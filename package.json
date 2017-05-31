@@ -1,0 +1,40 @@
+{
+  "name": "j6",
+  "version": "0.0.1",
+  "description": "Javascript scientific library (like R, NumPy, Matlab)",
+  "main": "j6.js",
+  "dependencies": {
+    "algebrite": "^0.2.23",
+    "coffeequate": "^1.2.2",
+    "jStat": "^1.5.2",
+    "lodash": "^4.16.4",
+    "numeric": "^1.2.6"
+  },
+  "devDependencies": {
+    "browserify": "^13.0.0"
+  },
+  "scripts": {
+    "build-web": "browserify web/_j6.js -o web/j6.js"
+  },
+  "bin": {},
+  "keywords": [
+    "R",
+    "Matlab",
+    "Scientific Computing",
+    "Statistics",
+    "Probability",
+    "Matrix", 
+		"Neural Network",
+		"Deep Learning"
+  ],
+  "homepage": "https://github.com/ccckmit/j6",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/ccckmit/j6.git"
+  },
+  "author": {
+    "name": "Chung-Chen Chen",
+    "email": "ccckmit@gmail.com"
+  },
+  "license": "MIT"
+}

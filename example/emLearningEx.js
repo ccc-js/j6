@@ -4,19 +4,6 @@
 var log=console.log;
 var R = require("../j6");
 
-function logp(n) {
-	return R.steps(1,n,1).log().sum();
-}
-
-// 傳回多項分布的 log 值！ log( (n!)/(x1!x2!...xk!) p1^x1 p2^x2 ... pk^xk )
-// = [log(n)+...+log(1)]-[log(x1)...]+....+x1*log(p1)+...+xk*log(pk)
-function xplog(x, p) {
-  var n = x.sum();
-  var r=logp(n);
-  for (var i in x) r-=logp(x[i]);
-  return r+x.dot(p.log());
-}
-
 function EM() {
 // 1st:  Coin B, {HTTTHHTHTH}, 5H,5T
 // 2nd:  Coin A, {HHHHTHHHHH}, 9H,1T
@@ -31,8 +18,8 @@ function EM() {
     log("pA=%s pB=%s delta=%d", pA, pB, delta.toFixed(4));
     var sumA=[0,0], sumB=[0,0];
     for (var i in e) {
-      var lA = xplog(e[i], pA);
-      var lB = xplog(e[i], pB);
+      var lA = R.xplog(e[i], pA);
+      var lB = R.xplog(e[i], pB);
       var a  = lA.exp(), b = lB.exp();
       var wA = a/(a+b), wB=b/(a+b);
       var eA = wA.mul(e[i]);

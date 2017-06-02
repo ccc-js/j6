@@ -1,15 +1,15 @@
 /**
  * Created by joonkukang on 2014. 1. 15..
  */
-var NN = R.NN, sigmoid = NN.sigmoid;
+var NN = j6.NN, sigmoid = NN.sigmoid;
 
 var RBM = function (settings) {
 	if (typeof settings === 'undefined') return;
   Object.assign(this, settings);
 	var a = 1. / this.nVisible;
-	this.W = this.W || R.randomM(this.nVisible,this.nHidden,-a,a);
-	this.hbias = this.hbias || R.newV(this.nHidden);
-  this.vbias = this.vbias || R.newV(this.nVisible);
+	this.W = this.W || j6.randomM(this.nVisible,this.nHidden,-a,a);
+	this.hbias = this.hbias || j6.newV(this.nHidden);
+  this.vbias = this.vbias || j6.newV(this.nVisible);
 }
 
 RBM.prototype.train = function(settings) {
@@ -91,11 +91,11 @@ RBM.prototype.reconstruct = function(v) {
 
 RBM.prototype.getReconstructionCrossEntropy = function() {
 	var reconstructedV = this.reconstruct(this.input);
-	var a = R.map2(this.input, reconstructedV, function(x,y){
+	var a = j6.map2(this.input, reconstructedV, function(x,y){
 		return x*Math.log(y);
 	});
 
-	var b = R.map2(this.input,reconstructedV,function(x,y){
+	var b = j6.map2(this.input,reconstructedV,function(x,y){
 		return (1-x)*Math.log(1-y);
 	});
   var crossEntropy = -a.add(b).rowSum().mean();

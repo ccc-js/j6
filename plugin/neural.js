@@ -1,6 +1,9 @@
+// 組合很多檔案的方法 : 用 Grunt
+// https://stackoverflow.com/questions/19664662/minify-some-files-combine-all-with-grunt-js
+// https://sethlakowske.com/software/use-grunt-and-uglifyjs-to-combine-multiple-javascript-files-into-a-single-javascript-file/
 // http://cs.stanford.edu/people/karpathy/convnetjs/
 // https://github.com/junku901/dnn
-var NN = R.NN = module.exports = {}
+var NN = module.exports = {}
 
 NN.sigmoid = function(x) {
 	var sigmoid = (1. / (1 + Math.exp(-x)))

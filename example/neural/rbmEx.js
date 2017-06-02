@@ -1,8 +1,8 @@
 /**
  * Created by joonkukang on 2014. 1. 15..
  */
-var R = require('../../j6');
-R.precision = 4;
+var j6 = require('../../j6');
+j6.precision = 4;
 var startTime = new Date();
 
 var data = [
@@ -13,7 +13,7 @@ var data = [
 [0,0,1,1,0,0],
 [0,0,1,1,1,0]];
 
-var rbm = new R.NN.RBM({
+var rbm = new j6.NN.RBM({
     input : data,
     nVisible : 6,
     nHidden : 2

@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
-var assert = require('chai').assert
+// var assert = require('chai').assert
 var j6 = require('../lib/j6')
+var assert = require('assert')
 var eq = assert.equal
 
 describe('Set', function () {

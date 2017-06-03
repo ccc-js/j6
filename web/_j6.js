@@ -1,1 +1,1 @@
-R=rlab=require("../rlab");
+require('../lib/j6')

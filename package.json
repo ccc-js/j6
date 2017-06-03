@@ -8,7 +8,9 @@
     "coffeequate": "^1.2.2",
     "jStat": "^1.5.2",
     "lodash": "^4.16.4",
-    "numeric": "^1.2.6"
+    "machine_learning": "^0.1.1",
+    "numeric": "^1.2.6",
+    "synaptic": "^1.0.11"
   },
   "devDependencies": {
     "browserify": "^13.0.0"

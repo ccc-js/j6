@@ -1,1 +1,1 @@
-require('../lib/j6')
+j6 = require('../lib/j6')

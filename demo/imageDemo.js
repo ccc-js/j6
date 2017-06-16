@@ -1,4 +1,4 @@
-G.loadImage('./demo/demo_small.png', function(image) {
+G.loadImage('./demo/demo_small.jpg', function(image) {
   console.log('load Image complete!');
   G.drawCanvas('#chart1', function(ctx1, canvas1) {
     ctx1.drawImage(image, 0, 0);

@@ -5,15 +5,14 @@
   "main": "j6.js",
   "dependencies": {
     "algebrite": "^0.2.23",
-    "coffeequate": "^1.2.2",
     "jStat": "^1.5.2",
     "lodash": "^4.16.4",
-    "machine_learning": "^0.1.1",
-    "numeric": "^1.2.6",
-    "synaptic": "^1.0.11"
+    "numeric": "^1.2.6"
   },
   "devDependencies": {
-    "browserify": "^13.0.0"
+    "browserify": "^13.0.0",
+    "koa": "^2.2.0",
+    "koa-static": "^3.0.0"
   },
   "scripts": {
     "build-web": "browserify web/_j6.js -o web/j6.js"

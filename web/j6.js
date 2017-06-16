@@ -1,912 +1,278 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var O = require("./field");
-
-var acc = {
-	sum:{init:0,op:'+'}, 
-	product:{init:1,op:'*'},
-	min:{init:Number.MAX_VALUE,op:'min'},
-	max:{init:-Number.MAX_VALUE,op:'max'},
-}
-
-O.vfill=function(size, value) {
-	var v=[];
-	for (var i=0; i<size; i++)
-		v[i] = value;
-	return v;
-}
-
-O.vextend=function(a, size) {
-	var v = a.slice();
-	for (var i=a.length; i<size; i++) {
-		v.push(0);
-	}
-	return v;
-}
-
-O.vdot=function(x,y) {
-	var sum = 0;
-	for (var i=0; i<x.length; i++) {
-		sum = sum.add(x[i].mul(y[i]));
-	}
-	return sum;
-}
-
-O.vop=function(op,x,y) {
-	var c=[],result=(O.isUndefined(acc[op]))?undefined:acc[op].init;
-  if (O.isArray(x)) {
-		for (var i=0; i<x.length; i++) {
-			if (!O.isUndefined(result)) {
-				var xi = x[i];
-				if (O.isArray(x[i])) // x[i] is subArray
-					xi = O.op(op, x[i]);
-				else {
-					if (!O.isUndefined(y))
-						xi = y(x[i]); // y should be a function
-				}
-				result = O.op(acc[op].op, xi, result);
-//				if (op==='min') console.log("xi=%d result=%d", xi, result);
-			}
-			else {
-				var yi = O.isArray(y)?y[i]:y;
-				c[i] = O.op(op, x[i], yi);
-			}
-		}
-	} else {
-		throw Error('vop fail:op,x,y=', op, x, y);
-	}
-	if (x.length === c.length)
-		return c;
-	else
-		return result;
-}
-
-O.op = function(op,x,y) {
-  if (O.isField(x)) {
-		if (!O.isUndefined(acc[op])) {
-			switch (op) {
-				case 'max': return Math.max(x,y);
-				case 'min': return Math.min(x,y);
-				default:return x;
-			}
-		}	else if (x instanceof O.FieldObj || 
-		    (O.isNumber(x) && y instanceof O.FieldObj)) {
-			x = O.Complex.toComplex(x); 
-			y = O.isNumber(y)?O.Complex.toComplex(y):y;
-			switch (op) {
-				case 'eval': var exp = y; return exp(x);
-				case 'neg':return x.neg();
-				case 'inv':return x.inv();
-				case 'bnot':return x.bnot();				
-				case '+':return x.add(y);
-				case '-':return x.sub(y);
-				case '*':return x.mul(y);
-				case '/':return x.div(y);
-				case 'power':return x.power(y);
-				case 'sqrt':return x.sqrt();
-				case 'eq':return x.eq(y);
-				case 'neq':return x.neq(y);
-				case 'geq':return x.geq(y);
-				case 'leq':return x.leq(y);
-				case 'gt':return x.gt(y);
-				case 'lt':return x.lt(y);
-			}
-		} else if (O.isBool(x) || O.isNumber(x)) {
-			switch (op) {
-				case 'eval': var exp = y; return exp(x);
-				case 'not':return !x;
-				case 'neg':return -x;
-				case 'inv':return 1/x;
-				case 'bnot':return ~x;
-				case 'and':return x&&y;
-				case 'or':return x||y;
-				case 'xor':return x!==y;
-				case '+':return x+y;
-				case '-':return x-y;
-				case '*':return x*y;
-				case '/':return x/y;
-				case '%':return x%y;
-				case 'eq':return x===y;
-				case 'neq':return x!==y;
-				case 'geq':return x>=y;
-				case 'leq':return x<=y;
-				case 'gt':return x>y;
-				case 'lt':return x<y;
-				case '&':return x&y;
-				case '|':return x|y;
-				case 'bxor':return x^y;
-				case '<<':return x<<y;
-				case '>>':return x>>y;
-				case 'and':return x&&y;
-				case 'or':return x||y;
-				case 'xor':return x!==y;
-				case 'sqrt':
-				  if (x>=0) return Math.sqrt(x);
-					else {
-						var c = new O.Complex(x,0);
-						return c.sqrt();
-					}
-				case 'power':
-				  if (x>=0 || O.isInteger(y))
-						return Math.pow(x,y);
-					else
-						return new O.Complex(x,0).power(y);
-				case 'log':return Math.log(x);
-				case 'exp':return Math.exp(x);
-				case 'abs':return Math.abs(x);;
-				case 'sin':return Math.sin(x);
-				case 'cos':return Math.cos(x);
-				case 'tan':return Math.tan(x);
-				case 'asin':return Math.asin(x);
-				case 'acos':return Math.acos(x);
-				case 'atan':return Math.atan(x);
-				case 'sinh':return Math.sinh(x);
-				case 'cosh':return Math.cosh(x);
-				case 'tanh':return Math.tanh(x);
-				case 'ceil':return Math.ceil(x);
-				case 'floor':return Math.floor(x);
-				case 'round':return Math.round(x);
-				case 'log1p':return Math.log1p(x);
-				case 'log10':return Math.log10(x);
-				case 'log2':return Math.log2(x);
-				case 'random':return Math.random();
-				case 'sign':return Math.sign(x);
-				case 'abs':return Math.abs(x);
-				case 'cbrt':return Math.cbrt(x); // cubic root
-			}
-		}
-	} else if (O.isFunction(x)) {
-		if (O.isFunction(y)) {
-			switch (op) {
-				case 'neg':return O.fneg(x);
-				case 'inv':return O.finv(x);
-				case '+':return O.fadd(x,y);
-				case '-':return O.fsub(x,y);
-				case '*':return O.fmul(x,y);
-				case '/':return O.fdiv(x,y);
-				case 'compose':return O.fcompose(x,y);
-			}			
-		} else {
-			switch (op) {
-				case 'eval':return x(y);
-			}
-		}
-	}	else if (O.isArray(x)) {
-		return O.vop(op,x,y);
-	}
-	throw Error('op fail:op,x,y=', op, x, y);
-}
-
-O.sum=function(x) { return O.vop('sum', x) }
-O.product=function(x) { return O.vop('product', x) }
-O.max=function(x) { return O.vop('max', x) }
-O.min=function(x) { return O.vop('min', x) }
-O.eval=function(x,y) { return O.op('eval', x,y) }
-O.norm=function(x) {
-	var norm2 = O.vop('sum', x, (x)=>x*x);
-	return Math.sqrt(norm2);
-}
-
-// +-*/%^
-O.add=function(x,y) {	return O.op('+',x,y) }
-O.sub=function(x,y) {	return O.op('-',x,y) }
-O.mul=function(x,y) {	return O.op('*',x,y) }
-O.div=function(x,y) {	return O.op('/',x,y) }
-O.mod=function(x,y) {	return O.op('%',x,y) }
-O.power=function(x,y) { return O.op('power', x, y) }
-O.neg=function(x) { return O.op('neg', x) }
-O.inv=function(x) { return O.op('inv', x) }
-// logical
-O.not=function(x) { return O.op('not', x) }
-O.and=function(x,y) { return O.op('&&', x, y) }
-O.or=function(x,y) { return O.op('||', x, y) }
-O.xor=function(x,y) { return O.op('xor', x, y) }
-O.bnot=function(x) { return O.op('bnot', x) }
-O.band=function(x,y) { return O.op('&', x, y) }
-O.bor=function(x,y) { return O.op('|', x, y) }
-O.bxor=function(x,y) { return O.op('bxor', x, y) }
-O.lshift=function(x,y) { return O.op('<<', x, y) }
-O.rshift=function(x,y) { return O.op('>>', x, y) }
-// compare
-O.eq=function(x,y) { return O.op('eq', x, y) }
-O.neq=function(x,y) { return O.op('neq', x, y) }
-O.geq=function(x,y) { return O.op('geq', x, y) }
-O.leq=function(x,y) { return O.op('leq', x, y) }
-O.gt=function(x,y) { return O.op('gt', x, y) }
-O.lt=function(x,y) { return O.op('lt', x, y) }
-// number function
-O.sqrt=function(x) { return O.op('sqrt', x) }
-O.log=function(x) { return O.op('log', x) }
-O.exp=function(x) { return O.op('exp', x) }
-O.abs=function(x) { return O.op('abs', x) }
-O.sin=function(x) { return O.op('sin', x) }
-O.cos=function(x) { return O.op('cos', x) }
-O.tan=function(x) { return O.op('tan', x) }
-O.asin=function(x) { return O.op('asin', x) }
-O.acos=function(x) { return O.op('acos', x) }
-O.atan=function(x) { return O.op('atan', x) }
-O.atan2=function(x) { return O.op('atan2', x) }
-O.ceil=function(x) { return O.op('ceil', x) }
-O.floor=function(x) { return O.op('floor', x) }
-O.round=function(x) { return O.op('round', x) }
- 
-O.parse = function(s) {
-	if (s.indexOf(';')>=0) {
-		var m = split(s, ";"), matrix;
-		for (var i=0; i<m.length; i++) {
-			matrix[i] = O.parse(m[i]);
-		}
-		return matrix;
-	} if (s.indexOf(',')>=0) {
-		var a = split(s, ","), array;
-		for (var i=0; i<a.length; i++) {
-			array[i] = O.parse(a[i]);
-		}
-		return array;
-	}
-	else if (s.indexOf('/')>=0)
-		return O.Ratio.parse(s);
-	else if (s.indexOf('i')>=0)
-		return O.Complex.parse(s);
-	else {
-		return parseFloat(s);
-	}
-}
-
-// =========== Polynomial Ring ==============
-O.PolynomialRing=extend({}, O.Field);
-
-class Polynomial extends O.FieldObj {
-  constructor(c) {
-    super(O.PolynomialRing);
-    this.c = c; // sum(ci x^i)
-  }
-	
-	eval(x) {
-		var c = this.c, i=c.length-1, sum=c[i];
-		for (i--;i>=0; i--) {
-			sum = c[i].add(x.mul(sum));
-		}
-		return sum;
-	}
-	
-	size() { return this.c.length }
-	
-	toString() {
-		var s = [], c=this.c;
-		for (var i=c.length-1; i>=0; i--) {
-			s.push(c[i]+'x^'+i);
-		}
-		return s.join('+');
-	}
-	
-	root() {
-		var p = this.normalize(); // 正規化
-		switch (this.size()) {
-		  case 2:return p.c[0].neg();
-		  case 3:return p.root2(p.c[1], p.c[0]);
-			case 4:return p.root3(p.c[2], p.c[1], p.c[0]);
-			default:throw Error('root() fail');
-		}
-			
-	}
-
-	root2(b,c) { // x^2 + bx + c	=0
-		var d = b.mul(b).sub(c.mul(4)).sqrt();
-		return [b.neg().add(d), b.neg().sub(d)];
-	}
-	
-	root3(a,b,c) { // x^3+ax^2+bx+c=0
-		var q=((2*a*a*a/27)-(a*b/3)+c)/2;
-		var p=(b-a*a/3)/3;
-		var D=p*p*p+q*q;
-		var Dsqrt = D.sqrt(), _q=q.neg();
-		var u_p=_q.add(Dsqrt).power(1/3); // (-q+sqrt(D))^1/3
-		var u_m=_q.sub(Dsqrt).power(1/3); // (-q-sqrt(D))^1/3
-		console.log("q=%s p=%s D=%s u+=%s u-=%s", q, p, D, u_p, u_m);
-		var rho_p = (1/2).mul(O.parse('-1+3i'));
-		var rho_m = (1/2).mul(O.parse('-1-3i'));
-		console.log("rho_p=%s rho_m=%s", rho_p, rho_m);
-		var y1=u_p.add(u_m);
-		var y2=rho_p.add(u_p).add(rho_m.mul(u_m));
-		var y3=rho_p.sub(u_p).add(rho_p.mul(u_m));
-		return [y1, y2, y3];
-	}	
-	
-	normalize() {
-		var a = this.c[this.size()-1];
-		var nc = this.c.div(a);
-		return new Polynomial(nc);
-	}
-}
-
-O.Polynomial = Polynomial;
-/*
-
-function root3(a,b,c) { // x^3+ax^2+bx+c=0
-  var q=((2*a*a*a/27)-(a*b/3)+c/2);
-	var p=(b-a*a/3)/3;
-	var D=p*p*p+q*q;
-	var u_p=Math.sqrt(3, -q+Math.sqrt(D));
-	var u_m=Math.sqrt(3, -q-Math.sqrt(D));
-	var rho_p = 1/2*(-1+3i);
-	var rho_m = 1/2*(-1-3i);
-  var y1=u_p+u_m;
-  var y2=rho_p+u_p+ rho_m*u_m;
-  var y3=rho_p-u_p+ rho_p*u_m;
-}
-*/
-O.PolynomialAddGroup={
-  e:new Polynomial([0]), // 到底應該設幾個？
-  op:function(x,y) {
-		var size = Math.max(x.size(), y.size());
-		var a=O.vextend(x.c,size), b=O.vextend(y.c,size);
-	  var c=O.add(a,b);
-		return new Polynomial(c);
-	},
-  inv:function(x) {
-		var c = O.neg(x.c);
-		return new Polynomial(c);
-	},
-}
-  
-extend(O.PolynomialAddGroup, O.Group);
-
-O.PolynomialMulSemiGroup={
-  e:new Polynomial([1]),
-  op:function(x,y) { 
-	  var c=[];
-	  for (var xi=0; xi<x.c.length; xi++) {
-			for (var yi=0; yi<y.c.length; yi++) {
-				var cxy = (typeof c[xi+yi]==='undefined')?0:c[xi+yi];
-				c[xi+yi] = cxy+x.c[xi]*y.c[yi];
-			}
-		}
-		return new Polynomial(c);
-	},
-  inv:function(x) { throw Error('PolynomialMulSemiGroup.inv not defined') },
-}
-
-extend(O.PolynomialMulSemiGroup, O.Group);
-
-O.PolynomialRing.init(O.PolynomialAddGroup, O.PolynomialMulSemiGroup);
-
-module.exports = O;
-
-},{"./field":4}],2:[function(require,module,exports){
-// http://blog.smartbear.com/testing/four-serious-math-libraries-for-javascript/
-
-// Four Serious Math Libraries for JavaScript
-
-var B = {};
-
-B.slice = function(a) {
-	return Array.prototype.slice.call(a);
-}
-
-B.bind=function(o, member) {
-	if (typeof o[member]==='Function')
-		return o[member].bind(o); 
-	else
-		return o[member];
-}
-
-B.ncall = function() {
-  var args = B.slice(arguments);
-  var n = args[0];
-  var o = args[1];
-  var fname = args[2];
-  var params = args.slice(3);
-  var a=[];
-  for (var i=0; i<n; i++)
-    a.push(o[fname].apply(o, params));
-  return a;
-}
-
-B.mapFunctions=function(host, obj, pairs) {
-	for (var h in pairs) {
-		var o = pairs[h];
-		if (typeof host[h] !=='undefined')
-			console.log('mapBind: error!', h, ' has been defined!');
-		host[h]=B.bind(obj, o);
-	}
-}
-
-B.copyFunctions=function(host, obj, names) {
-	for (var name of names) {
-		if (typeof host[name] !=='undefined')
-			console.log('namesBind: error!', name, ' has been defined!');
-		host[name]=B.bind(obj, name);
-	}
-}
-
-B.mix=function(self, members) {
-	for (var name in members) {
-		var member = members[name];
-		if (typeof self[name] === 'undefined') {
-			Object.defineProperty(self, name, {
-				enumerable: true,
-				writable: true,
-				value: member,
-			});
-		} else {
-	    console.log("B.mix fail:", name, " already exists!");
-		}
-	}
-}
-
-B.arg1this = function(f,obj) { // 傳回一個已經綁定 f, obj 的函數
-  return function() { 
-		var args = B.slice(arguments);
-    return f.apply(obj, [this].concat(args)); // 效果相當於 obj.f(this, args)
-  }
-}
-
-B.mixThis=function(proto, obj, fmembers) {
-	for (var fname of fmembers) {
-		var f = obj[fname];
-		if (typeof proto[fname] === 'undefined') {
-			Object.defineProperty(proto, fname, {
-				enumerable: false,
-				writable: true,
-				value: B.arg1this(f,obj), // proto.f(args) => obj.f(this, args) , 這行盡量不要動，除非想得很清楚了！
-			});
-		} else {
-	    console.log("B.mixThis:", fname, " fail!");
-		}
-	}
-}
-
-B.mixThisMap=function(proto, obj, poMap) {
-	for (var pname in poMap) {
-		var oname = poMap[pname];
-		var f = obj[oname];
-		if (typeof proto[pname] === 'undefined') {
-			Object.defineProperty(proto, pname, {
-				enumerable: false,
-				writable: true,
-				value: B.arg1this(f,obj), // proto.f(args) = f(this, args) , 這行盡量不要動，除非想得很清楚了！
-			});
-		} else {
-			console.log('pname=', pname, 'proto[pname]=', proto[pname]);
-	    console.log("B.mixThisMap:", oname, " fail!");
-		}
-	}
-}
-
-B.ctrim=function(s, set, side) {
-  side = side||"both";
-  for (var b=0; b<s.length; b++)
-    if (set.indexOf(s[b])<0) break;
-  for (var e=s.length-1; e>=0; e--)
-    if (set.indexOf(s[e])<0) break;
-  if (side === "right") b=0;
-  if (side === "left") e=s.length-1;
-  return s.substring(b, e+1);
-}
-
-B.lpad=function(s, width, ch) {
-  return s.length >= width ? s : new Array(width - s.length + 1).join(ch) + s;
-}
-
-B.def = function(x, value) {
-	return (typeof x !== 'undefined')?x:value;
-}
-
-B.precision=2;
-
-B.nstr = function(n, precision=B.precision) {
-	if (n % 1 === 0) return n.toString();
-	return n.toFixed(precision);
-}
-
-B.astr = function(a, precision=B.precision) {
-	var s=[];
-	for (var i in a) {
-		s.push(a[i].str(precision));
-	}
-	return "["+s.join(', ')+"]";
-}
-
-B.sstr = function(s) { return s.toString(); }
-
-B.ostr = function(o, precision=B.precision) {
-  var s = [];
-  for (var k in o)
-    s.push(k+":"+B.str(o[k], precision));
-  return "{"+s.join(", ")+"}";
-}
-
-B.str = function(o, precision=B.precision) {
-	if (typeof o ==='undefined')
-		return 'undefined';
-	else
-		return o.str(precision);
-}
-
-module.exports = B;
-
-/*
-B.calls = function() {
-  var args = B.slice(arguments);
-  var n = args[0];
-  var f = args[1];
-  var params = args.slice(2);
-  var a=[];
-  for (var i=0; i<n; i++)
-    a.push(f.apply(null, params));
-  return a;
-}
-*/
-/*
-B.slice = function(a) {
-	return Array.prototype.slice.call(a);
-}
-
-B.curry = function(f,o) {
-  return function() {
-		var args = Array.prototype.slice.call(arguments);
-    return f.apply(null, [o].concat(args));
-  }
-}
-
-B.mixThis=function(proto, fmap) {
-	for (var name in fmap) {
-		var f = fmap[name];
-		if (typeof proto[name] === 'undefined') {
-			Object.defineProperty(proto, name, {
-				enumerable: false,
-				writable: true,
-				value: B.arg1this(f), // proto.f(args) = f(this, args)
-			});
-		} else {
-	    console.log("B.mixThis:", name, " fail!");
-		}
-	}
-}
-B.thisAsArg1 = function(f) {
-  return function() {
-		var args = B.slice(arguments);
-    return f.apply(null, [this].concat(args));
-  }
-}
-
-*/
-
-/*
-B.mixThis=function(proto, obj, fmembers) {
-	for (var fname of fmembers) {
-//		var f = B.bind(obj, fname);
-		var f = obj[fname];
-		if (typeof proto[fname] === 'undefined') {
-			Object.defineProperty(proto, fname, {
-				enumerable: false,
-				writable: true,
-				value: B.arg1this(f,obj), // proto.f(args) = f(this, args)
-			});
-		} else {
-	    console.log("B.mixThis:", fname, " fail!");
-		}
-	}
-}
-*/
-},{}],3:[function(require,module,exports){
-module.exports = O = require("./matrix");
-
-// =========== Calculus =================
-O.dx = 0.01;
-
-// 微分 differential calculus
-O.fdiff = O.fdifferential = function(f, x, dx) {
-	dx = dx || O.dx;
-  var dy = f(x.add(dx)).sub(f(x.sub(dx)));
-  return dy.div(dx.mul(2));
-}
-
-// 積分 integral calculus
-O.fint = O.fintegral = function(f, a, b, dx) {
-	dx = dx || O.dx;
-  var area = 0.0;
-  for (var x=a; x<b; x=x+dx) {
-    area = area + f(x).mul(dx);
-  }
-  return area;
-}
-
-// 偏微分 partial differential calculus
-// f=[f1,f2,....] , x=[x1,x2,...] , dx=[dx1,dx2,....]
-O.pdiff = O.pdifferential = function(f, x, i) {
-	f = O.fa(f);
-	var dx = O.vfill(x.length, 0);
-	dx[i] = O.dx;
-//	var df = f.apply(null, x.add(dx)).sub(f.apply(null, x.sub(dx)));
-	var df = f(x.add(dx)).sub(f(x.sub(dx)));
-	return df.div(dx.norm().mul(2));
-}
-
-// multidimensional integral calculus
-// f=[f1,f2,....] , a=[a1,a2,...] , b=[b1,b2,....]
-O.pint = O.pintegral = function(f, a, b) {
-	
-}
-
-// 梯度 gradient : grad(f,x)=[pdiff(f,x,0), .., pdiff(f,x,n)]
-O.fgrad = O.fgradient = function(f, x) {
-	var gf = [];
-	for (var i=0; i<x.length; i++) {
-		gf[i] = O.pdiff(f, x, i);
-	}
-	return gf;
-}
-
-// 散度 divergence : div(F,x) = sum(pdiff(F[i],x,i))
-O.fdiv = O.fdivergence = function(F, x) {
-	var Fx = F(x);
-	var f=[], d=[];
-	for (var i=0; i<x.length; i++) {
-		f[i] = (xt)=>F(xt)[i];
-		d[i] = O.pdiff(f[i],x,i);
-	}
-	return d.sum();
-}
-
-// 旋度 curl : curl(F) = div(F)xF 
-O.fcurl = O.fcurlance = function(F, x) {
-	
-}
-
-// 線積分： int F●dr = int F(r(t))●r'(t) dt
-O.vint = O.vintegral = function(F, r, a, b, dt) {
-	dt = dt||O.dx;
-	var sum = 0;
-	for (var t=a; t<b; t+=dt) {
-		sum += F(r(t)).dot(r.diff(t));
-	}
-	return sum;
-}
-
-// 定理：int F●dr  = int(sum(Qxi dxi))
-
-// 向量保守場： F=grad(f) ==> int F●dr = f(B)-f(A)
-
-// 定理： 向量保守場 F, pdiff(Qxi,xj) == pdiff(Qxj,xi)  for any i, j
-// ex: F=[x^2y, x^3] 中， grad(F)=[x^2, 3x^2] 兩者不相等，所以不是保守場
-
-// 格林定理：保守場中 《線積分=微分後的區域積分》
-// int P dx + Q dy = int int pdiff(Q,x) - pdiff(P, y) dx dy
-
-// 散度定理：通量 = 散度的區域積分
-// 2D : int F●n ds = int int div F dx dy
-// 3D : int int F●n dS = int int int div F dV
-
-// 史托克定理：  F 在曲面 S 上的旋度總和 = F 沿著邊界曲線 C 的線積分
-// int int_D curl(F)●n dS = int_C F●dr
-
-
-},{"./matrix":8}],4:[function(require,module,exports){
+module.exports = function (j6) {
 // module : Field & Group Theory
-var F = require("./set");
-F.Integer=require("./integer");
-var eq = F.eq;
-// ========== Group =================
 // 注意： 箭頭函數會自動將 this 變數綁定到其定義時所在的物件，因此以下很多地方不能用箭頭函數。
 // 參考： https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Functions/Arrow_functions
-F.Group={ 
-  invOp:function(x,y) { 
-    return this.op(x,this.inv(y)); 
-  },
+var eq = j6.eq, extend=j6.extend;
+// ========== Group & Field Property ================
+// ref:https://en.wikipedia.org/wiki/Group_(mathematics)
+
+// 封閉性：For all a, b in G, a • b, is also in G
+j6.closability=function(set, op, a, b) {	return set.has(op(a,b)) }
+
+// 結合性：For all a, b and c in G, (a • b) • c = a • (b • c).
+j6.associativity=function(set, op, a, b, c) {
+	return eq(op(op(a,b),c), op(a,op(b,c)))
+}
+
+// 單位元素：Identity element
+j6.identity=function(set, op, e, a) { return eq(op(e,a),a) }
+
+// 反元素：Inverse element
+j6.inversability=function(e, inv, a) {
+	return eq(op(a,inv(a)),e);
+}
+
+// 交換性：
+j6.commutative=function(op,a,b) {
+	return eq(op(a,b),op(b,a));
+}
+
+// 左分配律：
+j6.ldistribute=function(add, mul, a,b,c) {
+	return eq(mul(a, add(b,c)), add(mul(a,b), mul(a,c)));
+}
+
+// 右分配律：
+j6.rdistribute=function(add, mul, a,b,c) {
+	return j6.ldistribute(b,c,a);
+}
+
+// 封閉性
+j6.isClose=function(g) {
+	var a=g.random(), b=g.random();	
+	return j6.closability(g, a, b);
+}
+
+// 結合性
+j6.isAssociate=function(g) {
+	var a=g.random(), b=g.random(), c=g.random();
+	return j6.associativity(g, g.op, a, b, c);
+}
+
+// 單位元素
+j6.isIdentify=function(g) {
+	var a=g.random(), b=g.random(), c=g.random();
+	return j6.associativity(g, g.op, a, b, c);
+}
+
+// 反元素
+j6.isInversable=function(g) {
+	var a=g.random(), b=g.random(), c=g.random();
+	return j6.associativity(g, g.op, a, b, c);
+}
+
+// 左分配律
+j6.isLeftDistribute=function(f, m, add, mul) {
+	var a=f.random(), b=g.random(), c=g.random();
+	return j6.ldistribute(add, mul, a, b, c);
+}
+
+// 右分配律
+j6.isRightDistribute=function(f, m, add, mul) {
+	var a=f.random(), b=f.random(), c=g.random();
+	return j6.rdistribute(add, mul, a, b, c);
+}
+
+// 原群
+j6.isMagma = function(g) {	return j6.isClose(g) }
+
+// 半群
+j6.isSemiGroup = function(g) {	return j6.isClose(g) && j6.isAssociate(g) }
+
+// 么半群
+j6.isMonoid = function(g) { return j6.isSemiGroup(g) && j6.isIdentify(g) }
+
+// 群
+j6.isGroup = function(g) { return j6.isMonoid(g) && j6.isInversable(g) }
+
+// 交換群
+j6.isAbelGroup = function(g) {	return j6.isGroup(g) && j6.isCommutable(g) }
+
+// 擬群
+j6.isQuasiGroup = function(g) { return j6.isClose(g) && j6.isInversable(g) }
+
+// 環群
+j6.isLoop = function(g) { return j6.isQuasiGroup(g) && j6.isIdentify(g) }
+
+// 環 ： 沒有乘法反元素的體。
+j6.isRing = function(f) { 
+  return isAbelGroup(f.addSet) && isSemiGroup(f.mulSet);
+}
+
+// 體 ： 具有加減乘除結構的集合
+j6.isField = function(f) {
+	return isAbelGroup(f.addSet) && isAbelGroup(f.mulSet);
+}
+
+// 模 ： 向量的抽象化
+j6.isModule = function(r,m) {
+	return j6.isRing(r)&&j6.isAbelGroup(m);
+//	      &&j6.isLeftDistribute(r.madd, m.add); 
+}
+
+// ========== Group =================
+j6.SemiGroup={
   power:function(x,n) {
     var p=this.e;
     for (var i=0;i<n;i++) {
       p=this.op(p,x);
     }
     return p;
+  },	
+  leftCoset:function(g, H) {
+    var set = new Set();
+    for (var i in H)
+      set.add(this.op(g,H[i]));
+    return set;
   },
-	leftCoset:function(g, H) {
-		var set = new F.Set();
-		for (var i in H)
-		  set.add(this.op(g,H[i]));
-		return set;
-	},
-	rightCoset:function(H, g) {
-		var set = new F.Set();
-		for (var i in H)
-		  set.add(this.op(g,H[i]));
-		return set;
-	},
-  // ref:https://en.wikipedia.org/wiki/Group_(mathematics)
-  // 封閉性：For all a, b in G, a • b, is also in G
-  closability:function(a,b) {
-		var ab = this.op(a,b);
-    var close=this.has(ab);
-    return this.has(this.op(a,b));
+  rightCoset:function(H, g) {
+    var set = new Set();
+    for (var i in H)
+      set.add(this.op(g,H[i]));
+    return set;
   },
-  // 結合性：For all a, b and c in G, (a • b) • c = a • (b • c).
-  associativity:function(a,b,c) {
-    var op = this.op.bind(this);
-    return eq(op(op(a,b),c), op(a,op(b,c)))
-  },
-  // 單位元素：Identity element
-  identity:function(a) {
-    return eq(this.op(this.e,a),a)
-  },
-  // 反元素：Inverse element
-  inversability:function(a) {
-    return eq(this.op(a,this.inv(a)),this.e);
-  },
+}  // 半群
+
+j6.Monoid={} // 么半群
+
+extend(j6.Monoid, j6.SemiGroup)
+
+j6.Group={ 
+//  inv:function(x) { return x.inv() },
 }
+
+extend(j6.Group, j6.Monoid);
+
+j6.AbelGroup = {} // 交換群
+
+extend(j6.AbelGroup, j6.Group);
 
 // PermutationGroup
-F.PermutationGroup={
+j6.PermutationGroup={
   op:function(x,y) {
-	  var z = [];
-		for (var i in x)
-			z[i] = y[x[i]];
-		return z;
+    var z = [];
+    for (var i in x)
+      z[i] = y[x[i]];
+    return z;
   },
   inv:function(x) { 
-	  var nx = [];
-		for (var i in x) {
-			nx[x[i]] = i;
-		}
-	  return nx;
-	},
-}
-
-extend(F.PermutationGroup, F.Group);
-
-// Cyclic Group :  a group that is generated by a single element (g)
-F.CyclicGroup={
-	G:[],
-//	g:g,
-  op:function(x,y) {
+    var nx = [];
+    for (var i in x) {
+      nx[x[i]] = i;
+    }
+    return nx;
   },
-  inv:function(x) {
-	},
-	create(g) {
-		var t = e;
-		for (var i=0; !t.eq(e); i++) {
-			G[i]=t;
-			t=op(g,G[i]);
-		}
-	}
 }
 
-extend(F.CyclicGroup, F.Group);
+extend(j6.PermutationGroup, j6.Group);
+
+// 循環群 Cyclic Group :  a group that is generated by a single element (g)
+j6.CyclicGroup={
+  G:[], // g:g,
+  op:function(x,y) {},
+  inv:function(x) {},
+  create(g) {
+    var t = e;
+    for (var i=0; !t.eq(e); i++) {
+      G[i]=t;
+      t=op(g,G[i]);
+    }
+  }
+}
+
+extend(j6.CyclicGroup, j6.Group);
 
 // NormalSubGroup : 正規子群
-F.NormalSubGroup={
-  op:function(x,y) {
-  },
-  inv:function(x) {
-	},
-	normality(g,n) {
-		return this.has(g.op(n).op(g.inv()));
-	},
+j6.isNormalSubGroup=function(G,H,g,h) {
+	return H.has(G.op(G.op(g,h), G.inv(g)));
 }
 
-extend(F.NormalSubGroup, F.Group);
+// 商群 Quotent Group : aggregating similar elements of a larger group using an equivalence relation that preserves the group structure
 
-// Quotent Group : aggregating similar elements of a larger group using an equivalence relation that preserves the group structure
-
-F.QuotentGroup={
-	eq:function(x,y) {
-		
-	},
-  op:function(x,y) {
-  },
-  inv:function(x) {
-	},
+j6.QuotentGroup={
+  eq:function(x,y) {},
+  op:function(x,y) {},
+  inv:function(x)  {},
 }
 
-extend(F.QuotentGroup, F.Group);
+extend(j6.QuotentGroup, j6.Group);
 
 // Normal SubGroup : gH = Hg
 // https://en.wikipedia.org/wiki/Normal_subgroup
-F.NormalSubGroup={
-  op:function(x,y) {
-  },
-  inv:function(x) {
-	},
+j6.NormalSubGroup={
+  op:function(x,y) {},
+  inv:function(x)  {},
 }
 
-extend(F.NormalSubGroup, F.Group);
+extend(j6.NormalSubGroup, j6.Group);
 
 // 群同構第一定理： 給定 GG和 G ′ 兩個群，和 f : G → G ′ 群同態。則 Ker ⁡ f 是一個 G 的正規子群。
-// 群同構第二定理：給定群 G 、其正規子群 N、其子群 H，則 N ∩ H 是 H 的正規子群，且我們有群同構如下： H / ( H ∩ N ) ≃ H N / N
-// 群同構第三定理： 給定群 G， N 和 M，M 為 G 的正規子群，滿足 M 包含於 N ，則 N / M 是 G / M 的正規子群，且有如下的群同構： ( G / M ) / ( N / M ) ≃ G / N .
+// 群同構第二定理：給定群 G 、其正規子群 j6、其子群 H，則 j6 ∩ H 是 H 的正規子群，且我們有群同構如下： H / ( H ∩ j6 ) ≃ H j6 / j6
+// 群同構第三定理： 給定群 G， j6 和 M，M 為 G 的正規子群，滿足 M 包含於 j6 ，則 j6 / M 是 G / M 的正規子群，且有如下的群同構： ( G / M ) / ( j6 / M ) ≃ G / j6 .
 
 // ========== Field =================
-F.Field={
-  sub:function(x,y) { return this.addGroup.invOp(x,y) },
-  div:function(x,y) { return this.mulGroup.invOp(x,y) },
-//  mod:function(x,y) { return x.sub(x.div(y).mul(y)) },
-  power:function(x,n) { return this.mulGroup.power(x,n) },
-  init:function(addGroup, mulGroup) {
-    this.addGroup = addGroup;
-    this.mulGroup = mulGroup;
-    this.zero = addGroup.e;
-    this.add  = function(x,y) { return this.addGroup.op(x,y) }
-    this.neg  = function(x) { return this.addGroup.inv(x) }
-    this.one  = mulGroup.e;
-    this.mul  = function(x,y) { return this.mulGroup.op(x,y) }
-    this.inv  = function(x) { return this.mulGroup.inv(x) }
-    this.power= function(x,n) { return this.mulGroup.power(x,n) }
-		this.eq   = function(x,y) { return F.eq(x,y); }
-		this.neq  = function(x,y) { return !this.eq(x,y); }
-		this.isZero = function(x) { 
-		  return this.field.eq(this, F.proto(this).zero) 
-		}
-		this.isOne = function(x) { 
-		  return this.field.eq(this, F.proto(this).one)
-		}
-		this.gcd  = function(x,y) {
-			if (y.isZero()) return x;
-			return gcd(y, mod(x,y));
-		}
+j6.Ring = { // Ring  (環)  : 可能沒有乘法單位元素和反元素的 Field
+  neg:function(x) { return this.addSet.inv(x) },
+  add:function(x,y) { return this.addSet.op(x,y) },
+  sub:function(x,y) { return this.addSet.op(x, this.addSet.inv(y)) },
+	mul:function(x,y) { return this.mulSet.op(x,y) },
+  power:function(x,n) { return this.mulSet.power(x,n) },	
+  init:function(addSet, mulSet) {
+    this.addSet = addSet;
+    this.mulSet = mulSet;
+    this.zero = addSet.e;
+	},
+	// Ideal (理想): 子環，且 i·r ∈ I (左理想), r·i ∈ I (右理想)
+	ideal:function(i) {}, // https://en.wikipedia.org/wiki/Ideal_(ring_theory)
+}
+
+// (F,+,*) : (F,+), (F-0,*) 均為交換群。
+j6.Field = {
+  div:function(x,y) { return this.mulSet.op(x, this.mulSet.inv(y)) },
+	inv:function(x) { return this.mulSet.inv(x) },
+  init:function(addSet, mulSet) {
+		j6.Ring.init.call(this, addSet, mulSet);
+    this.one  = mulSet.e;
   },
-	ldistribute:function(a,b,c) {
-		return this.mul(a, this.add(b,c)).eq(this.add(this.mul(a,b), this.mul(a,c)));
-	},
-	rdistribute:function(a,b,c) {
-		return this.ldistribute(b,c,a);
-	},
-	associativity:function(a,b,c) {
-		return this.mul(a,this.mul(b,c)).eq(this.mul(this.mul(a,b),c));
-	},
 }
 
-F.Ring = F.Field;  // Ring  (環)  : 可能沒有乘法單位元素和反元素的 Field
-F.Module = F.Field;// Module(模)  : (R +) is Ring, (R × M → M)
-F.Ideal = F.Field; // Ideal (理想): 子環，且 i·r ∈ I (左理想), r·i ∈ I (右理想)
+extend(j6.Field, j6.Ring);
 
-// ref : https://en.wikipedia.org/wiki/Group_homomorphism
-//  https://en.wikipedia.org/wiki/Fundamental_theorem_on_homomorphisms
-// 同態：h(a • b) = h(a) x h(b) 
-F.homomorphism=function(h, g1, g2) {
-  var a=g1.random(), b=g2.random();
-  return eq(h(group1.op(a,b)), group2.op(h(a), h(b)))
-}
-
-// ref : https://en.wikipedia.org/wiki/Isomorphism
-//  https://en.wikipedia.org/wiki/Isomorphism_theorem
-// 同構：h(a • b) = h(a) • h(b)
-F.isomorphism=function(h1, h2, g1, g2) {
-  var a1=g1.random(), b1=g2.random();
-  var a2=g1.random(), b2=g2.random();
-  return homorphism(h1,g1,g2)&&homorphism(h2,g2,g1);
-}
+// https://zh-classical.wikipedia.org/wiki/%E6%A8%A1_(%E4%BB%A3%E6%95%B8)
+j6.Module = j6.Field;// Module(模)  : (j6 +) is Ring, (j6 × M → M)
 
 // ========== Float Field =================
-F.FloatAddGroup={
+j6.FloatAddGroup={
   e:0,
   op:function(x,y) { return x+y },
   inv:function(x) { return -x},
 }
 
-extend(F.FloatAddGroup, F.Group, F.Set.Float);
+extend(j6.FloatAddGroup, j6.AbelGroup, j6.Float);
 
-F.FloatMulGroup={
+j6.FloatMulGroup={
   e:1,
   op:function(x,y) { return x*y },
   inv:function(x) { return 1/x},
 }
 
-extend(F.FloatMulGroup, F.Group, F.Set.Float);
+extend(j6.FloatMulGroup, j6.AbelGroup, j6.Float);
 
-F.FloatField=extend({}, F.Field, F.Set.Float);
+j6.FloatField=extend({}, j6.Field, j6.Float);
 
-F.FloatField.init(F.FloatAddGroup, F.FloatMulGroup);
+j6.FloatField.init(j6.FloatAddGroup, j6.FloatMulGroup);
 
 // ========== Finite Field =================
-F.FiniteAddGroup={
+j6.FiniteAddGroup={
   e:0,
   op:function(x,y) { return (x+y)%this.n },
   inv:function(x) { return (this.n-x) }
 }
 
-extend(F.FiniteAddGroup, F.Group);
+extend(j6.FiniteAddGroup, j6.AbelGroup);
 
-F.FiniteMulGroup={
+j6.FiniteMulGroup={
   e:1,
   op:function(x,y) { return (x*y)%this.n }, 
   inv:function(x) { return this.invMap[x] },
@@ -921,16 +287,16 @@ F.FiniteMulGroup={
   }
 }
 
-extend(F.FiniteMulGroup, F.Group);
+extend(j6.FiniteMulGroup, j6.AbelGroup);
 
-F.FiniteField=extend({}, F.Field);
+j6.FiniteField=extend({}, j6.Field);
 
-F.FiniteField.create=function(n) {
-  var finiteField = extend(F.Finite(n), F.FiniteField);
-  var addGroup = extend(F.Finite(n), {n:n}, F.FiniteAddGroup);
-  var mulGroup = extend(F.Finite(n), {n:n}, F.FiniteMulGroup);
-  finiteField.init(addGroup, mulGroup);
-  mulGroup.setOrder(n);
+j6.FiniteField.create=function(n) {
+  var finiteField = extend(j6.Finite(n), j6.FiniteField);
+  var addSet = extend(j6.Finite(n), {n:n}, j6.FiniteAddGroup);
+  var mulSet = extend(j6.Finite(n), {n:n}, j6.FiniteMulGroup);
+  finiteField.init(addSet, mulSet);
+  mulSet.setOrder(n);
   return finiteField;
 }
 
@@ -939,16 +305,16 @@ class MathObj {
   str() { return this.toString() }
 }
 
-F.MathObj = MathObj;
+j6.MathObj = MathObj;
 
 // =========== Field Object ==============
 class FieldObj extends MathObj {
   constructor(field) { 
     super();
     this.field = field;
-		var p = Object.getPrototypeOf(this);
-		p.zero = field.zero;
-		p.one = field.one;
+    var p = Object.getPrototypeOf(this);
+    p.zero = field.zero;
+    p.one = field.one;
   }
   
   add(y) { return this.field.add(this,y) }
@@ -958,61 +324,60 @@ class FieldObj extends MathObj {
   div(y) { return this.field.div(this,y) }
   sub(y) { return this.field.sub(this,y) }
   power(n) { return this.field.power(this,n) }
-	isZero(x) { return this.field.isZero(this) }
-	isOne(x) { return this.field.isOne(this) }
+  isZero(x) { return this.field.isZero(this) }
+  isOne(x) { return this.field.isOne(this) }
   eq(y) { return this.field.eq(this, y) }
-	neq(y) { return this.field.neq(this, y) }
-	mod(y) { return this.field.mod(this, y) }
-	gcd(y) { return this.field.gcd(this, y) }
+  neq(y) { return this.field.neq(this, y) }
+  mod(y) { return this.field.mod(this, y) }
 }
 
-F.FieldObj = FieldObj;
+j6.FieldObj = FieldObj;
 
 // =========== Complex Field ==============
-F.ComplexField=extend({}, F.Field);
+j6.ComplexField=extend({}, j6.Field);
 
 class Complex extends FieldObj {
   constructor(a,b) {
-    super(F.ComplexField);
+    super(j6.ComplexField);
     this.a = a; this.b = b; 
   }
   conj() { return new Complex(this.a, -1*this.b); }
   
-	str() { 
+  str() { 
     var op = (this.b<0)?'':'+';
-	  return this.a.str()+op+this.b.str()+'i';
-	}
+    return j6.nstr(this.a)+op+j6.nstr(this.b)+'i';
+  }
   toString() { return this.str() }
   
-	toPolar() {
+  toPolar() {
     var a=this.a, b=this.b, r=Math.sqrt(a*a+b*b);
     var theta = Math.acos(a/r);
-		return {r:r, theta:theta}
-	}
-	
-	power(k) {
-		var p = this.toPolar();
-		return Complex.polarToComplex(Math.pow(p.r,k), k*p.theta);
-	}
-	
-	sqrt() {
-		return this.power(1/2);
-	}
-	
-	static toComplex(o) {
-		if (F.isFloat(o))
-			return new Complex(o, 0);
-		else if (o instanceof Complex)
-			return o;
-		console.log('o=', o);
-		throw Error('toComplex fail');
-	}
-	
-	static polarToComplex(r,theta) {
+    return {r:r, theta:theta}
+  }
+  
+  power(k) {
+    var p = this.toPolar();
+    return Complex.polarToComplex(Math.pow(p.r,k), k*p.theta);
+  }
+  
+  sqrt() {
+    return this.power(1/2);
+  }
+  
+  static toComplex(o) {
+    if (j6.isFloat(o))
+      return new Complex(o, 0);
+    else if (o instanceof Complex)
+      return o;
+    console.log('o=', o);
+    throw Error('toComplex fail');
+  }
+  
+  static polarToComplex(r,theta) {
     var a=r*Math.cos(theta), b=r*Math.sin(theta);
-		return new Complex(a, b);
-	}
-	
+    return new Complex(a, b);
+  }
+  
   static parse(s) {
     var m = s.match(/^([^\+]*)(\+(.*))?$/);
     var a = parseFloat(m[1]);
@@ -1021,57 +386,60 @@ class Complex extends FieldObj {
   }
 }
 
-F.Complex = Complex;
+j6.Complex = Complex;
+j6.polarToComplex = Complex.polarToComplex;
+j6.toComplex = Complex.toComplex;
+
 var C = (a,b)=>new Complex(a,b);
 var enumComplex=[C(1,0),C(0,1),C(0,0),C(2,3),C(-5,4),C(-10,-7)];
-F.ComplexSet=new F.Set(enumComplex);
-F.ComplexSet.has = (a)=>a instanceof Complex;
+j6.ComplexSet=new j6.create(enumComplex);
+j6.ComplexSet.has = (a)=>a instanceof Complex;
 
-F.ComplexAddGroup={
+j6.ComplexAddGroup={
   e:new Complex(0,0),
   op:function(x,y) { 
-	  x = Complex.toComplex(x), y=Complex.toComplex(y);
-	  return new Complex(x.a+y.a, x.b+y.b) 
-	},
+    x = Complex.toComplex(x), y=Complex.toComplex(y);
+    return new Complex(x.a+y.a, x.b+y.b) 
+  },
   inv:function(x) { 
-	  x = Complex.toComplex(x);
-	  return new Complex(-x.a, -x.b) 
-	}
+    x = Complex.toComplex(x);
+    return new Complex(-x.a, -x.b) 
+  }
 }
 
-extend(F.ComplexAddGroup, F.Group, F.ComplexSet);
+extend(j6.ComplexAddGroup, j6.AbelGroup, j6.ComplexSet);
 
-F.ComplexMulGroup={
+j6.ComplexMulGroup={
   e:new Complex(1,0),
   op:function(x,y) {
-	  x = Complex.toComplex(x), y=Complex.toComplex(y);
+    x = Complex.toComplex(x), y=Complex.toComplex(y);
     return new Complex(x.a*y.a-x.b*y.b, x.a*y.b+x.b*y.a);
   },
   inv:function(x) {
-	  x = Complex.toComplex(x);
-    var a=x.a,b=x.b, r=(a*a+b*b);
+    x = Complex.toComplex(x);
+    var a=x.a,b=x.b, r=a*a+b*b;
     return new Complex(a/r, -b/r);
   } 
 }
 
-extend(F.ComplexMulGroup, F.Group, F.ComplexSet);
+extend(j6.ComplexMulGroup, j6.AbelGroup, j6.ComplexSet);
 
-extend(F.ComplexField, F.ComplexSet);
+extend(j6.ComplexField, j6.ComplexSet);
 
-F.ComplexField.init(F.ComplexAddGroup, F.ComplexMulGroup);
+j6.ComplexField.init(j6.ComplexAddGroup, j6.ComplexMulGroup);
 
 // =========== Ratio Field ==============
-F.RatioField=extend({}, F.Field);
+j6.RatioField=extend({}, j6.Field);
 
 class Ratio extends FieldObj {
   constructor(a,b) {
-    super(F.RatioField);
+    super(j6.RatioField);
     this.a = a; this.b = b; 
   }
 
   reduce() {
     var a = this.a, b=this.b;
-    var c = F.Integer.gcd(a, b);
+    var c = j6.gcd(a, b);
     return new Ratio(a/c, b/c);
   }
   
@@ -1085,680 +453,1884 @@ class Ratio extends FieldObj {
   } 
 }
 
-F.Ratio = Ratio;
+j6.Ratio = Ratio;
 
-F.RatioAddGroup={
+j6.RatioAddGroup={
   e:new Ratio(0,1),
   op:function(x,y) { return new Ratio(x.a*y.b+x.b*y.a, x.b*y.b) },
   inv:function(x) { return new Ratio(-x.a, x.b); },
 }
   
-extend(F.RatioAddGroup, F.Group);
+extend(j6.RatioAddGroup, j6.AbelGroup);
 
-F.RatioMulGroup={
+j6.RatioMulGroup={
   e:new Ratio(1,1),
   op:function(x,y) { return new Ratio(x.a*y.a, x.b*y.b) },
   inv:function(x) { return new Ratio(x.b, x.a) },
 }
 
-extend(F.RatioMulGroup, F.Group);
+extend(j6.RatioMulGroup, j6.AbelGroup);
 
-F.RatioField.init(F.RatioAddGroup, F.RatioMulGroup);
+j6.RatioField.init(j6.RatioAddGroup, j6.RatioMulGroup);
 
+// Function
+j6.isField = j6.isField=function(x) {
+  return j6.isBool(x) || j6.isNumber(x) || x instanceof j6.FieldObj;
+}
+
+j6.parse = j6.parse = function(s) {
+	if (s.indexOf(';')>=0) {
+		var m = split(s, ";"), matrix;
+		for (var i=0; i<m.length; i++) {
+			matrix[i] = j6.parse(m[i]);
+		}
+		return matrix;
+	} if (s.indexOf(',')>=0) {
+		var a = split(s, ","), array;
+		for (var i=0; i<a.length; i++) {
+			array[i] = j6.parse(a[i]);
+		}
+		return array;
+	}
+	else if (s.indexOf('/')>=0)
+		return j6.Ratio.parse(s);
+	else if (s.indexOf('i')>=0)
+		return j6.Complex.parse(s);
+	else {
+		return parseFloat(s);
+	}
+}
+
+j6.op = function(op,x,y) {
+	if (y instanceof j6.Complex) {
+		x = x.toComplex();
+		switch (op) {
+			case 'add':return x.add(y);
+			case 'sub':return x.sub(y);
+			case 'mul':return x.mul(y);
+			case 'div':return x.div(y);
+			case 'sqrt':return x.sqrt();
+			case 'power':return x.power(y);
+		}
+	} else if (y instanceof Array) {
+		switch (op) {
+			case 'add':return y.add(x);
+			case 'sub':return y.sub(x).neg();
+			case 'mul':return y.mul(x);
+			case 'div':return y.div(x).inv();
+		}
+	} else {
+		switch (op) {
+			case 'add':return x+y;
+			case 'sub':return x-y;
+			case 'mul':return x*y;
+			case 'div':return x/y;
+			case 'sqrt':return (x>=0)?Math.sqrt(x):x.toComplex().sqrt(x);
+			case 'power':return (y>=0)?Math.pow(x,y):x.toComplex().power(x,y);
+		}
+	}
+	throw Error('j6.op:invalid '+op);
+}
+
+j6.neg=function(x) { return -x }
+j6.inv=function(x) { return 1/x }
+j6.add=function(x,y) { return j6.op('add', x, y) }
+j6.sub=function(x,y) { return j6.op('sub', x, y) }
+j6.mul=function(x,y) { return j6.op('mul', x, y) }
+j6.div=function(x,y) { return j6.op('div', x, y) }
+j6.mod=function(x,y) { return x%y }
+j6.sqrt=function(x) { return j6.op('sqrt', x) }
+j6.power=function(x,y) { return j6.op('power', x, y) }
+j6.eval=function(f,x) { return f(x) }
+
+// =========== Function Field ==============
+j6.FunctionField = extend({}, j6.Field)
+
+j6.FunctionAddGroup = {
+  e: function (x) { return 0 },
+  op: function (x, y) { return j6.add(x, y) },
+  inv: function (x) { return j6.neg(x) }
+}
+
+extend(j6.FunctionAddGroup, j6.AbelGroup)
+
+j6.FunctionMulGroup = {
+  e: function (x) { return f(x) },
+  op: function (x, y) { return j6.sub(x, y) },
+  inv: function (x) { return j6.inv(x) }
+}
+
+extend(j6.FunctionMulGroup, j6.AbelGroup)
+
+j6.FunctionField.init(j6.FunctionAddGroup, j6.FunctionMulGroup)
+
+// =========== Polynomial Ring ==============
+j6.PolynomialRing = extend({}, j6.Field)
+
+class Polynomial extends j6.FieldObj {
+  constructor (c) {
+    super(j6.PolynomialRing)
+    this.c = c // sum(ci x^i)
+  }
+
+  eval (x) {
+    var c = this.c
+    var i = c.length - 1
+    var sum = c[i]
+    for (i--; i >= 0; i--) {
+      sum = c[i].add(x.mul(sum))
+    }
+    return sum
+  }
+
+  size () { return this.c.length }
+
+  toString () {
+    var s = []
+    var c = this.c
+    for (var i = c.length - 1; i >= 0; i--) {
+      s.push(c[i] + 'x^' + i)
+    }
+    return s.join('+')
+  }
+
+  root () {
+    var p = this.normalize() // 正規化
+    var c = p.c.toComplex()
+    console.log('c=%s', c)
+    switch (this.size()) {
+      case 2:return p.c[0].neg()
+      case 3:return p.root2(c[1], c[0])
+      case 4:return p.root3(c[2], c[1], c[0])
+      default:throw Error('root() fail')
+    }
+  }
+
+  root2 (b, c) { // x^2 + bx + c = 0
+    var d = b.mul(b).sub(c.mul(j6.parse('4+0i'))).sqrt()
+    return [b.neg().add(d), b.neg().sub(d)]
+  }
+
+  root3 (a, b, c) { // x^3+ax^2+bx+c=0
+    var q = a.power(3).mul(2 / 27).sub(a.mul(b).div(3).add(c)).div(2) // q=((2*a*a*a/27)-(a*b/3)+c)/2;
+    var p = b.sub(a.power(2).div(3)).div(3) // p=(b-a*a/3)/3;
+    var D = p.power(3).add(q.power(2)) // D=p*p*p+q*q;
+    var Dsqrt = D.sqrt()
+    var _q = q.neg()
+    console.log('Dsqrt=%s _q=%s', Dsqrt, _q)
+    var uP = _q.add(Dsqrt).power(1 / 3) // u+ = (-q+sqrt(D))^1/3
+    var uM = _q.sub(Dsqrt).power(1 / 3) // u- = (-q-sqrt(D))^1/3
+    console.log('q=%s p=%s D=%s u+=%s u-=%s', q, p, D, u_p, u_m)
+    var rhoP = j6.parse('-1+3i').div(2) // rho+ = (-1+3i)/2
+    var rhoM = j6.parse('-1-3i').div(2) // rho- = (-1-3i)/2
+    console.log('rho+ = %s rho- = %s', rhoP, rhoM)
+    var y1 = uP.add(uM) // y1 = (u+) + (u-)
+    var y2 = rhoP.mul(uP).add(rhoM.mul(uM)) // y2=(rho+*u+)+(rho-*u-)
+    var y3 = rhoM.mul(uP).add(rhoP.mul(uM)) // y3=(rho-*u+)+(rho+*u-)
+    return [y1, y2, y3]
+  }
+
+  normalize () {
+    var a = this.c[this.size() - 1]
+    var nc = this.c.div(a)
+    return new Polynomial(nc)
+  }
+}
+
+j6.Polynomial = Polynomial
+
+j6.PolynomialAddGroup = {
+  e: new Polynomial([0]), // 到底應該設幾個？
+  op: function (x, y) {
+    var size = Math.max(x.size(), y.size())
+    var a = j6.extend(x.c, size)
+    var b = j6.extend(y.c, size)
+    var c = a.add(b)
+    return new Polynomial(c)
+  },
+  inv: function (x) {
+    var c = x.c.neg()
+    return new Polynomial(c)
+  }
+}
+
+extend(j6.PolynomialAddGroup, j6.Group)
+
+j6.PolynomialMulSemiGroup = {
+  e: new Polynomial([1]),
+  op: function (x, y) {
+    var c = []
+    for (var xi = 0; xi < x.c.length; xi++) {
+      for (var yi = 0; yi < y.c.length; yi++) {
+        var cxy = (typeof c[xi + yi] === 'undefined') ? 0 : c[xi + yi]
+        c[xi + yi] = cxy + (x.c[xi] * y.c[yi])
+      }
+    }
+    return new Polynomial(c)
+  },
+  inv: function (x) { throw Error('PolynomialMulSemiGroup.inv not defined') }
+}
+
+extend(j6.PolynomialMulSemiGroup, j6.Group)
+
+j6.PolynomialRing.init(j6.PolynomialAddGroup, j6.PolynomialMulSemiGroup)
+}
+},{}],2:[function(require,module,exports){
+module.exports = function (j6) {
+
+/* eslint-disable no-undef */
+j6.cosineSimilarity = function (v1, v2) {
+  return v1.vdot(v2) / (v1.norm() * v2.norm())
+}
+
+j6.euclidDistance = function (v1, v2) { // sqrt((v1-v2)*(v1-v2)T)
+  let dv = v1.sub(v2)
+  return Math.sqrt(dv * (dv.tr()))
+}
+
+j6.manhattanDistance = function (v1, v2) { // sum(|v1-v2|)
+  return v1.sub(v2).abs().sum()
+}
+
+j6.chebyshevDistance = function (v1, v2) { // max(|v1-v2|)
+  return v1.sub(v2).abs().max()
+}
+}
+},{}],3:[function(require,module,exports){
+module.exports = function (j6) {
+j6.logp = function(n) {
+	return j6.steps(1,n,1).log().sum();
+}
+
+// 傳回多項分布的 log 值！ log( (n!)/(x1!x2!...xk!) p1^x1 p2^x2 ... pk^xk )
+// = [log(n)+...+log(1)]-[log(x1)...]+....+x1*log(p1)+...+xk*log(pk)
+j6.xplog = function(x, p) {
+  var n = x.sum();
+  var r = j6.logp(n);
+  for (var i in x) r -= j6.logp(x[i]);
+  return r + x.dot(p.log());
+}
+}
+
+},{}],4:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable no-undef */
 // =========== Function Operation ==============
-F.fneg=function(fx) { return function(v) {
-	return -1*fx(v);
-}}
+j6.neg = function (fx) {
+  return function (v) { return -1 * fx(v) }
+}
 
-F.finv=function(fx) { return function(v) {
-	return 1/fx(v);
-}}
+j6.inv = function (fx) {
+  return function (v) { return 1 / fx(v) }
+}
 
-F.fadd=function(fx,fy) { return function(v) {
-	return fx(v).add(fy(v));
-}}
+j6.add = function (fx, fy) {
+  return function (v) { return fx(v).add(fy(v)) }
+}
 
-F.fsub=function(fx,fy) { return function(v) {
-	return fx(v).sub(fy(v));
-}}
+j6.sub = function (fx, fy) {
+  return function (v) { return fx(v).sub(fy(v)) }
+}
 
-F.fmul=function(fx,fy) { return function(v) {
-	return fx(v).mul(fy(v));
-}}
+j6.mul = function (fx, fy) {
+  return function (v) { return fx(v).mul(fy(v)) }
+}
 
-F.fdiv=function(fx,fy) { return function(v) {
-	return fx(v).div(fy(v));
-}}
+j6.div = function (fx, fy) {
+  return function (v) { return fx(v).div(fy(v)) }
+}
 
-F.fcompose=function(fx,fy) { return function(v) {
-	return fx(fy(v));
-}}
+j6.compose = function (fx, fy) {
+  return function (v) { return fx(fy(v)) }
+}
 
-F.feval=function(f,x) { return f(x) }
+j6.eval = function (f, x) { return f(x) }
 
 // f=(x,y)=>x*y+x*x;
 // f0=fa(f); f0([x,y]);
-F.fa=function(f) {
-	return function(x) {
-		return f.apply(null, x);
-	}
+j6.fa = function (f) {
+  return function (x) { return f.apply(null, x) }
 }
 
-// =========== Function Field ==============
-F.FunctionField=extend({}, F.Field);
+/*
 
-F.FunctionAddGroup={
-  e:function(x) { return 0 },
-  op:function(x,y) { return F.fadd(x,y) },
-  inv:function(x) { return F.fneg(x) },
-}
-  
-extend(F.FunctionAddGroup, F.Group);
-
-F.FunctionMulGroup={
-  e:function(x) { return f(x) },
-  op:function(x,y) { return F.fsub(x,y) },
-  inv:function(x) { return F.finv(x) },
+// ================= Checking Rule =====================
+j6.check = j6.assert = function (cond, msg) {
+  if (cond) {
+    if (j6.assertMessage) console.log('O:' + msg)
+  } else {
+    console.log('X:' + msg)
+    if (j6.throwError) throw Error('check fail!')
+  }
 }
 
-extend(F.FunctionMulGroup, F.Group);
+j6.assertMessage = true
+j6.throwError = false
+*/
+// j6.be = function (msg, cond) { return j6.check(cond, msg) }
 
-F.FunctionField.init(F.FunctionAddGroup, F.FunctionMulGroup);
+// j6.proto = function (o) { return Object.getPrototypeOf(o) }
 
-// Function
-F.isField=function(x) {
-	return F.isBool(x) || F.isNumber(x) || x instanceof F.FieldObj;
+// relation
+j6.eq = function (a, b) {
+  return (typeof a === typeof b) && a.toString() === b.toString()
 }
 
-module.exports = F;
+j6.neq = function (a, b) { return !j6.eq(a, b) }
+j6.leq = function (a, b) { return a <= b }
+j6.geq = function (a, b) { return a >= b }
+j6.lt = function (a, b) { return a < b }
+j6.gt = function (a, b) { return a > b }
+j6.near = function (a, b) { return Math.abs(a - b) < 0.0001 }
 
 
-},{"./integer":6,"./set":9}],5:[function(require,module,exports){
-var G = require("./statistics");
+// =========== Integer ====================
+j6.isPrime = function (n) {
+  for (var i = 2; i <= Math.sqrt(n); i++) {
+    if (n % i === 0) return false
+  }
+  return n % 1 === 0
+}
+
+j6.gcd = function (a, b) {
+  if (!b) return a
+  return j6.gcd(b, a % b)
+}
+
+j6.lcm = function (a, b) {
+  return (a * b) / j6.gcd(a, b)
+}
+
+// ========= type checking =================
+j6.yes = function (a) { return true }
+j6.no = function (a) { return false }
+j6.isBool = function (a) {
+  return typeof a === 'boolean' || a instanceof Boolean
+}
+j6.isFunction = function (a) {
+  return typeof a === 'function' || a instanceof Function
+}
+j6.isString = function (a) {
+  return typeof a === 'string' || a instanceof String
+}
+j6.isObject = function (a) {
+  return typeof a === 'object' || a instanceof Object
+}
+j6.isArray = function (a) { return a instanceof Array }
+j6.isUndefined = function (a) { return typeof a === 'undefined' }
+j6.isSet = function (a) { return a instanceof Set }
+j6.isFloat = j6.isNumber = function (a) {
+  return typeof a === 'number' || a instanceof Number
+}
+j6.isInteger = function (a) { return j6.isFloat(a) && a % 1 === 0 }
+j6.isZero = function (a) { return a === 0 }
+j6.isPositive = function (a) { return a > 0 }
+j6.isNegative = function (a) { return a < 0 }
+j6.isEven = function (a) { return (j6.isInteger(a) && a % 2 === 0) }
+j6.isOdd = function (a) { return (j6.isInteger(a) && a % 2 === 1) }
+}
+},{}],5:[function(require,module,exports){
+module.exports = function (j6) {
+var extend = j6.extend;
+// j6 = j6.j6 = j6.Geometry = {}
 
 // 各種 space : https://en.wikipedia.org/wiki/Space_(mathematics)#/media/File:Mathematical_implication_diagram_eng.jpg
 
-G.Space={} // Space = HllbertSpace + BanachSpace + Manifold (流形)
+// Space = HllbertSpace + BanachSpace + Manifold (流形)
+j6.Space = extend({}, j6.Set);
 
-G.HilbertSpace={} // HilbertSpace => InnerProductSpace => LocallyConvaxSpace => VectorSpace (LinearSpace)
-
-G.InnerProductSpace={}
-
-G.LocallyConvaxSpace={}
-
-G.LinearSpace=G.VectorSpace={} // (Algebraic)
-
-G.BanachSpace={} // BanachSpace => NormedVectorSpace => MetricSpace => TopologicalSpace
-
-G.NormedVectorSpace={}
-
-G.MetricSpace={}
-
-G.TopologicalSpace={} // (Analytic)
-
-G.Manifold={}
-
-G.Rn = {} // (R,R,....)
-
-G.steps = function(from, to, step) {
-	step=step || 1;
-	var a=[];
-	for (var t=from; t<=to; t+=step)
-		a.push(t);
-	return a;
+// ============= Topology ====================
+// https://en.wikipedia.org/wiki/Topological_space
+// p : point
+j6.TopologicalSpace={ // 拓撲空間 : a Space with neighbor()
+	neighbor:function(p1, p2) {}, // TopologicalSpace is a Space with neighbor() function.
+  coarser:function(T1, T2) {}, // 更粗糙的 (coarser, weaker or smaller) 的拓樸
+	finer:function(T1, T2) { return !courser(T2,T1) }, // 更細緻的 (finer, stronger or larger) 的拓樸
+	continuous:function() {}, // if for all x in X and all neighbourhoods N of f(x) there is a neighbourhood M of x such that f(M) is subset of N.
+	homeomorphism:function() {}, // 同胚: 同胚是拓撲空間範疇中的同構(存在 f 雙射，連續，且 f-1 也連續) (注意和代數的 Homomorphism (同態) 不同，差一個 e)
 }
 
-G.curve=function(f, from=-10, to=10, step=0.1) {
-	var x=G.steps(from, to, step);
-	var y=x.map(f);
-	return { type:"curve", x:x,	y:y	};
+extend(j6.TopologicalSpace, j6.Space);
+
+// Kolmogorov classification T0, T1, T2, ....
+// https://en.wikipedia.org/wiki/Separation_axiom
+
+j6.T0 = j6.KolmogorovSpace = {
+// every pair of distinct points of X, at least one of them has a neighborhood not containing the other	
 }
 
-G.hist=function(a, from, to, step=1) {
-//	console.log("from=%d to=%d step=%d", from, to, step);
-	from = from||a.min();
-	to = to||a.max();
-  var n = Math.ceil((to-from+G.EPSILON)/step);
-  var xc = G.steps(from+step/2.0, to, step);
-//	console.log("from=%d to=%d step=%d xc=%j", from, to, step, xc);
-  var bins = G.newV(n, 0);
-  for (var i in a) {
-    var slot=Math.floor((a[i]-from)/step);
-    if (slot>=0 && slot < n)
-      bins[slot]++;
-  }
-	return { type:'histogram', xc:xc, bins:bins, from:from, to:to, step:step};
+extend(j6.T0, j6.TopologicalSpace);
+
+j6.T1 = j6.FrechetSpace = {}
+
+// 任兩點都可鄰域分離者，為郝斯多夫空間。
+j6.T2 = j6.HausdorffSpace = {}
+
+j6.T2Complete = {}
+
+j6.T2p5	= j6.Urysohn = {} // T2?
+
+j6.T3 = j6.RegularSpace = {
+	// every closed subset C of X and a point p not contained in C admit non-overlapping open neighborhoods
 }
+
+j6.T3p5	= j6.TychonoffSpace = {} // T3?
+
+j6.T4 = j6.NormalHausdorff = {}
+
+j6.T5 = j6.CompletelyNormalHausdorff = {}
+
+j6.T6 = j6.PerfectlyNormalHausdorff = {}
+
+// https://en.wikipedia.org/wiki/Discrete_space
+j6.DiscreteSpace = {} // 
+
+extend(j6.DiscreteSpace, j6.TopologicalSpace);
+
+// 1. d(x,y)>=0, 2. d(x,y)=0 iff x=y 3. d(x,y)=d(y,x) 4. d(x,z)<=d(x,y)+d(y,z)
+j6.Metric = {
+	d:function(x,y) {}, 
+	test0:function() {
+		be(d(x,y)>=0);
+		be(d(x,x)==0);
+		be(d(x,y)==d(y,x));
+	},
+	test:function() {
+		test0();
+		be(d(x,z)<=d(x,y)+d(y,z));
+	},
+}
+
+j6.UltraMetric = {
+	test:function() {
+		test0();
+		be(d(x,z)<=max(d(x,y),d(y,z)));
+	},
+}
+
+extend(j6.UltraMetric, j6.Metric);
+
+// https://en.wikipedia.org/wiki/Metric_space
+j6.MetricSpace = { // distances between all members are defined
+	d:function(p1,p2) {},
+	test:function() {
+		be(d(x,y)>=0);
+		be(d(x,x)===0);
+		be(d(x,y)===d(y,x));
+		be(d(x,z)<=d(x,y)+d(y,z));
+	}
+}
+
+j6.CompleteMetricSpace = { // 空間中的任何柯西序列都收斂在該空間之內。
+}
+
+extend(j6.CompleteMetricSpace, j6.MetricSpace);
+
+// https://en.wikipedia.org/wiki/Complete_metric_space
+j6.CompleteMetricSpace = {
+	// M is called complete (or a Cauchy space) if every Cauchy sequence of points in M has a limit that is also in M or, alternatively, if every Cauchy sequence in M converges in M.
+}
+
+// https://en.wikipedia.org/wiki/Uniform_space
+j6.UniformSpace = { // 帶有一致結構的集合，「x 鄰近於a 勝過y 鄰近於b」之類的概念，在均勻空間中是有意義的。
+	
+}
+
+j6.Rn = {
+	
+} // (j6,j6,....)
+
+// 向量空間： VectorSpace = Rn + Linearity
+// V:AbelGroup(交換群), F:Field
+// 1. F × V → V，(r,v)→ rv
+// 2. r(x+y) = rx+ry
+// 3. (r+s)x = rx+sx
+// 4. (rs)x = r(sx)
+// 5. 1x = x
+j6.VectorSpace = j6.LinearSpace = {
+	add(x,y) { return x.add(y) },
+	mul(a,x) { return a.mul(x) },
+	bilinear(b) { // https://en.wikipedia.org/wiki/Bilinear_form
+		linear((u)=>b(u,w));
+		linear((w)=>b(u,w));
+	},
+	positiveDefinite(b) { }, // 正定
+	symmetric(b) {}, // 對稱
+	dualSpace() {}, // https://en.wikipedia.org/wiki/Dual_space
+}
+
+extend(j6.VectorSpace, j6.Rn);
+
+j6.FiniteVectorSpace = {} // 有限體向量空間
+
+extend(j6.FiniteVectorSpace, j6.VectorSpace);
+
+j6.NormedVectorSpace={ // 賦範空間
+	norm:function(v) { return x.norm() },
+}
+
+extend(j6.NormedVectorSpace, j6.VectorSpace);
+
+j6.InnerProductSpace={ // 內積空間
+	dot(x,y) { return x.vdot(y) },
+}
+
+extend(j6.InnerProductSpace, j6.NormedVectorSpace);
+
+// 仿射空間：a1 v1 + ... + an vn 中 sum(ai)=1
+// https://en.wikipedia.org/wiki/Affine_space
+j6.AffineSpace = {
+	sub(x,y) { }, // 點與點的差是一向量
+	add(x,v) { }, // 點加向量得一點，但點與點不可作加法
+}
+
+// ============= Euclidean Geometry 歐氏幾何 ====================
+j6.EuclideanSpace = {
+	d(x,y) { return x.sub(y).norm() }, // v= x.sub(y); v.dot(v).sqrt()
+	dot(x,y) { return x.vdot(y) },
+}
+
+j6.LocallyConvaxSpace={}
+extend(j6.LocallyConvaxSpace, j6.VectorSpace);
+
+j6.HilbertSpace={} // HilbertSpace => InnerProductSpace => LocallyConvaxSpace => VectorSpace (LinearSpace)
+extend(j6.HilbertSpace, j6.InnerProductSpace);
+
+// BanachSpace => NormedVectorSpace => MetricSpace => TopologicalSpace
+// NormedVectorSpace that Cauchy sequence of vectors always converges to a well defined limit
+j6.BanachSpace={}
+
+extend(j6.BanachSpace, j6.NormedVectorSpace);
+
+j6.MeasureSpace = {} // 測度空間 M(Set) => j6
+
+j6.ProbabilitySpace = {} // 機率空間 M(Set) = 1/3
+
+
+// ============= Elliptic Geometry 橢圓幾何 ====================
+j6.EllipticGeometry = {} // 橢圓幾何
+
+j6.SphericalGeometry = {} // 球面幾何
+
+j6.SphericalTrigonometry = {} // 球面三角學
+
+j6.Geodesy = {} // 大地測量學
+
+j6.GreatCircleDistance = {} // 大球距離
+
+// 圓： x^2+y^2 = 1 =>  (x,y)=(sin t, cos t)
+// 雙曲線： x^2-y^2 = 1 => (x,y) = (sinh t, cosh t)
+// sinh = (e^x-e^{-x})/2, cosh = (e^x+e^{-x})/2
+// https://en.wikipedia.org/wiki/Hyperbolic_function
+// sinh x = -i sin ix ; cosh x = cos ix
+// sin x  泰勒展開 = x - 1/3! x^3 + 1/5! x^5 ....
+// sinh x 泰勒展開 = x + 1/3! x^3 + 1/5! x^5 ....
+// int sinh cx dx = 1/c cosh cx + C 
+  
+
+// ============= Hyperbolic Geometry 雙曲幾何 ====================
+j6.HyperbolicGeometry = {}
+
+// ============= Riemannian Geometry ====================
+// https://en.wikipedia.org/wiki/Riemannian_geometry
+j6.RiemannianGeometry = {} // 黎曼幾何
+
+j6.RiemannianMetrics = {} // 黎曼度規
+
+j6.MetricTensor = {} // 度規張量
+
+j6.GaussBonnetTheorem = {} // 高斯博內定理
+
+// ============= Manifold : 流形 ====================
+j6.Manifold={}
+
+j6.C0 = {}
+
+j6.Coo = {}
+
+// https://en.wikipedia.org/wiki/Topological_vector_space
+j6.TopologicalVectorSpace = {}  
+
+// https://en.wikipedia.org/wiki/Locally_convex_topological_vector_space
+j6.LocallyConvexSpace = {}
+
+extend(j6.LocallyConvexSpace, j6.TopologicalVectorSpace);
+extend(j6.LocallyConvexSpace, j6.NormedVectorSpace);
+
+// m 維拓撲流形
+j6.TopologicalManifold={
+// M是豪斯多夫空間，x in M 有鄰域 U 同胚於 m 維歐幾里得空間 j6^{m}的一個開集
+}
+
+j6.BanachManifold = {}
+
+// =========== Topological Ring ==============
+j6.TopologicalRing = extend({}, j6.Ring);
+j6.TopologicalField = extend({}, j6.Field);
+
+// ref : https://en.wikipedia.org/wiki/Group_homomorphism
+//  https://en.wikipedia.org/wiki/Fundamental_theorem_on_homomorphisms
+// 同態：h(a • b) = h(a) x h(b) 
+j6.homomorphism=function(h, g1, g2) {
+  var a=g1.random(), b=g2.random();
+  return eq(h(group1.op(a,b)), group2.op(h(a), h(b)))
+}
+
+// ref : https://en.wikipedia.org/wiki/Isomorphism
+//  https://en.wikipedia.org/wiki/Isomorphism_theorem
+// 同構：h(a • b) = h(a) • h(b)
+j6.isomorphism=function(h1, h2, g1, g2) {
+  var a1=g1.random(), b1=g2.random();
+  var a2=g1.random(), b2=g2.random();
+  return homorphism(h1,g1,g2)&&homorphism(h2,g2,g1);
+}
+
+
+// 多邊形：Polygon
+// 多面體：Polyhedron : V-E+F = 2
+// 多胞形：Polytope
+// ============= Spherical Geometry ====================
+j6.SphericalGeometry = {}
+
+j6.MandelbrotSet = {}
 /*
-G.ihist=function(a) {
-	console.log("a.min()=%d a.max()=%d", a.min(), a.max());
-	return G.hist(a, a.min()-0.5, a.max()+0.5, 1);
+For each pixel (Px, Py) on the screen, do:
+{
+  x0 = scaled x coordinate of pixel (scaled to lie in the Mandelbrot X scale (-2.5, 1))
+  y0 = scaled y coordinate of pixel (scaled to lie in the Mandelbrot Y scale (-1, 1))
+  x = 0.0
+  y = 0.0
+  iteration = 0
+  max_iteration = 1000
+  // Here N=2^8 is chosen as a reasonable bailout radius.
+  while ( x*x + y*y < (1 << 16)  AND  iteration < max_iteration ) {
+    xtemp = x*x - y*y + x0
+    y = 2*x*y + y0
+    x = xtemp
+    iteration = iteration + 1
+  }
+  // Used to avoid floating point issues with points inside the set.
+  if ( iteration < max_iteration ) {
+    // sqrt of inner term removed using log simplification rules.
+    log_zn = log( x*x + y*y ) / 2
+    nu = log( log_zn / log(2) ) / log(2)
+    // Rearranging the potential function.
+    // Dividing log_zn by log(2) instead of log(N = 1<<8)
+    // because we want the entire palette to range from the
+    // center to radius 2, NOT our bailout radius.
+    iteration = iteration + 1 - nu
+  }
+  color1 = palette[floor(iteration)]
+  color2 = palette[floor(iteration) + 1]
+  // iteration % 1 = fractional part of iteration.
+  color = linear_interpolate(color1, color2, iteration % 1)
+  plot(Px, Py, color)
 }
 */
-module.exports=G;
-},{"./statistics":10}],6:[function(require,module,exports){
-var I = {};
 
-I.gcd = function(a, b) {
-  if (!b) return a;
-  return I.gcd(b, a % b);
+
+// 碎形幾何 : Fractal
+// http://andrew-hoyer.com/
+// http://andrew-hoyer.com/experiments/fractals/
+// http://flam3.com/flame.pdf
+// https://en.wikipedia.org/wiki/List_of_fractals_by_Hausdorff_dimension
+
+// http://rembound.com/articles/drawing-mandelbrot-fractals-with-html5-canvas-and-javascript
+// https://github.com/rembound/Mandelbrot-Fractal-HTML5/blob/master/mandelbrot-fractal.js
+
+
+// 操控繪圖
+// http://fabricjs.com/ (讚！)
+// https://github.com/kangax/fabric.js
+
+// 3D 動畫
+// https://threejs.org/
+// http://haptic-data.com/toxiclibsjs/
+
+// 地理資訊
+// ArcGIS : https://developers.arcgis.com/javascript/3/
+
+// 動畫
+// http://paperjs.org/features/
+// https://processing.org/
+
+// 向量
+// http://victorjs.org/
+// 3d: https://evanw.github.io/lightgl.js/docs/vector.html
+}
+},{}],6:[function(require,module,exports){
+/* eslint-disable no-undef */
+var j6 = module.exports = {}
+require('./util')(j6)
+require('./function')(j6)
+require('./set')(j6)
+require('./algebra')(j6)
+require('./tensor')(j6)
+require('./vector')(j6)
+require('./matrix')(j6)
+require('./probability')(j6)
+require('./statistics')(j6)
+require('./test')(j6)
+require('./entropy')(j6)
+require('./geometry')(j6)
+require('./distance')(j6)
+// j6.Symbol = require('algebrite')
+/*
+require('./optimize')(j6)
+require('./nn/nn')(j6)
+require('./ml/ml')(j6)
+// j6.NN = require('./neural')
+j6.Image = require('./image')
+j6.Kb = require('./kb')
+*/
+var J = require('jStat').jStat
+
+j6._ = require('lodash')
+
+j6.dot = function (a, b, isComplex = false) {
+  return (j6.M.isMatrix(a)) ? j6.M.dot(a, b, isComplex) : j6.V.dot(a, b, isComplex)
 }
 
-I.lcm = function(a, b) {
-  return (a * b) / gcd(a, b);   
-}
+j6.mapFunctions(j6, J, {
+//  C: 'combination', // C(n,m)
+  choose: 'combination', // C(n,m)
+  lchoose: 'combinationln', // log C(n,m)
+//  P: 'permutation', // P(n,m)
+  sd: 'stdev',
+  cov: 'covariance',
+  cor: 'corrcoeff'
+})
 
-I.isPrime=function(n) {
-	for (var i=2; i<=Math.sqrt(n); i++)
-		if (n%i===0) return false;
-	return n%1===0;
-}
+j6.mixThis(Array.prototype, j6, [
+  'samples',
+  'range',
+  'median',
+  'variance',
+  'deviation',
+  'sd',
+  'cov',
+  'cor',
+  'normalize',
+  'curve',
+  'hist',
+  'ihist',
+  'eval'
+])
 
-module.exports = I;
-},{}],7:[function(require,module,exports){
-// var M = require("./calculus");
-var M = require("./geometry");
+j6.mixThisMap(Array.prototype, j6.T, {
+  dim: 'dim',
+  sum: 'sum',
+  near: 'near',
+  max: 'max',
+  min: 'min',
+  product: 'product',
+  norm: 'norm',
+  mean: 'mean',
+  map1: 'map1',
+  map2: 'map2',
+  // slow map version
+  // logical
+  all: 'all',
+  // compare
+  eq: 'eq',
+  neq: 'neq',
+  geq: 'geq',
+  leq: 'leq',
+  gt: 'gt',
+  lt: 'lt',
+  // *+-/%
+  add: 'add',
+  sub: 'sub',
+  mul: 'mul',
+  div: 'div',
+  mod: 'mod',
+  neg: 'neg',
+  and: 'and',
+  or: 'or',
+  xor: 'xor',
+  not: 'not',
+  // bits operation
+  bnot: 'bnot',
+  band: 'band',
+  bor: 'bor',
+  bxor: 'bxor',
+  // function
+  power: 'power',
+  // 'dot', 和矩陣相衝
+  sqrt: 'sqrt',
+  log: 'log',
+  exp: 'exp',
+  abs: 'abs',
+  sin: 'sin',
+  cos: 'cos',
+  tan: 'tan',
+  asin: 'asin',
+  acos: 'acos',
+  atan: 'atan',
+  ceil: 'ceil',
+  floor: 'floor',
+  round: 'round',
+  toComplex: 'toComplex',
+  // Object version
+  oadd: 'oadd',
+  osub: 'osub',
+  omul: 'omul',
+  odiv: 'odiv',
+  osqrt: 'osqrt',
+  osum: 'osum',
+  oproduct: 'oproduct'
+})
 
-module.exports=M;
+j6.mixThisMap(Array.prototype, j6.V, {
+  // fast vector op
+  vdot: 'dot',
+  vadd: 'add',
+  vsub: 'sub',
+  vmul: 'mul',
+  vdiv: 'div'
+})
 
-},{"./geometry":5}],8:[function(require,module,exports){
-var N = require("numeric");
-var M = require("./algebra");
-// var M = N;
+j6.mixThisMap(Number.prototype, j6, {
+  add: 'add',
+  sub: 'sub',
+  mul: 'mul',
+  div: 'div',
+  sqrt: 'sqrt',
+  mod: 'mod',
+  neg: 'neg',
+  inv: 'inv',
+  power: 'power',
+  eval: 'eval',
+  toComplex: 'toComplex'
+})
+
+j6.mixThis(Number.prototype, Math, [
+  'log',
+  'exp',
+  'abs',
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'ceil',
+  'floor',
+  'round'
+])
+
+j6.mixThisMap(String.prototype, j6, {str: 'sstr', print: 'print', json: 'json'})
+j6.mixThisMap(Number.prototype, j6, {str: 'nstr', print: 'print', json: 'json'})
+j6.mixThisMap(Array.prototype, j6, {
+  str: 'vstr',
+  print: 'print',
+  json: 'json'
+})
+j6.mixThisMap(Object.prototype, j6, {
+  str: 'ostr',
+//  print: 'print', 這兩行去掉， c3.js 才能正常繪製圖表，原因不明！
+//  json: 'json'
+})
+
+j6.mixThisMap(Array.prototype, j6.M, {
+  lu: 'lu',
+  luSolve: 'luSolve',
+  svd: 'svd',
+  // 'cdelsq',
+  // 'clone',
+  rows: 'rows',
+  cols: 'cols',
+  row: 'row',
+  col: 'col',
+  tr: 'tr',
+  inv: 'inv',
+  // 'all',
+  // 'any',
+  // 'same',
+  // 'isFinite',
+  // 'isNaN',
+  // 'mapreduce',
+  // 'complex',
+  det: 'det',
+  // 'norm2',
+  // 'norm2Squared',
+  // 'norm2inf',
+  madd: 'add',
+  msub: 'sub',
+  mmul: 'mul',
+  mdiv: 'div',
+  mdot: 'dot',
+  // 'dim',
+  eig: 'eig',
+  // 'sum',
+  rowSum: 'rowSum',
+  colSum: 'colSum',
+  rowMean: 'rowMean',
+  colMean: 'colMean',
+  // mapM: 'mmap1',
+  // mapMM: 'mmap2',
+  // flat: 'flat',
+  mfillv: 'fillv',
+  maddv: 'addv',
+  // fillMM: 'fillMM',
+  // getBlock: 'getBlock',
+  // setBlock: 'setBlock',
+  // getDiag: 'getDiag',
+  diag: 'diag',
+  // 'parseFloat',
+  // 'parseDate',
+  // 'parseCSV',
+  // 'toCSV',
+  // strM: 'strM',
+  mstr: 'str',
+  // 'sumM',
+  isMatrix: 'isMatrix'
+})
+
+j6.mixThisMap(Array.prototype, j6, {
+  dot: 'dot'
+})
+
+var N = require('numeric')
 // Advance mathematics
-M.ode=N.dopri; // dopri(x0,x1,y0,f,tol,maxit,event) #Ordinary Diff Eq
-M.minimize=N.uncmin; // uncmin(f,x0,tol,gradient,maxit,callback,options) # Unconstrained optimization
-M.sparse=N.ccsSparse; // Matrix => Sparse
-M.sparse2full=N.ccsFull; // Sparse => Matrix
-// M.complex=N.t;
+j6.ode = N.dopri // dopri(x0,x1,y0,f,tol,maxit,event) #Ordinary Diff Eq
+j6.minimize = N.uncmin // uncmin(f,x0,tol,gradient,maxit,callback,options) # Unconstrained optimization
+j6.solveLP = N.solveLP // dopri(x0,x1,y0,f,tol,maxit,event) #Ordinary Diff Eq
+j6.spline = N.spline
+j6.linspace = N.linspace
+
+j6.copyFunctions(j6, J, [
+  'sumsqrt',
+  'sumsqerr',
+  'sumrow',
+  'meansqerr',
+  'geomean',
+  'median',
+  'cumsum',
+  'cumprod',
+  'mode',
+  'range',
+  'variance',
+  'stdev',
+  'meandev',
+  'meddev',
+  'skewness',
+  'kurtosis',
+  'coeffvar',
+  'quartiles',
+  'quantiles',
+  'percentile',
+  'percentileOfScore',
+  'histogram',
+  'covariance',
+  'corrcoeff',
+  'calcRdx',
+  'betafn',
+  'betacf',
+  'ibetainv',
+  'ibeta',
+  'gammafn',
+  'gammaln',
+  'gammap',
+  'lowRegGamma',
+  'gammapinv',
+  'factorialln',
+  'factorial',
+  'combination',
+  'combinationln',
+  'permutation',
+  'randn',
+  'randg'
+])
+
+// mix Lodash
+j6.mixThisMap(Array.prototype, j6._, {
+  _chunk: 'chunk',
+  _compact: 'compact',
+  _concat: 'concat',
+  _difference: 'difference',
+  _differenceBy: 'differenceBy',
+  _differenceWith: 'differenceWith',
+  _drop: 'drop',
+  _dropRight: 'dropRight',
+  _dropRightWhile: 'dropRightWhile',
+  _dropWhile: 'dropWhile',
+  _fill: 'fill',
+  _findIndex: 'findIndex',
+  _findLastIndex: 'findLastIndex',
+  _flatten: 'flatten',
+  _flattenDeep: 'flattenDeep',
+  _flattenDepth: 'flattenDepth',
+  _fromPairs: 'flattenPairs',
+  _head: 'head',
+  _indexOf: 'indexOf',
+  _initial: 'initial',
+  _intersection: 'intersection',
+  _intersectionBy: 'intersectonBy',
+  _intersectionWith: 'intersectionWith',
+  _join: 'join',
+  _last: 'last',
+  _lastIndexOf: 'lastIndexOf',
+  _nth: 'nth',
+  _pull: 'pull',
+  _pullAll: 'pullAll',
+  _pullAllBy: 'pullAllBy',
+  _pullAllWith: 'pullAllWith',
+  _pullAt: 'pullAt',
+  _remove: 'remove',
+  _reverse: 'reverse',
+  _slice: 'slice',
+  _sortedIndex: 'sortedIndex',
+  _sortedIndexBy: 'sortedIndexBy',
+  _sortedIndexOf: 'sortedIndexOf',
+  _sortedLastIndex: 'sortedLastIndex',
+  _sortedLastIndexBy: 'sortedLastIndexBy',
+  _sortedLastIndexOf: 'sortedLastIndexOf',
+  _sortedUniq: 'sortedUniq',
+  _sortedUniqBy: 'sortedUniqBy',
+  _tail: 'tail',
+  _take: 'take',
+  _takeRight: 'takeRight',
+  _takeRightWhile: 'takeRightWhile',
+  _takeWhile: 'takeWhile',
+  _union: 'union',
+  _unionBy: 'unionBy',
+  _unionWith: 'unionWith',
+  _uniq: 'uniq',
+  _uniqBy: 'uniqBy',
+  _uniqWith: 'uniqWith',
+  _unzip: 'unzip',
+  _unzipWith: 'unzipWith',
+  _without: 'without',
+  _xor: 'xor',
+  _xorBy: 'xorBy',
+  _xorWith: 'xorWith',
+  _zip: 'zip',
+  _zipObject: 'zipObject',
+  _zipObjectDeep: 'zipObjectDeep',
+  _zipWith: 'zipWith',
+  // Collection
+  _countBy: 'countBy',
+  // each→ forEach
+  // _eachRight → forEachRight
+  _every: 'every',
+  _filter: 'filter',
+  _find: 'find',
+  _findLast: 'findLast',
+  _flatMap: 'flatMap',
+  _flatMapDeep: 'flatMapDeep',
+  _flatMapDepth: 'flatMapDepth',
+  _forEach: 'forEach',
+  _forEachRight: 'forEachRight',
+  _groupBy: 'groupBy',
+  _includes: 'includes',
+  _invokeMap: 'invokeMap',
+  _keyBy: 'keyBy',
+  _map: 'map',
+  _orderBy: 'orderBy',
+  _partition: 'partition',
+  _reduce: 'reduce',
+  _reduceRight: 'reduceRight',
+  _reject: 'reject',
+  _sample: 'sample',
+  _sampleSize: 'sampleSize',
+  _shuffle: 'shuffle',
+  _size: 'size',
+  _some: 'some',
+  _sortBy: 'sortBy'
+})
+
+
+},{"./algebra":1,"./distance":2,"./entropy":3,"./function":4,"./geometry":5,"./matrix":7,"./probability":8,"./set":9,"./statistics":10,"./tensor":11,"./test":12,"./util":13,"./vector":14,"jStat":15,"lodash":16,"numeric":17}],7:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable one-var */
+var N = require('numeric')
+var M = j6.M = {}
+
+M.sparse = N.ccsSparse // Matrix => Sparse
+M.sparse2full = N.ccsFull // Sparse => Matrix
+// j6.complex=N.t
 // matrix
-M.svd = N.svd;
-M.det = N.det;
-M.inv = N.inv;
-M.lu = N.cLU;
-M.luSolve = N.cLUsolve;
-M.dot = N.dot;
-M.rep = N.rep;
-M.tr = N.transpose;
-M.diag = N.diag;
-M.mstr = M.strM = N.prettyPrint;
-// M.sumM = N.sum;
-M.rows=function(m) { return m.length; }
-M.cols=function(m) { return m[0].length; }
-M.row =function(m,i) { return m[i]; }
-M.col =function(m,j) { 
-  var cols = m.cols();
-  var c = M.vnew(cols);
-	for (var i=0;i<cols;i++) {
-		c[i] = m[i][j];
-	}
-	return c;
-}
+M.svd = N.svd
+// j6.det = N.det
+// j6.inv = N.inv
+M.lu = N.cLU
+M.luSolve = N.cLUsolve
+// j6.dot = N.dot
+// j6.rep = N.rep
+// j6.tr = N.transpose
+// j6.diag = N.diag
+// j6.sumM = N.sum
 
-M.newV = function(n, value) {
-	return M.rep([n], value||0);
-}
-
-M.newM = function(rows, cols, value) {
-	return M.rep([rows, cols], value||0);
-}
-
-M.randomV = function(n, a, b) { 
-  return N.random([n]).mul(b-a).add(a); 
-}
-
-M.randomM = function(rows, cols, a, b) {
-  return N.random([rows, cols]).mul(b-a).add(a); 
-}
-
-M.rowSum = function(m) {
-	var rows = M.rows(m);
-	var s=M.newV(rows, 0);
-	for (var i=0; i<rows; i++) {
-		s[i] = m[i].sum();
-	}
-	return s;
-}
-
-M.colSum = function(m) {
-	var mt = M.tr(m);
-	return M.rowSum(mt);
-}
-
-M.rowMean = function(m) { 
-  return M.rowSum(m).div(m.cols());
-}
-
-M.colMean = function(m) { 
-  return M.colSum(m).div(m.rows());
-}
-
-M.addMV = function(m,v) {
-  var result = [];
-  for(var i=0;i<m.length;i++) {
-    result.push(m[i].add(v));
-	}
-  return result;
-}
-
-M.mapM = function(m, f) {
-	var fm = M.clone(m);
-	var rows = M.rows(m), cols=M.cols(m);
-  for(i=0;i<rows;i++) {
-    for(j=0;j<cols;j++)
-      fm[i][j]=f(m[i][j]);
+M.str = N.prettyPrint
+M.rows = function (m) { return m.length }
+M.cols = function (m) { return m[0].length }
+M.row = function (m, i) { return m[i] }
+M.col = function (m, j) {
+  var rows = m.length
+  var c = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    c[i] = m[i][j]
   }
-  return fm;
+  return c
 }
 
-M.mapMM = function(m1,m2,f) {
-	var fm = M.clone(m1);
-	var rows = m1.rows(), cols=m1.cols();
-  for(i=0;i<rows;i++) {
-    for(j=0;j<cols;j++)
-      fm[i][j]=f(m1[i][j],m2[i][j]);
+M.new = function (rows, cols, value = 0) {
+  return j6.T.repeat([rows, cols], value)
+}
+
+M.random = function (rows, cols, a, b) {
+  return j6.T.random([rows, cols], a, b)
+}
+
+M.rowSum = function (m) {
+  var rows = m.length
+  var s = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    s[i] = j6.T.sum(m[i])
   }
-  return fm;
+  return s
 }
 
-M.flatM=function(m) {
-	var a=[];
-	var ai = 0;
-	for (var i=0; i<m.length;i++)
-		for (var j=0; j<m[i].length; j++)
-			a[ai++] = m[i][j];
-	return a;
+M.colSum = function (m) {
+  var rows = m.length
+  if (rows === 0) return []
+  var s = m[0]
+  for (var i = 1; i < rows; i++) {
+    s = j6.V.add(s, m[i])
+  }
+  return s
 }
 
-M.fillVM=function(v,rows,cols) {
-	var m = M.newM(rows,cols);
-	for (var r=0; r<rows; r++) {
-		for (var c=0; c<cols; c++) {
-			m[r][c] = v[r*cols+c];
-		}
-	}
-	return m;
+M.rowMean = function (m) {
+  return M.rowSum(m).div(m.cols())
 }
 
-M.fillMM=function(m,rows,cols) {
-	var v = M.flatM(m);
-	return M.fillVM(m,rows,cols);
+M.colMean = function (m) {
+  return M.colSum(m).div(m.rows())
 }
 
-M.eig=function(m) {
-	var E = N.eig(m);
-	return {lambda:E.lambda.x, E:E.E.x};
+M.addv = function (m, v) {
+  var rows = m.length
+  var r = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    r[i] = j6.V.add(m[i], v)  // 這行比較快 (使用多型速度會變慢)
+  }
+  return r
 }
 
-module.exports = M;
-},{"./algebra":1,"numeric":16}],9:[function(require,module,exports){
-var S = {}
-var I = require("./integer");
-
-S.PI = Math.PI;
-S.E  = Math.E;
-
-extend = S.extend = Object.assign;
-// ================= Rule =====================
-var check = S.check = S.assert = function(cond, msg) {
-	if (cond)
-		console.log("O:"+msg);
-	else {
-		console.log("X:"+msg);
-		if (S.throwError) throw Error('check fail!');
-	}
+M.add = function (m1, m2) {
+  var rows = m1.length
+  var r = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    r[i] = j6.V.add(m1[i], m2[i])
+  }
+  return r
 }
 
-be = S.be =function(msg,cond) { return check(cond, msg) }
-
-S.proto=function(o) { return Object.getPrototypeOf(o) }
-
-// relation
-var eq=S.eq=function(a,b)  {
-  return (typeof a === typeof b) && a.toString()===b.toString() 
-}
-S.neq=function(a,b)  { return !S.eq(a,b) }
-S.leq=function(a,b)  { return a<=b }
-S.geq=function(a,b)  { return a>=b }
-S.lt =function(a,b)  { return a<b  }
-S.gt =function(a,b)  { return a>b  }
-
-// ========= type checking =================
-S.yes=function(a) { return true }
-S.no=function(a) {return false }
-S.isBool=function(a) { 
-  return typeof a === 'boolean' || a instanceof Boolean 
-}
-S.isFunction=function(a) { 
-  return typeof a==='function' || a instanceof Function 
-}
-S.isString=function(a) { 
-  return typeof a==='string' || a instanceof String 
-}
-S.isObject=function(a) { 
-  return typeof a==='object' || a instanceof Object 
-}
-S.isArray=function(a) { 
-  return a instanceof Array 
-}
-S.isUndefined=function(a) { 
-  return typeof a === 'undefined' 
-}
-S.isSet=function(a) { 
-  return a instanceof Set 
-}
-S.isFloat=S.isNumber=function(a) { 
-  return typeof a === 'number' || a instanceof Number 
-}
-S.isInteger=function(a) { return S.isFloat(a) && a%1===0 }
-S.isZero=function(a) { return a===0 }
-S.isPositive=function(a) { return a>0 }
-S.isNegative=function(a) { return a<0 }
-S.isEven=function(a) { return (S.isInteger(a) && a%2===0) }
-S.isOdd=function(a) { return (S.isInteger(a) && a%2===1) }
-
-// ========== Random ==============
-S.random=function(a,b) {
-  return a+Math.random()*(b-a);
+M.sub = function (m1, m2) {
+  var rows = m1.length
+  var r = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    r[i] = j6.V.sub(m1[i], m2[i])
+  }
+  return r
 }
 
-S.randomInt=function(a,b) {
-  return Math.floor(S.random(a,b));
+M.mul = function (m1, m2) {
+  var rows = m1.length
+  var r = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    r[i] = j6.V.mul(m1[i], m2[i])
+  }
+  return r
 }
 
-S.sample=function(a) {
-  return a[S.randomInt(0,a.length)]; 
+M.div = function (m1, m2) {
+  var rows = m1.length
+  var r = new Array(rows)
+  for (var i = 0; i < rows; i++) {
+    r[i] = j6.V.div(m1[i], m2[i])
+  }
+  return r
 }
 
-// ========= Set ===================
-Set.prototype.union = function(setB) {
-    var union = new Set(this);
-    for (var elem of setB) {
-        union.add(elem);
+M.fillv = function (v, rows, cols) {
+  var m = new Array(rows)
+  for (var r = 0; r < rows; r++) {
+    var mr = m[r] = new Array(cols)
+    for (var c = 0; c < cols; c++) {
+      mr[c] = v[(r * cols) + c]
     }
-    return union;
+  }
+  return m
 }
 
-Set.prototype.intersection = function(setB) {
-    var intersection = new Set();
-    for (var elem of setB) {
-        if (this.has(elem)) {
-            intersection.add(elem);
-        }
+M.eig = function (m) {
+  var E = N.eig(m)
+  return {lambda: E.lambda.x, E: E.E.x}
+}
+
+M.tr = M.transpose = function (m) {
+  var r = []
+  var rows = m.length
+  var cols = m[0].length
+  for (var j = 0; j < cols; j++) {
+    var rj = r[j] = []
+    for (var i = 0; i < rows; i++) {
+      rj[i] = m[i][j]
     }
-    return intersection;
+  }
+  return r
 }
 
-Set.prototype.difference = function(setB) {
-    var difference = new Set(this);
-    for (var elem of setB) {
-        difference.delete(elem);
+M.dot = function (a, b, isComplex = false) {
+  var arows = a.length
+  var bcols = b[0].length
+  var r = []
+  var bt = M.tr(b)
+  for (var i = 0; i < arows; i++) {
+    var ri = r[i] = []
+    for (var j = 0; j < bcols; j++) {
+      ri.push(j6.V.dot(a[i], bt[j], isComplex))
     }
-    return difference;
+  }
+  return r
 }
 
-Set.prototype.enumerate = function(n) {
-	var array=[], values = this.values();
-	for (var i=0; i<n; i++) {
-		array.push(values.next().value);
-	}
-	return array;
+M.isMatrix = function (m) {
+  return (m instanceof Array && m[0] instanceof Array)
 }
 
-class EnumSet {
-	constructor(enumHead) { 
-	  this.set = new Set(enumHead);
-	  this.enumHead = S.isUndefined(enumHead)?[]:enumHead;	
-	}
-	add(e) { this.set.add(e) }
-	has(e) { return this.set.has(e) }
-	sample(n) { 
-	  if (S.isUndefined(n))
-			return S.sample(this.enumHead);
-		else {
-			var a=[];
-			for (var i=0; i<n; i++) a.push(this.sample());
-			return a;
-		}
-	}
-	enumerate() { return this.enumHead }
-	intersection(y) {
-		var x=this, xy=new EnumSet();
-		xy.has=function(e) { return x.has(e)&&y.has(e) }
-		return xy;
-	}
-	union(y) {
-		var x=this, xy=new EnumSet();
-		xy.has=function(e) { return x.has(e)||y.has(e) }
-		return xy;
-	}
-	difference(y) {
-		var x=this, xy=new EnumSet();
-		xy.has=function(e) { return x.has(e)&&!y.has(e) }
-		return xy;
-	}
-	symmetricDifference(y) {
-		var x=this;
-		return x.union(y).difference(x.intersection(y));
-	}
-	cartesianProduct(y) { 
-		var x=this, xy=new EnumSet();
-		xy.has=function(e) { return x.has(e[0]) && y.has(e[1]) }
-		return xy;
-	}
+M.diag = function (v) {
+  var rows = v.length
+  var r = M.new(rows, rows)
+  for (var i = 0; i < rows; i++) {
+    r[i][i] = v[i]
+  }
+  return r
 }
 
-S.Set = EnumSet
-
-function steps(a,b,step) {
-	var array=[];
-	for (var i=a; i<=b; i+=step) 
-		array.push(i);
-	return array;
+M.identity = function (n) {
+  return M.diag(j6.T.repeat([n], () => 1))
 }
 
-var enumFloat = [-3.2,-1, 0, 1, 2.3, 4.7];
-var enumInt   = [-10,-5,-1,0,1,3,5,6];
-var enumN0    = steps(0,10,1);
-var enumN1    = steps(1,10,1);
-var enumOdd   = steps(1,15,2);
-var enumEven  = steps(2,15,2);
-var enumPrime = [2,3,5,7,11,13,17,19,23,29,31,37];
-var enumAll   = ["hi", 5, Math.PI, EnumSet, S.isBool, enumPrime, new Set() ];
+M.inv = function (m0) {
+  var s = j6.T.dim(m0), abs = Math.abs, m = s[0], n = s[1]
+  var A = j6.clone(m0), Ai, Aj
+  var I = M.identity(m), Ii, Ij
+  var i, j, k, x
+  for (j = 0; j < n; ++j) {
+    var i0 = -1
+    var v0 = -1
+    for (i = j; i !== m; ++i) {
+      k = abs(A[i][j])
+      if (k > v0) { i0 = i; v0 = k }
+    }
+    Aj = A[i0]; A[i0] = A[j]; A[j] = Aj
+    Ij = I[i0]; I[i0] = I[j]; I[j] = Ij
+    x = Aj[j]
+    for (k = j; k !== n; ++k) Aj[k] /= x
+    for (k = n - 1; k !== -1; --k) Ij[k] /= x
+    for (i = m - 1; i !== -1; --i) {
+      if (i !== j) {
+        Ai = A[i]
+        Ii = I[i]
+        x = Ai[j]
+        for (k = j + 1; k !== n; ++k) Ai[k] -= Aj[k] * x
+        for (k = n - 1; k > 0; --k) { Ii[k] -= Ij[k] * x; --k; Ii[k] -= Ij[k] * x }
+        if (k === 0) Ii[0] -= Ij[0] * x
+      }
+    }
+  }
+  return I
+}
 
-// 全體集合
-S.All = new EnumSet(enumAll);
-S.All.has = S.yes;
-
-// 空集合
-S.Empty = new EnumSet([]);
-S.Empty.has = S.no;
-
-// 浮點數集合
-S.Float=new EnumSet(enumFloat);
-S.Float.has=S.isFloat;
-
-// 整數集合
-S.Z=S.Integer=new EnumSet(enumInt);
-S.Z.has=S.isInteger;
-
-// 自然數集合 N0
-S.N0=new EnumSet(enumN0);
-S.N0.has=(e)=>S.isInteger(e)&&e>=0;
-
-// 自然數集合 N1
-S.N1=new EnumSet(enumN1);
-S.N1.has=(e)=>S.isInteger(e)&&e>1;
-
-// 偶數集合
-S.Even=new EnumSet(enumEven);
-S.Even.has=S.isEven;
-
-// 奇數集合
-S.Odd=new EnumSet(enumOdd);
-S.Odd.has=S.isOdd;
-
-// 質數集合
-S.Prime=new EnumSet(enumPrime)
-S.Prime.has=I.isPrime;
-
-// 有限集合 0...n-1
-S.Finite=(n)=>new EnumSet(steps(0,n-1,1));
-
-// 羅素集合悖論
-S.RussellSet=new EnumSet(enumAll);
-S.RussellSet.has=function(e) { return !e.has(e) }
-
-module.exports=S;
-
-},{"./integer":6}],10:[function(require,module,exports){
-var B = require('./base');
-var J = require('jStat').jStat;
-var S = require('./calculus');
-var ncall = B.ncall;
-// var T, R;
+M.det = function (x) {
+  var s = j6.dim(x)
+  if (s.length !== 2 || s[0] !== s[1]) { throw new Error('numeric: det() only works on square matrices') }
+  var n = s[0], ret = 1, i, j, k, A = j6.clone(x), Aj, Ai, alpha, temp, k1
+  for (j = 0; j < n - 1; j++) {
+    k = j
+    for (i = j + 1; i < n; i++) { if (Math.abs(A[i][j]) > Math.abs(A[k][j])) { k = i } }
+    if (k !== j) {
+      temp = A[k]; A[k] = A[j]; A[j] = temp
+      ret *= -1
+    }
+    Aj = A[j]
+    for (i = j + 1; i < n; i++) {
+      Ai = A[i]
+      alpha = Ai[j] / Aj[j]
+      for (k = j + 1; k < n - 1; k += 2) {
+        k1 = k + 1
+        Ai[k] -= Aj[k] * alpha
+        Ai[k1] -= Aj[k1] * alpha
+      }
+      if (k !== n) { Ai[k] -= Aj[k] * alpha }
+    }
+    if (Aj[j] === 0) { return 0 }
+    ret *= Aj[j]
+  }
+  return ret * A[j][j]
+}
+}
+},{"numeric":17}],8:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable no-undef */
+var J = require('jStat').jStat
+var ncall = j6.ncall
 
 // ========== 離散分佈的 r, q 函數 ============
-S.qcdf=function(cdf, q, N, p) {
-  for (var i=0; i<=N; i++) {
-    if (cdf(i, N, p) > q) return i;
+j6.qcdf = function (cdf, q, N, p) {
+  for (var i = 0; i <= N; i++) {
+    if (cdf(i, N, p) > q) return i
   }
-  return N;
+  return N
 }
 
-S.rcdf=function(cdf, n, N, p) {
-  var a = [];
-  for (var i=0; i<n; i++) {
-    var q = Math.random();
-    a.push(cdf(q, N, p));
+j6.rcdf = function (cdf, n, N, p) {
+  var a = []
+  for (var i = 0; i < n; i++) {
+    var q = Math.random()
+    a.push(cdf(q, N, p))
   }
-  return a;
+  return a
 }
 
-S.EPSILON=0.0000000001;
-// 均等分布 : jStat.uniform( a, b )
-S.dunif=(x,a=0,b=1)=>J.uniform.pdf(x,a,b);
-S.punif=(q,a=0,b=1)=>J.uniform.cdf(q,a,b);
-S.qunif=(p,a=0,b=1)=>J.uniform.inv(p,a,b);
-S.runif=(n,a=0,b=1)=>ncall(n, J.uniform, 'sample', a, b);
+j6.EPSILON = 0.0000000001
+// 均等分布 : Uniform Distribution(a,b)    1/(b-a)
+j6.dunif = function (x, a = 0, b = 1) { return (x >= a && x <= b) ? 1 / (b - a) : 0 }
+j6.punif = function (x, a = 0, b = 1) { return (x >= b) ? 1 : (x <= a) ? 0 : (x - a) / (b - a) }
+j6.qunif = function (p, a = 0, b = 1) { return (p >= 1) ? b : (p <= 0) ? a : a + (p * (b - a)) }
+j6.runif1 = function (a = 0, b = 1) { return j6.random(a, b) }
+j6.runif = function (n, a = 0, b = 1) { return ncall(n, j6, 'random', a, b) }
+/*
+j6.dunif=(x,a=0,b=1)=>J.uniform.pdf(x,a,b);
+j6.punif=(q,a=0,b=1)=>J.uniform.cdf(q,a,b);
+j6.qunif=(p,a=0,b=1)=>J.uniform.inv(p,a,b);
+j6.runif=(n,a=0,b=1)=>ncall(n, J.uniform, 'sample', a, b);
+*/
 // 常態分布 : jStat.normal( mean, sd )
-S.dnorm=(x,mean=0,sd=1)=>J.normal.pdf(x,mean,sd);
-S.pnorm=(q,mean=0,sd=1)=>J.normal.cdf(q,mean,sd);
-S.qnorm=(p,mean=0,sd=1)=>J.normal.inv(p,mean,sd);
-S.rnorm=(n,mean=0,sd=1)=>ncall(n, J.normal, 'sample', mean, sd);
+j6.dnorm = (x, mean = 0, sd = 1) => J.normal.pdf(x, mean, sd)
+j6.pnorm = (q, mean = 0, sd = 1) => J.normal.cdf(q, mean, sd)
+j6.qnorm = (p, mean = 0, sd = 1) => J.normal.inv(p, mean, sd)
+j6.rnorm1 = function () { // generate random guassian distribution number. (mean : 0, standard deviation : 1)
+  var v1, v2, s
+  do {
+    v1 = (2 * Math.random()) - 1   // -1.0 ~ 1.0 ??? ?
+    v2 = (2 * Math.random()) - 1   // -1.0 ~ 1.0 ??? ?
+    s = (v1 * v1) + (v2 * v2)
+  } while (s >= 1 || s === 0)
+
+  s = Math.sqrt((-2 * Math.log(s)) / s)
+  return v1 * s
+}
+
+j6.rnorm = (n, mean = 0, sd = 1) => ncall(n, J.normal, 'sample', mean, sd)
 // F 分布 : jStat.centralF( df1, df2 )
-S.df=(x,df1,df2)=>J.centralF.pdf(x,df1,df2);
-S.pf=(q,df1,df2)=>J.centralF.cdf(q,df1,df2);
-S.qf=(p,df1,df2)=>J.centralF.inv(p,df1,df2);
-S.rf=(n,df1,df2)=>ncall(n, J.centralF, 'sample', df1, df2);
+j6.df = (x, df1, df2) => J.centralF.pdf(x, df1, df2)
+j6.pf = (q, df1, df2) => J.centralF.cdf(q, df1, df2)
+j6.qf = (p, df1, df2) => J.centralF.inv(p, df1, df2)
+j6.rf = (n, df1, df2) => ncall(n, J.centralF, 'sample', df1, df2)
 // T 分布 : jStat.studentt( dof )
-S.dt=(x,dof)=>J.studentt.pdf(x,dof);
-S.pt=(q,dof)=>J.studentt.cdf(q,dof);
-S.qt=(p,dof)=>J.studentt.inv(p,dof);
-S.rt=(n,dof)=>ncall(n, J.studentt, 'sample', dof);
+j6.dt = (x, dof) => J.studentt.pdf(x, dof)
+j6.pt = (q, dof) => J.studentt.cdf(q, dof)
+j6.qt = (p, dof) => J.studentt.inv(p, dof)
+j6.rt = (n, dof) => ncall(n, J.studentt, 'sample', dof)
 // Beta 分布 : jStat.beta( alpha, beta )
-S.dbeta=(x,alpha,beta)=>J.beta.pdf(x,alpha,beta);
-S.pbeta=(q,alpha,beta)=>J.beta.cdf(q,alpha,beta);
-S.qbeta=(p,alpha,beta)=>J.beta.inv(p,alpha,beta);
-S.rbeta=(n,alpha,beta)=>ncalls(n, J.beta, 'sample', alpha, beta);
+j6.dbeta = (x, alpha, beta) => J.beta.pdf(x, alpha, beta)
+j6.pbeta = (q, alpha, beta) => J.beta.cdf(q, alpha, beta)
+j6.qbeta = (p, alpha, beta) => J.beta.inv(p, alpha, beta)
+j6.rbeta = (n, alpha, beta) => ncalls(n, J.beta, 'sample', alpha, beta)
 // 柯西分布 : jStat.cauchy( local, scale )
-S.dcauchy=(x,local,scale)=>J.cauchy.pdf(x,local,scale);
-S.pcauchy=(q,local,scale)=>J.cauchy.cdf(q,local,scale);
-S.qcauchy=(p,local,scale)=>J.cauchy.inv(q,local,scale);
-S.rcauchy=(n,local,scale)=>ncall(n, J.cauchy, 'sample', local, scale);
+j6.dcauchy = (x, local, scale) => J.cauchy.pdf(x, local, scale)
+j6.pcauchy = (q, local, scale) => J.cauchy.cdf(q, local, scale)
+j6.qcauchy = (p, local, scale) => J.cauchy.inv(q, local, scale)
+j6.rcauchy = (n, local, scale) => ncall(n, J.cauchy, 'sample', local, scale)
 // chisquare 分布 : jStat.chisquare( dof )
-S.dchisq=(x,dof)=>J.chisquare.pdf(x,dof);
-S.pchisq=(q,dof)=>J.chisquare.cdf(q,dof);
-S.qchisq=(p,dof)=>J.chisquare.inv(p,dof);
-S.rchisq=(n,dof)=>ncall(n, J.chisquare, 'sample', dof);
-// 指數分布 : jStat.exponential( rate )
-S.dexp=(x,rate)=>J.exponential.pdf(x,rate);
-S.pexp=(q,rate)=>J.exponential.cdf(q,rate);
-S.qexp=(p,rate)=>J.exponential.inv(p,rate);
-S.rexp=(n,rate)=>ncall(n, J.exponential, 'sample', rate);
+j6.dchisq = (x, dof) => J.chisquare.pdf(x, dof)
+j6.pchisq = (q, dof) => J.chisquare.cdf(q, dof)
+j6.qchisq = (p, dof) => J.chisquare.inv(p, dof)
+j6.rchisq = (n, dof) => ncall(n, J.chisquare, 'sample', dof)
+// 指數分布 : Exponential Distribution(b)  1/b e^{-x/b}
+j6.dexp = function (x, rate) { return rate * Math.exp(-rate * x) }
+j6.pexp = function (x, rate) { return x < 0 ? 0 : 1 - Math.exp(-rate * x) }
+j6.qexp = function (p, rate) { return -Math.log(1 - p) / rate }
+j6.rexp1 = function (rate) { return j6.qexp(j6.random(0, 1), rate) }
+j6.rexp = function (n, rate) { return ncall(n, j6, 'rexp1', rate) }
+/*
+j6.dexp=(x,rate)=>J.exponential.pdf(x,rate);
+j6.pexp=(q,rate)=>J.exponential.cdf(q,rate);
+j6.qexp=(p,rate)=>J.exponential.inv(p,rate);
+j6.rexp=(n,rate)=>ncall(n, J.exponential, 'sample', rate);
+*/
 // Gamma 分布 : jStat.gamma( shape, scale )
-S.dgamma=(x,shape,scale)=>J.gamma.pdf(x,shape,scale);
-S.pgamma=(q,shape,scale)=>J.gamma.cdf(q,shape,scale);
-S.qgamma=(p,shape,scale)=>J.gamma.inv(p,shape,scale);
-S.rgamma=(n,shape,scale)=>ncall(n, J.gamma, 'sample', shape, scale);
+j6.dgamma = (x, shape, scale) => J.gamma.pdf(x, shape, scale)
+j6.pgamma = (q, shape, scale) => J.gamma.cdf(q, shape, scale)
+j6.qgamma = (p, shape, scale) => J.gamma.inv(p, shape, scale)
+j6.rgamma = (n, shape, scale) => ncall(n, J.gamma, 'sample', shape, scale)
 // 反 Gamma 分布 : jStat.invgamma( shape, scale )
-S.rinvgamma=(n,shape,scale)=>ncall(n, J.invgamma, 'sample', shape, scale);
-S.dinvgamma=(x,shape,scale)=>J.invgamma.pdf(x,shape,scale);
-S.pinvgamma=(q,shape,scale)=>J.invgamma.cdf(q,shape,scale);
-S.qinvgamma=(p,shape,scale)=>J.invgamma.inv(p,shape,scale);
+j6.rinvgamma = (n, shape, scale) => ncall(n, J.invgamma, 'sample', shape, scale)
+j6.dinvgamma = (x, shape, scale) => J.invgamma.pdf(x, shape, scale)
+j6.pinvgamma = (q, shape, scale) => J.invgamma.cdf(q, shape, scale)
+j6.qinvgamma = (p, shape, scale) => J.invgamma.inv(p, shape, scale)
 // 對數常態分布 : jStat.lognormal( mu, sigma )
-S.dlognormal=(n, mu, sigma)=>J.lognormal.pdf(x,sigma);
-S.plognormal=(n, mu, sigma)=>J.lognormal.cdf(q,sigma);
-S.qlognormal=(n, mu, sigma)=>J.lognormal.inv(p,sigma);
-S.rlognormal=(n, mu, sigma)=>ncall(n, J.dlognormal, 'sample', mu, sigma);
+j6.dlognormal = (n, mu, sigma) => J.lognormal.pdf(x, sigma)
+j6.plognormal = (n, mu, sigma) => J.lognormal.cdf(q, sigma)
+j6.qlognormal = (n, mu, sigma) => J.lognormal.inv(p, sigma)
+j6.rlognormal = (n, mu, sigma) => ncall(n, J.dlognormal, 'sample', mu, sigma)
 // Pareto 分布 : jStat.pareto( scale, shape )
-S.dpareto=(n, scale, shape)=>J.pareto.pdf(x,scale,shape);
-S.ppareto=(n, scale, shape)=>J.pareto.cdf(q,scale,shape);
-S.qpareto=(n, scale, shape)=>J.pareto.inv(p,scale,shape);
-S.rpareto=(n, scale, shape)=>ncall(n, J.pareto, 'sample', scale, shape);
+j6.dpareto = (n, scale, shape) => J.pareto.pdf(x, scale, shape)
+j6.ppareto = (n, scale, shape) => J.pareto.cdf(q, scale, shape)
+j6.qpareto = (n, scale, shape) => J.pareto.inv(p, scale, shape)
+j6.rpareto = (n, scale, shape) => ncall(n, J.pareto, 'sample', scale, shape)
 // Weibull 分布 jStat.weibull(scale, shape)
-S.dweibull=(n, scale, shape)=>J.weibull.pdf(x,scale,shape);
-S.pweibull=(n, scale, shape)=>J.weibull.cdf(q,scale,shape);
-S.qweibull=(n, scale, shape)=>J.weibull.inv(p,scale,shape);
-S.rweibull=(n, scale, shape)=>ncall(n, J.weibull, 'sample', scale, shape);
+j6.dweibull = (n, scale, shape) => J.weibull.pdf(x, scale, shape)
+j6.pweibull = (n, scale, shape) => J.weibull.cdf(q, scale, shape)
+j6.qweibull = (n, scale, shape) => J.weibull.inv(p, scale, shape)
+j6.rweibull = (n, scale, shape) => ncall(n, J.weibull, 'sample', scale, shape)
 // 三角分布 : jStat.triangular(a, b, c)
-S.dtriangular=(n, a, b, c)=>J.triangular.pdf(x,a,b,c);
-S.ptriangular=(n, a, b, c)=>J.triangular.cdf(q,a,b,c);
-S.qtriangular=(n, a, b, c)=>J.triangular.inv(p,a,b,c);
-S.rtriangular=(n, a, b, c)=>ncall(n, J.triangular, 'sample', a, b, c);
+j6.dtriangular = (n, a, b, c) => J.triangular.pdf(x, a, b, c)
+j6.ptriangular = (n, a, b, c) => J.triangular.cdf(q, a, b, c)
+j6.qtriangular = (n, a, b, c) => J.triangular.inv(p, a, b, c)
+j6.rtriangular = (n, a, b, c) => ncall(n, J.triangular, 'sample', a, b, c)
 // 類似 Beta 分布，但計算更簡單 : jStat.kumaraswamy(alpha, beta)
-S.dkumaraswamy=(n, alpha, beta)=>J.kumaraswamy.pdf(x,alpha,beta);
-S.pkumaraswamy=(n, alpha, beta)=>J.kumaraswamy.cdf(q,alpha,beta);
-S.qkumaraswamy=(n, alpha, beta)=>J.kumaraswamy.inv(p,alpha,beta);
-S.rkumaraswamy=(n, alpha, beta)=>ncalls(n, J.kumaraswamy, 'sample', alpha, beta);
+j6.dkumaraswamy = (n, alpha, beta) => J.kumaraswamy.pdf(x, alpha, beta)
+j6.pkumaraswamy = (n, alpha, beta) => J.kumaraswamy.cdf(q, alpha, beta)
+j6.qkumaraswamy = (n, alpha, beta) => J.kumaraswamy.inv(p, alpha, beta)
+j6.rkumaraswamy = (n, alpha, beta) => ncalls(n, J.kumaraswamy, 'sample', alpha, beta)
 
 // ========== 離散分佈的 r, q 函數 ============
 // 二項分布 : jStat.binomial(n, p0)
-S.dbinom=(x, size, prob)=>J.binomial.pdf(x, size, prob);
-S.pbinom=(q, size, prob)=>J.binomial.cdf(q, size, prob);
-S.qbinom=(p, size, prob)=>S.qcdf(S.pbinom, p, size, prob);
-S.rbinom=(n, size, prob)=>S.rcdf(S.qbinom, n, size, prob);
+j6.dbinom = (x, size, prob) => J.binomial.pdf(x, size, prob)
+j6.pbinom = (q, size, prob) => J.binomial.cdf(q, size, prob)
+j6.qbinom = (p, size, prob) => j6.qcdf(j6.pbinom, p, size, prob)
+j6.rbinom = (n, size, prob) => j6.rcdf(j6.qbinom, n, size, prob)
 // 負二項分布 : jStat.negbin(r, p)
-S.dnbinom=(x, size, prob)=>J.negbin.pdf(x, size, prob);
-S.pnbinom=(q, size, prob)=>J.negbin.cdf(q, size, prob);
-S.qnbinom=(p, size, prob)=>S.qcdf(S.pnbinom, p, size, prob);
-S.rnbinom=(n, size, prob)=>S.rcdf(S.qnbinom, n, size, prob);
+j6.dnbinom = (x, size, prob) => J.negbin.pdf(x, size, prob)
+j6.pnbinom = (q, size, prob) => J.negbin.cdf(q, size, prob)
+j6.qnbinom = (p, size, prob) => j6.qcdf(j6.pnbinom, p, size, prob)
+j6.rnbinom = (n, size, prob) => j6.rcdf(j6.qnbinom, n, size, prob)
 // 超幾何分布 : jStat.hypgeom(N, m, n)
-S.dhyper=(x, m, n, k)=>J.hypgeom.pdf(k, m, n, k);
-S.phyper=(q, m, n, k)=>J.hypgeom.cdf(q, m, n, k);
-S.qhyper=(p, m, n, k)=>S.qcdf(S.phyper, p, m, n, k);
-S.rhyper=(nn,m, n, k)=>S.rcdf(S.qhyper, nn, m, n, k);
+j6.dhyper = (x, m, n, k) => J.hypgeom.pdf(k, m, n, k)
+j6.phyper = (q, m, n, k) => J.hypgeom.cdf(q, m, n, k)
+j6.qhyper = (p, m, n, k) => j6.qcdf(j6.phyper, p, m, n, k)
+j6.rhyper = (nn, m, n, k) => j6.rcdf(j6.qhyper, nn, m, n, k)
 // 布瓦松分布 : jStat.poisson(l)
-S.dpois=(x, lambda)=>J.poisson.pdf(x, lambda);
-S.ppois=(q, lambda)=>J.poisson.cdf(q, lambda);
-S.qpois=(p, lambda)=>S.qcdf(S.ppois, p, lambda);
-S.rpois=(n, lambda)=>S.rcdf(S.qpois, n, lambda);
-
-// ====================== statistics =================================
-// extend function
-
-S.normalize=function(a) {
-	var sum = S.sum(a);
-	return a.map(function(x) { return x/sum});
+j6.dpois = (x, lambda) => J.poisson.pdf(x, lambda)
+j6.ppois = (q, lambda) => J.poisson.cdf(q, lambda)
+j6.qpois = (p, lambda) => j6.qcdf(j6.ppois, p, lambda)
+j6.rpois = (n, lambda) => j6.rcdf(j6.qpois, n, lambda)
+}
+},{"jStat":15}],9:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable no-undef */
+/* eslint-disable no-extend-native */
+// ========= Set ===================
+Set.prototype.union = function (setB) {
+  var union = new Set(this)
+  for (var elem of setB) {
+    union.add(elem)
+  }
+  return union
 }
 
-// Vector Functionality
-B.copyFunctions(S, J, "sumsqrt,sumsqerr,sumrow,mean,meansqerr,geomean,median,cumsum,cumprod,diff,mode,range,variance,stdev,meandev,meddev,skewness,kurtosis,coeffvar,quartiles,quantiles,percentile,percentileOfScore,histogram,covariance,corrcoeff,calcRdx,betafn,betacf,ibetainv,ibeta,gammafn,gammaln,gammap,lowRegGamma,gammapinv,factorialln,factorial,combination,combinationln,permutation,erf,erfc,erfcinv,randn,randg".split(","));
+Set.prototype.intersection = function (setB) {
+  var intersection = new Set()
+  for (var elem of setB) {
+    if (this.has(elem)) {
+      intersection.add(elem)
+    }
+  }
+  return intersection
+}
 
-B.mapFunctions(S, J, {
-	C:'combination',// C(n,m)
-	choose:'combination',// C(n,m)
-	lchoose:'combinationln',// log C(n,m)
-	P:'permutation', // P(n,m)
-	sd:'stdev',
-	cov:'covariance',
-	cor:'corrcoeff',
-});
+Set.prototype.difference = function (setB) {
+  var difference = new Set(this)
+  for (var elem of setB) {
+    difference.delete(elem)
+  }
+  return difference
+}
 
+Set.prototype.enumerate = function (n) {
+  let array = []
+  let values = this.values()
+  for (var i = 0; i < n; i++) {
+    array.push(values.next().value)
+  }
+  return array
+}
+/* eslint-enable no-extend-native */
+
+j6.intersection = function (x, y) {
+  var xy = new EnumSet()
+  xy.has = function (e) { return x.has(e) && y.has(e) }
+  return xy
+}
+
+j6.union = function (x, y) {
+  var xy = new EnumSet()
+  xy.has = function (e) { return x.has(e) || y.has(e) }
+  return xy
+}
+
+j6.difference = function (x, y) {
+  var xy = new EnumSet()
+  xy.has = function (e) { return x.has(e) && !y.has(e) }
+  return xy
+}
+
+j6.symmetricDifference = function (x, y) {
+  return x.union(y).difference(x.intersection(y))
+}
+
+j6.cartesianProduct = function (x, y) {
+  var xy = new EnumSet()
+  xy.has = function (e) { return x.has(e[0]) && y.has(e[1]) }
+  return xy
+}
+
+class EnumSet {
+  constructor (enumHead, has) {
+    this.set = new Set(enumHead)
+    this.enumHead = j6.isUndefined(enumHead) ? [] : enumHead
+    if (typeof has !== 'undefined') this.has = has
+  }
+  add (e) { this.set.add(e) }
+  has (e) { return this.set.has(e) }
+  sample (n) {
+    if (j6.isUndefined(n)) {
+      return j6.sample(this.enumHead)
+    } else {
+      var a = []
+      for (var i = 0; i < n; i++) a.push(this.sample())
+      return a
+    }
+  }
+  enumerate () { return this.enumHead }
+  intersection (y) { return j6.intersection(this, y) }
+  union (y) { return j6.union(this, y) }
+  difference (y) { return j6.difference(this, y) }
+  symmetricDifference (y) { return j6.symmetricDifference(this, y) }
+  cartesianProduct (y) { return j6.cartesianProduct(this, y) }
+}
+
+j6.create = function (enumHead, has) { return new EnumSet(enumHead, has) }
+
+var enumFloat = [-3.2, -1, 0, 1, 2.3, 4.7]
+var enumInt = [-10, -5, -1, 0, 1, 3, 5, 6]
+var enumN0 = j6.steps(0, 10, 1)
+var enumN1 = j6.steps(1, 10, 1)
+var enumOdd = j6.steps(1, 15, 2)
+var enumEven = j6.steps(2, 15, 2)
+var enumPrime = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]
+var enumAll = [ 'hi', 5, Math.PI, EnumSet, j6.isBool, enumPrime, new Set() ]
+
+j6.All = new EnumSet(enumAll, j6.yes) // 全體集合
+j6.Empty = new EnumSet([], j6.no) // 空集合
+j6.Float = new EnumSet(enumFloat, j6.isFloat) // 浮點數集合
+j6.Z = j6.Integer = new EnumSet(enumInt, j6.isInteger) // 整數集合
+j6.N0 = new EnumSet(enumN0, (e) => j6.isInteger(e) && e >= 0)// 自然數集合 N0
+j6.N1 = new EnumSet(enumN1, (e) => j6.isInteger(e) && e >= 1) // 自然數集合 N1
+j6.Even = new EnumSet(enumEven, j6.isEven)// 偶數集合
+j6.Odd = new EnumSet(enumOdd, j6.isOdd) // 奇數集合
+j6.Prime = new EnumSet(enumPrime, j6.isPrime) // 質數集合
+j6.Finite = (n) => new EnumSet(j6.steps(0, n - 1, 1)) // 有限集合 0...n-1
+j6.Russel = j6.NoSelf = new EnumSet(enumAll, function (e) { return !e.has(e) }) // 羅素集合悖論
+j6.Set = EnumSet
+// =========== 集合的相關數學性質 ==================
+
+// 測度（Measure）: https://en.wikipedia.org/wiki/Measure_(mathematics)
+// 請注意不要和幾何的《度量 Metric》搞混，度量是距離函數，但測度是集合的函數
+// Measure(Set)=>j6
+j6.Measure = {
+  // Non-negativity: For all E in Σ: μ(E) ≥ 0.
+  // Null empty set: μ({}) = 0.
+  // Countable additivity (or σ-additivity): μ(E1+E2+...) = μ(E1)+μ(E2)+...
+}
+
+// Counting measure : is defined by μ(j6) = number of elements in j6.
+// Lebesgue measure : μ([0, 1]) = 1; https://en.wikipedia.org/wiki/Lebesgue_measure
+// Circular angle measure :
+// Haar measure : https://en.wikipedia.org/wiki/Haar_measure
+
+/* eslint-enable no-undef  no-extend-native */
+}
+},{}],10:[function(require,module,exports){
+module.exports = function (j6) {
+  // ====================== statistics =================================
+  j6.random = function (a = 0, b = 1) {
+    let r = a + (Math.random() * (b - a))
+    return r
+  }
+
+  j6.randomInt = function (a, b) {
+    let r = j6.random(a, b + 0.999999999)
+    return Math.floor(r)
+  }
+
+  j6.sample = function (space, probs) {
+    if (probs == null) return space[j6.randomInt(0, space.length - 1)]
+    let p = j6.random(0, 1)
+    let sump = 0
+    for (let i = 0; i < space.length; i++) {
+      sump += probs[i]
+      if (p <= sump) return space[i]
+    }
+    throw new Error('j6.sample fail!')
+  }
+
+  j6.samples = function (space, size, arg) {
+    arg = j6._.defaults(arg, {replace: true})
+    if (arg.replace) {
+      var results = []
+      for (let i = 0; i < size; i++) {
+        results.push(j6.sample(space, arg.prob))
+      }
+      return results
+  // return _.times(size, ()=>_.sample(space));
+    } else {
+      if (space.length < size) throw Error('statistics.samples() : size > space.length')
+      return j6._.sampleSize(space, size)
+    }
+  }
+
+  j6.normalize = function (a) {
+    var sum = j6.T.sum(a)
+    return a.map(function (x) { return x / sum })
+  }
+
+  j6.max = j6.T.max
+  j6.min = j6.T.min
+  j6.sum = j6.T.sum
+  j6.product = j6.T.product
+
+  // graphics
+  j6.curve = function (f, from = -10, to = 10, step = 0.1) {
+    var x = j6.steps(from, to, step)
+    var y = x.map1(f)
+    return {type: 'curve', x: x, y: y}
+  }
+
+  j6.hist = function (a, from, to, step = 1) {
+    from = from || a.min()
+    to = to || a.max()
+    var n = Math.ceil((to - from + j6.EPSILON) / step)
+    var xc = j6.steps(from + step / 2.0, to, step)
+    var bins = j6.V.new(n, 0)
+    for (var i in a) {
+      var slot = Math.floor((a[i] - from) / step)
+      if (slot >= 0 && slot < n) {
+        bins[slot]++
+      }
+    }
+    return {type: 'histogram', xc: xc, bins: bins, from: from, to: to, step: step}
+  }
+
+  j6.ihist = function (a) {
+    return j6.hist(a, a.min() - 0.5, a.max() + 0.5, 1)
+  }
+}
+
+},{}],11:[function(require,module,exports){
+// ============= Multi-Dimensional Array Operation ====================
+module.exports = function (j6) {
+var recursiveDim = function (a, d) { // dimension by recursion (tensor)
+  if (j6.isArray(a)) {
+    d.push(a.length)
+    recursiveDim(a[0], d)
+  }
+}
+
+var recursiveRepeat = function (dim, i, v) {
+  if (i === dim.length) {
+    return j6.isFunction(v) ? v() : v
+  } else {
+    let n = dim[i]
+    let a = new Array(n)
+    for (var k = 0; k < n; k++) {
+      a[k] = recursiveRepeat(dim, i + 1, v)
+    }
+    return a
+  }
+}
+
+var T = j6.T = {}
+
+T.dim = function (a) {
+  var d = []
+  recursiveDim(a, d)
+  return d
+}
+
+T.repeat = function (dim, value = 0) {
+  return recursiveRepeat(dim, 0, value)
+}
+
+T.random = function (dim, a = 0, b = 1) {
+  return T.repeat(dim, () => j6.random(a, b))
+}
+
+// ================== Map Reduce =========================
+var map1 = T.map1 = function (a, f) {
+  if (a instanceof Array) {
+    var fa = new Array(a.length)
+    for (var i = 0; i < a.length; i++) {
+      fa[i] = map1(a[i], f)
+    }
+    return fa
+  } else {
+    return f(a)
+  }
+}
+
+var map2 = T.map2 = function (a, b, f) {
+  if (a instanceof Array) {
+    var fa = new Array(a.length)
+    var isArrayB = (b instanceof Array)
+    for (var i = 0; i < a.length; i++) {
+      var bi = isArrayB ? b[i] : b
+      fa[i] = map2(a[i], bi, f)
+    }
+    return fa
+  } else {
+    return f(a, b)
+  }
+}
+
+var reduce = T.reduce = function (a, f, init) {
+  var result = init
+  if (a instanceof Array) {
+    for (var i in a) {
+      result = f(result, reduce(a[i], f, init))
+    }
+  } else {
+    result = f(result, a)
+  }
+  return result
+}
+
+T.all = function (a) {
+  return (a instanceof Array) ? a.every(e => T.all(e)) : (a === true)
+}
+
+T.any = function (a) {
+  return (a instanceof Array) ? a.some(e => T.any(e)) : (a === true)
+}
+
+// statistics
+T.max = (a) => reduce(a, Math.max, -Number.MAX_VALUE)
+T.min = (a) => reduce(a, Math.min, Number.MAX_VALUE)
+T.sum = (a) => reduce(a, (x, y) => x + y, 0)
+T.product = (a) => reduce(a, (x, y) => x * y, 1)
+T.mean = function (a) { return a.sum().div(a.length) }
+T.norm = function (a) { return a.map1((x) => x * x).sum().sqrt() }
+// +-*/%^
+T.add = function (a, b) { return map2(a, b, (x, y) => x + y) }
+T.sub = function (a, b) { return map2(a, b, (x, y) => x - y) }
+T.mul = function (a, b) { return map2(a, b, (x, y) => x * y) }
+T.div = function (a, b) { return map2(a, b, (x, y) => x / y) }
+T.mod = function (a, b) { return map2(a, b, (x, y) => x % y) }
+T.power = function (a, b) { return map2(a, b, (x, y) => Math.pow(x, y)) }
+T.neg = function (a) { return map1(a, (x) => -x) }
+T.inv = function (a) { return map1(a, (x) => 1 / x) }
+// logical
+T.not = function (a) { return map1(a, (x) => !x) }
+T.and = function (a, b) { return map2(a, (x, y) => x && y) }
+T.or = function (a, b) { return map2(a, (x, y) => x || y) }
+// j6.xor=function(x,y) { return x^y }
+T.bnot = function (x) { return map1(a, (x) => ~x) }
+T.band = function (a, b) { return map2(a, b, (x, y) => x & y) }
+T.bor = function (a, b) { return map2(a, b, (x, y) => x | y) }
+T.bxor = function (a, b) { return map2(a, b, (x, y) => x ^ y) }
+T.lshift = function (a, b) { return map2(a, b, (x) => x << b) }
+T.rshift = function (a, b) { return map2(a, b, (x) => x >> b) }
+// compare
+T.eq = function (a, b) { return map2(a, b, (x, y) => x === y) }
+T.neq = function (a, b) { return map2(a, b, (x, y) => x !== y) }
+T.geq = function (a, b) { return map2(a, b, (x, y) => x >= y) }
+T.leq = function (a, b) { return map2(a, b, (x, y) => x <= y) }
+T.gt = function (a, b) { return map2(a, b, (x, y) => x > y) }
+T.lt = function (a, b) { return map2(a, b, (x, y) => x < y) }
+T.near = function (a, b) { return a.sub(b).abs().sum() < 0.001 }
+// number function
+T.sqrt = function (a) { return map1(a, Math.sqrt) }
+T.log = function (a) { return map1(a, Math.log) }
+T.exp = function (a) { return map1(a, Math.exp) }
+T.abs = function (a) { return map1(a, Math.abs) }
+T.sin = function (a) { return map1(a, Math.sin) }
+T.cos = function (a) { return map1(a, Math.cos) }
+T.tan = function (a) { return map1(a, Math.tan) }
+T.asin = function (a) { return map1(a, Math.asin) }
+T.acos = function (a) { return map1(a, Math.acos) }
+T.atan = function (a) { return map1(a, Math.atan) }
+T.atan2 = function (a) { return map1(a, Math.atan2) }
+T.ceil = function (a) { return map1(a, Math.ceil) }
+T.floor = function (a) { return map1(a, Math.floor) }
+T.round = function (a) { return map1(a, Math.round) }
+T.sin = function (a) { return map1(a, Math.sin) }
+T.sqrt = function (a) { return map1(a, Math.sqrt) }
+T.toComplex = function (a) { return map1(a, (x) => j6.Complex.toComplex(x)) }
+// Operation (Object version)
+T.oadd = function (a, b) { return map2(a, b, (x, y) => x.add(y)) }
+T.osub = function (a, b) { return map2(a, b, (x, y) => x.sub(y)) }
+T.omul = function (a, b) { return map2(a, b, (x, y) => x.mul(y)) }
+T.odiv = function (a, b) { return map2(a, b, (x, y) => x.div(y)) }
+// j6.omod = function(a,b) { return map2(a,b,(x,y)=>x.mod(y)) }
+T.osqrt = function (a) { return map1(a, (x) => x.sqrt()) }
+T.osum = function (a) { return reduce(a, function (x, y) { return x.add(y) }, 0) }
+T.product = function (a) { return reduce(a, (x, y) => x.mul(y), 1) }
+
+// ===================== Tensor Operation ===========================
+T.prod = function (a, b) {
+  var c = []
+  if (!j6.isArray(a)) return a.mul(b)
+  for (var i = 0; i < a.length; i++) {
+    c.push(j6.tprod(a[i], b))
+  }
+  return c
+}
+
+function contract2 (b, j, ai, k) {
+  if (k === j) {
+    return b[ai]
+  } else {
+    var c = []
+    for (var bi = 0; bi < b.length; bi++) {
+      c.push(contract2(b, j, ai, k + 1))
+    }
+    return c
+  }
+}
+
+// b = [[1,2],[3,4]];
+// a = [[1,0],[0,1]];
+// ab=[[b,0],      ab[0=1] = [b+b] = [2b] = [[2,4],[6,8]]
+//     [0,b]]
+function contract (a, i, j, k) { // merge a[..i..j..]
+  var c = []
+  if (k === i) {
+    for (let ai = 0; ai < a.length; ai++) {
+      c.push(contract2(a[ai], j, ai, k + 1))
+    }
+    return j6.colSum(c)
+  } else {
+    for (let ai = 0; ai < a.length; ai++) {
+      c.push(contract(a[ai], i, j, k + 1))
+    }
+  }
+  return c
+}
+
+j6.tcontract = function (a, i, j) {
+  return contract(a, i, j, 0)
+}
+}
+},{}],12:[function(require,module,exports){
+module.exports = function (j6) {
 // =============== 檢定 ==============================
-B.mix(S, B);
-
-var T = S;
+var T = j6;
 
 T.test = function(o) { // name, D, x, mu, sd, y, alpha, op
   Object.assign(o, {alpha:0.05, op:"="});
@@ -1770,14 +2342,14 @@ T.test = function(o) { // name, D, x, mu, sd, y, alpha, op
   if (o.op === "=") {
     if (q1>0.5) q1 = 1-q1; // (q1>0.5) 取右尾，否則取左尾。
     pvalue= 2*q1; // 對稱情況：雙尾檢定的 p 值是單尾的兩倍。
-    interval = [D.q2p(alpha/2, o, "L"), D.q2p(1-alpha/2, o, "R")];
+    interval = [D.q2p(alpha/2, o, "L"), D.q2p(1-alpha/2, o, "j6")];
   } else {
     if (o.op === "<") { // 右尾檢定 H0: q < 1-alpha, 
       interval = [ D.q2p(alpha, o, "L"), Infinity ]; 
       pvalue = 1-q1;
     }
     if (o.op === ">") { // 左尾檢定 H0: q > alpha
-      interval=[-Infinity, D.q2p(1-alpha, o, "R")];
+      interval=[-Infinity, D.q2p(1-alpha, o, "j6")];
       pvalue = q1;
     }
   }
@@ -1789,7 +2361,7 @@ T.test = function(o) { // name, D, x, mu, sd, y, alpha, op
     pvalue: pvalue, 
     ci : interval, 
     df : D.df(o),
-    report: function() { S.report(this) }
+    report: function() { j6.report(this) }
   };
 }
 
@@ -1797,47 +2369,47 @@ T.report = function(o) {
   console.log("=========== report ==========");
   for (var k in o) {
     if (typeof o[k] !== "function")
-      console.log(k+"\t: "+S.str(o[k]));
+      console.log(k+"\t: "+j6.str(o[k]));
   }
 }
 
-var t1 = { // 單樣本 T 檢定 t = (X-mu)/(S/sqrt(n))
+var t1 = { // 單樣本 T 檢定 t = (X-mu)/(j6/sqrt(n))
   h:function(o) { return "H0:mu"+o.op+o.mu; }, 
   o2q:function(o) {
     var x = o.x, n = x.length;
-    var t = (S.mean(x)-o.mu)/(S.sd(x)/Math.sqrt(n)); 
-    return S.pt(t, n-1);
+    var t = (j6.mean(x)-o.mu)/(j6.sd(x)/Math.sqrt(n)); 
+    return j6.pt(t, n-1);
   },
-  // P(X-mu/(S/sqrt(n))<t) = q ; 信賴區間 P(T<q)
-  // P(mu > X-t*S/sqrt(n)) = q ; 這反而成了右尾檢定，所以左尾與右尾確實會反過來
+  // P(X-mu/(j6/sqrt(n))<t) = q ; 信賴區間 P(T<q)
+  // P(mu > X-t*j6/sqrt(n)) = q ; 這反而成了右尾檢定，所以左尾與右尾確實會反過來
   q2p:function(q, o) {
     var x = o.x, n = x.length;
-    return S.mean(x) + S.qt(q, n-1) * S.sd(x) / Math.sqrt(n);
+    return j6.mean(x) + j6.qt(q, n-1) * j6.sd(x) / Math.sqrt(n);
   },
   df:function(o) { return o.x.length-1; }
 }
 
 var t2vareq = { // σ1=σ2, 合併 T 檢定 (雙樣本)
   h:function(o) { return "H0:mu1"+o.op+"mu2" }, 
-  // S^2 = (n1-1)*S1^2+(n2-1)*S2^2)/(n1-1+n2-1)
+  // j6^2 = (n1-1)*S1^2+(n2-1)*S2^2)/(n1-1+n2-1)
   sd:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S1= S.sd(x), S2 = S.sd(y);
-    var S = Math.sqrt(((n1-1)*S1*S1+(n2-1)*S2*S2)/(n1-1+n2-1)); 
-    return S;
+    var S1= j6.sd(x), S2 = j6.sd(y);
+    var j6 = Math.sqrt(((n1-1)*S1*S1+(n2-1)*S2*S2)/(n1-1+n2-1)); 
+    return j6;
   },
-  // T = ((X-Y)-(mu1-mu2))/(sqrt(1/n1+1/n2)*S)
+  // T = ((X-Y)-(mu1-mu2))/(sqrt(1/n1+1/n2)*j6)
   o2q:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S = this.sd(o);
-    var t = (S.mean(x)-S.mean(y)-o.mu)/(Math.sqrt(1/n1+1/n2)*S);
-    return S.pt(t, n1+n2-2);
+    var j6 = this.sd(o);
+    var t = (j6.mean(x)-j6.mean(y)-o.mu)/(Math.sqrt(1/n1+1/n2)*j6);
+    return j6.pt(t, n1+n2-2);
   },
-  // t=((X-Y)-mu)/(sqrt(1/n1+1/n2)*S), (X-Y)-t*sqrt(1/n1+1/n2)*S = mu
+  // t=((X-Y)-mu)/(sqrt(1/n1+1/n2)*j6), (X-Y)-t*sqrt(1/n1+1/n2)*j6 = mu
   q2p:function(q, o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S = this.sd(o);
-    return S.mean(x)-S.mean(y)+ S.qt(q, n1+n2-2)*Math.sqrt(1/n1+1/n2)*S;
+    var j6 = this.sd(o);
+    return j6.mean(x)-j6.mean(y)+ j6.qt(q, n1+n2-2)*Math.sqrt(1/n1+1/n2)*j6;
   },
   df:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;  
@@ -1845,24 +2417,24 @@ var t2vareq = { // σ1=σ2, 合併 T 檢定 (雙樣本)
   }
 }
 
-var t2paired = { // 成對 T 檢定 T = (X-Y-mu)/(S/sqrt(n)) (雙樣本)
+var t2paired = { // 成對 T 檢定 T = (X-Y-mu)/(j6/sqrt(n)) (雙樣本)
   h:function(o) { return "H0:mu1"+o.op+"mu2" }, 
-  sd:function(o) { // S = sd(x-y)
+  sd:function(o) { // j6 = sd(x-y)
     var x = o.x, n = x.length, y=o.y;
-    var S= S.sd(S.sub(x,y));
-    return S;
+    var j6= j6.sd(j6.sub(x,y));
+    return j6;
   },
   o2q:function(o) { 
     var x = o.x, n = x.length, y=o.y;
-    var S = this.sd(o);
-    var t = (S.mean(S.sub(x,y))-o.mu)/(S/Math.sqrt(n));
-    return S.pt(t, n-1);
+    var j6 = this.sd(o);
+    var t = (j6.mean(j6.sub(x,y))-o.mu)/(j6/Math.sqrt(n));
+    return j6.pt(t, n-1);
   },
-  // mean(x-y)+t*S/sqrt(n)
+  // mean(x-y)+t*j6/sqrt(n)
   q2p:function(q, o) {
     var x = o.x, n = x.length, y=o.y;
-    var S = this.sd(o);
-    return S.mean(S.sub(x,y))+ S.qt(q, n-1)*S/Math.sqrt(n);
+    var j6 = this.sd(o);
+    return j6.mean(j6.sub(x,y))+ j6.qt(q, n-1)*j6/Math.sqrt(n);
   },
   df:function(o) {
     return o.x.length-1; 
@@ -1875,19 +2447,19 @@ var t2varneq = { // σ1≠σ2, Welch's t test (雙樣本) (又稱 Smith-Satterwa
   // T = ((X-Y)-(mu1-mu2))/sqrt(S1^2/n1+S2^2/n2)
   o2q:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S1 = S.sd(x), S2=S.sd(y);
-    var t = (S.mean(x)-S.mean(y)-o.mu)/Math.sqrt(S1*S1/n1+S2*S2/n2);
-    return S.pt(t, this.df(o));
+    var S1 = j6.sd(x), S2=j6.sd(y);
+    var t = (j6.mean(x)-j6.mean(y)-o.mu)/Math.sqrt(S1*S1/n1+S2*S2/n2);
+    return j6.pt(t, this.df(o));
   },
   // t=((X-Y)-mu)/sqrt(S1^2/n1+S2^2/n2), (X-Y)-t*sqrt(S1^2/n1+S2^2/n2) = mu
   q2p:function(q, o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S1 = S.sd(x), S2=S.sd(y);
-    return S.mean(x)-S.mean(y)+ S.qt(q, this.df(o))*Math.sqrt(S1*S1/n1+S2*S2/n2);
+    var S1 = j6.sd(x), S2=j6.sd(y);
+    return j6.mean(x)-j6.mean(y)+ j6.qt(q, this.df(o))*Math.sqrt(S1*S1/n1+S2*S2/n2);
   },
   df:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;  
-    var S1 = S.sd(x), S2=S.sd(y);
+    var S1 = j6.sd(x), S2=j6.sd(y);
     var Sn1 = S1*S1/n1, Sn2 = S2*S2/n2, Sn12 = Sn1+Sn2;
     var df = (Sn12*Sn12)/((Sn1*Sn1)/(n1-1)+(Sn2*Sn2)/(n2-1));
     return df;
@@ -1900,8 +2472,8 @@ T.ttest = function(o) {
     o.name = "ttest(X)";
     o.D = t1;
     t = T.test(o);
-    t.mean = S.mean(o.x);
-    t.sd   = S.sd(o.x);
+    t.mean = j6.mean(o.x);
+    t.sd   = j6.sd(o.x);
   } else {
     var varequal = o.varequal || false;
     var paired = o.paired || false;
@@ -1913,16 +2485,16 @@ T.ttest = function(o) {
       o.name = "ttest(x,y,mu="+o.mu+",paired=true)";
       o.D = t2paired;
       t = T.test(o);
-      t.mean = "mean(x-y)="+S.str(S.mean(S.sub(o.x, o.y)));
-      t.sd   = "sd(x-y)="+S.str(S.sd(S.sub(o.x, o.y)));
+      t.mean = "mean(x-y)="+j6.str(j6.mean(j6.sub(o.x, o.y)));
+      t.sd   = "sd(x-y)="+j6.str(j6.sd(j6.sub(o.x, o.y)));
     } else {
       o.name = "ttest(x,y,mu="+o.mu+",varequal=false), Welch t-test";
       o.D = t2varneq;
       t = T.test(o);
     }
     if (typeof t.mean === "undefined") {
-      t.mean = "mean(x)="+S.str(S.mean(o.x))+" mean(y)="+S.str(S.mean(o.y));
-      t.sd   = "sd(x)="+S.str(S.sd(o.x))+" sd(y)="+S.str(S.sd(o.y));
+      t.mean = "mean(x)="+j6.str(j6.mean(o.x))+" mean(y)="+j6.str(j6.mean(o.y));
+      t.sd   = "sd(x)="+j6.str(j6.sd(o.x))+" sd(y)="+j6.str(j6.sd(o.y));
     }
   }
   return t;
@@ -1933,17 +2505,17 @@ var f2 = { // 檢定 σ1/σ2 = 1?
   // F = S1^2/S2^2
   o2q:function(o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S1 = S.sd(x), S2=S.sd(y);
+    var S1 = j6.sd(x), S2=j6.sd(y);
     var f = (S1*S1)/(S2*S2);
-    var pf = S.pf(f, n1-1, n2-1);
+    var pf = j6.pf(f, n1-1, n2-1);
     return pf;
   },
   // 信賴區間公式： S1^2/(S2^2*F(1-α/2), S1^2/(S2^2*F(α/2))
-  // 也就是要用 S1^2/(S2^2*f(1-q)) ，參考 R 軟體、應用統計方法 (陳景祥) 389 頁。
+  // 也就是要用 S1^2/(S2^2*f(1-q)) ，參考 j6 軟體、應用統計方法 (陳景祥) 389 頁。
   q2p:function(q, o) {
     var x = o.x, n1 = x.length, y=o.y, n2=y.length;
-    var S1 = S.sd(x), S2=S.sd(y);
-    var qf = S.qf(1-q, n1-1, n2-1);
+    var S1 = j6.sd(x), S2=j6.sd(y);
+    var qf = j6.qf(1-q, n1-1, n2-1);
     return (S1*S1)/(S2*S2*qf);
   },
   df:function(o) {
@@ -1956,24 +2528,24 @@ T.ftest = function(o) {
   o.name = "ftest(X, Y)";
   o.D = f2;
   var t = T.test(o);
-  var rsd = S.sd(o.x)/S.sd(o.y);
+  var rsd = j6.sd(o.x)/j6.sd(o.y);
   t.ratio = (rsd*rsd);
   return t;
 }
 
-// R 軟體沒有此函數，測試請看湯銀才 143 頁
+// j6 軟體沒有此函數，測試請看湯銀才 143 頁
 var chisq1 = { // 檢定 σ1 = σ ?
   h:function(o) { return "H0:σ1"+o.op+"σ"; }, 
-  // χ(n-1) = (n-1)S^2/σ^2
+  // χ(n-1) = (n-1)j6^2/σ^2
   o2q:function(o) {
-    var x = o.x, n = x.length, S=S.sd(x);
-    var v = (n-1)*S*S/(o.sd*o.sd);
-    return S.pchisq(v, n-1);
+    var x = o.x, n = x.length, j6=j6.sd(x);
+    var v = (n-1)*j6*j6/(o.sd*o.sd);
+    return j6.pchisq(v, n-1);
   },
-  // 信賴區間公式： (n-1)S^2/χ^2(1-q)，參考 R 語言與統計分析 (湯銀才) 142 頁。
+  // 信賴區間公式： (n-1)j6^2/χ^2(1-q)，參考 j6 語言與統計分析 (湯銀才) 142 頁。
   q2p:function(q, o) {
-    var x = o.x, n = x.length, S=S.sd(x);
-    return (n-1)*S*S/S.qchisq(1-q, n-1);
+    var x = o.x, n = x.length, j6=j6.sd(x);
+    return (n-1)*j6*j6/j6.qchisq(1-q, n-1);
   },
   df:function(o) {
     var x = o.x, n = x.length;
@@ -1989,21 +2561,21 @@ T.chisqtest = function(o) {
 
 T.vartest = function(o) {
   if (typeof o.y === "undefined")
-    return S.chisqtest(o);
+    return j6.chisqtest(o);
   else
-    return S.ftest(o);
+    return j6.ftest(o);
 }
 
 var z1 = { // 單樣本 Z 檢定
   h:function(o) { return "H0:mu"+o.op+o.mu+" when sd="+o.sd; }, 
   o2q:function(o) {
     var x = o.x, n = x.length;
-    var z = (S.mean(x)-o.mu)/(o.sd/Math.sqrt(n)); // z=(X-mu)/(sd/sqrt(n))
-    return S.pnorm(z, 0, 1);
+    var z = (j6.mean(x)-o.mu)/(o.sd/Math.sqrt(n)); // z=(X-mu)/(sd/sqrt(n))
+    return j6.pnorm(z, 0, 1);
   },
   q2p:function(q, o) {
     var x = o.x, n = x.length;
-    return S.mean(x) + S.qnorm(q, 0, 1) * S.sd(x) / Math.sqrt(n);
+    return j6.mean(x) + j6.qnorm(q, 0, 1) * j6.sd(x) / Math.sqrt(n);
   },
   df:function(o) { return o.x.length; }
 }
@@ -2020,14 +2592,14 @@ var zprop1 = { // 比例的檢定， n 較大時的近似解 o={ x, n, p } // x 
   o2q:function(o) {
     var x=o.x, n=o.n, p1=x/n, p=o.p||p1;
     var z = (p1-p)/Math.sqrt(p*(1-p)/n);
-    return S.pnorm(z, 0, 1);
+    return j6.pnorm(z, 0, 1);
   },
-  // 信賴區間公式： p1+z*sqrt(p1*(1-p1)/n)，參考 R 語言與統計分析 (湯銀才) 149 頁。
+  // 信賴區間公式： p1+z*sqrt(p1*(1-p1)/n)，參考 j6 語言與統計分析 (湯銀才) 149 頁。
   q2p:function(q, o) {
     var x=o.x, n=o.n, p1=x/n, p=p1;
-    var z = S.qnorm(q, 0, 1);
+    var z = j6.qnorm(q, 0, 1);
     var z22n = z*z/(2*n);
-    return (p1+z22n+z*Math.sqrt( p*(1-p)/n + z22n/(2*n) ))/(1+2*z22n); // R 的版本，比較複雜的估計公式
+    return (p1+z22n+z*Math.sqrt( p*(1-p)/n + z22n/(2*n) ))/(1+2*z22n); // j6 的版本，比較複雜的估計公式
 //  return p1+z*Math.sqrt(p*(1-p)/n); //  語言與統計分析 (湯銀才) 149 頁的版本。
   },
   df:function(o) { return 1; }
@@ -2035,22 +2607,22 @@ var zprop1 = { // 比例的檢定， n 較大時的近似解 o={ x, n, p } // x 
 
 var zprop2 = { // 比例的檢定， n 較大時的近似解 o={ x, y, n1, n2 }
   h:function(o) { return "H0:p1-p2"+o.op+o.p; }, 
-  // Z = (p1-p2)/sqrt(p*(1-p)*(1/n1+1/n2)), p = (n1p1+n2p2)/(n1+n2)，參考 R 語言與統計分析 (湯銀才) 175 頁。
+  // Z = (p1-p2)/sqrt(p*(1-p)*(1/n1+1/n2)), p = (n1p1+n2p2)/(n1+n2)，參考 j6 語言與統計分析 (湯銀才) 175 頁。
   o2q:function(o) {
     var x=o.x, y=o.y, n1=o.n1, n2=o.n2, p1=x/n1, p2=y/n2, p=(n1*p1+n2*p2)/(n1+n2);
     var z = (p1-p2)/Math.sqrt(p*(1-p)*(1/n1+1/n2));
-    return S.pnorm(z, 0, 1);
+    return j6.pnorm(z, 0, 1);
   },
   // 信賴區間公式： p1-p2+z*sqrt(p*(1-p)*(1/n1+1/n2));
   q2p:function(q, o) {
     var x=o.x, y=o.y, n1=o.n1, n2=o.n2, p1=x/n1, p2=y/n2, p=(n1*p1+n2*p2)/(n1+n2);
-    var z = S.qnorm(q, 0, 1);
+    var z = j6.qnorm(q, 0, 1);
     return p1-p2+z*Math.sqrt(p*(1-p)*(1/n1+1/n2));
   },
   df:function(o) { return 1; }
 }
 
-/* 在 prop.test.R 當中，雙邊檢定的 pvalue 是用 pchisq, 單邊才是用 z ，為何呢？ ( 但是信賴區間則是全部用 z)
+/* 在 prop.test.j6 當中，雙邊檢定的 pvalue 是用 pchisq, 單邊才是用 z ，為何呢？ ( 但是信賴區間則是全部用 z)
  if (alternative == "two.sided")
   PVAL <- pchisq(STATISTIC, PARAMETER, lower.tail = FALSE)
     else {
@@ -2064,7 +2636,7 @@ var zprop2 = { // 比例的檢定， n 較大時的近似解 o={ x, y, n1, n2 }
 
 T.proptest = function(o) {
   o.p = o.p || 0.5;
-  o.name = "proptest("+S.str(o)+")";
+  o.name = "proptest("+j6.str(o)+")";
   o.correct = o.correct|| false;
   if (o.correct) {
     o.name += ", binomtest";
@@ -2087,18 +2659,18 @@ T.proptest = function(o) {
   return t;
 }
 
-// 參考： https://github.com/SurajGupta/r-source/blob/master/src/library/stats/R/binom.test.R
+// 參考： https://github.com/SurajGupta/r-source/blob/master/src/library/stats/j6/binom.test.j6
 var binom1 = { // 比例的檢定， n 較大時的近似解 o={ x, n, p } // x 為數值，n 個中出現 x 個 1
   h:function(o) { return "H0:p"+o.op+o.p; }, 
   
   // Z = C(n, k)*p1^k*(1-p1)^(n-k), CDF(z: from 1 to x)
   o2q:function(o) {
     var x=o.x, n=o.n, p = o.p, q;
-    var dx = S.dbinom(x, n, p);
+    var dx = j6.dbinom(x, n, p);
     if (o.op === "=") { // 雙尾檢定，去雙尾後 / 2
       var q = 0;
       for (var i=0; i<=n; i++) {
-        var di = S.dbinom(i, n, p);
+        var di = j6.dbinom(i, n, p);
         if (di > dx+1e-5) q += di; // 為何 x 本身不算，如果算應該用 di > dx-1e-5 才對。
       }
       q=1-((1-q)/2); // 因為 test 會 * 2 所進行的減半調整
@@ -2107,14 +2679,14 @@ var binom1 = { // 比例的檢定， n 較大時的近似解 o={ x, n, p } // x 
         q = 1;
       else {
         if (o.op === ">")
-          q = S.pbinom(x, n, p); // 去右尾
+          q = j6.pbinom(x, n, p); // 去右尾
         else // op=== "<"
-          q = S.pbinom(x-1, n, p); // 去右尾
+          q = j6.pbinom(x-1, n, p); // 去右尾
       }
     }
     return q;
   },
-/* 注意上述 R 原始碼另一尾的計算方式，是用 < pbinom(最接近 x 者) 的算法，而不是直接 * 2。 問題是我們在 test 中是直接用*2 的方式。
+/* 注意上述 j6 原始碼另一尾的計算方式，是用 < pbinom(最接近 x 者) 的算法，而不是直接 * 2。 問題是我們在 test 中是直接用*2 的方式。
   d <- dbinom(x, n, p)
   ...
   else if (x < m) {
@@ -2132,16 +2704,16 @@ var binom1 = { // 比例的檢定， n 較大時的近似解 o={ x, n, p } // x 
   q2p:function(q, o, side) { 
     var x=o.x, n=o.n, p=o.p, op=o.op;
     if (side === "L")
-      return S.qbeta(q, x, n - x + 1); // 這裏採用 qbeta 是 R 的作法; 直覺上應該採用 S.qbinom(q, n, p);
+      return j6.qbeta(q, x, n - x + 1); // 這裏採用 qbeta 是 j6 的作法; 直覺上應該採用 j6.qbinom(q, n, p);
     else
-      return S.qbeta(q, x + 1, n - x);
+      return j6.qbeta(q, x + 1, n - x);
   },
   df:function(o) { return 1; }
 }
 
 T.binomtest = function(o) {
   o.p = o.p || 0.5;
-  o.name = "binomtest("+S.str(o)+")";
+  o.name = "binomtest("+j6.str(o)+")";
   o.D = binom1;
   var t=T.test(o);
   t.p = o.x/o.n;
@@ -2158,17864 +2730,277 @@ T.anovaftest = function() {
     score: J.anovafscore(),
   };
 }
-
-module.exports = S;
-
-},{"./base":2,"./calculus":3,"jStat":14}],11:[function(require,module,exports){
-var Symbol = require('algebrite')
-
-module.exports = Symbol;
-},{"algebrite":12}],12:[function(require,module,exports){
-// Generated by CoffeeScript 1.10.0
-(function() {
-  var $, ABS, ADD, ADJ, AND, ARCCOS, ARCCOSH, ARCSIN, ARCSINH, ARCTAN, ARCTANH, ARG, ATOMIZE, AUTOEXPAND, BAKE, BESSELJ, BESSELY, BINDING, BINOMIAL, BINOM_check_args, BUF, C1, C2, C3, C4, C5, C6, CEILING, CHECK, CHOOSE, CIRCEXP, CLEAR, CLOCK, COEFF, COFACTOR, CONDENSE, CONJ, CONS, CONTRACT, COS, COSH, Condense, DEBUG, DECOMP, DEFINT, DEGREE, DENOMINATOR, DERIVATIVE, DET, DET_check_arg, DIM, DIRAC, DISPLAY, DIVISORS, DO, DOT, DOUBLE, DRAW, DRAWX, DSOLVE, E, EIGEN, EIGENVAL, EIGENVEC, EIG_N, EIG_check_arg, EIG_yydd, EIG_yyqq, ERF, ERFC, EVAL, EXP, EXPAND, EXPCOS, EXPSIN, Eval, Eval_Eval, Eval_abs, Eval_add, Eval_adj, Eval_and, Eval_arccos, Eval_arccosh, Eval_arcsin, Eval_arcsinh, Eval_arctan, Eval_arctanh, Eval_arg, Eval_besselj, Eval_bessely, Eval_binding, Eval_binomial, Eval_ceiling, Eval_check, Eval_choose, Eval_circexp, Eval_clear, Eval_clock, Eval_coeff, Eval_cofactor, Eval_condense, Eval_conj, Eval_cons, Eval_contract, Eval_cos, Eval_cosh, Eval_decomp, Eval_defint, Eval_degree, Eval_denominator, Eval_derivative, Eval_det, Eval_dim, Eval_dirac, Eval_divisors, Eval_do, Eval_dsolve, Eval_eigen, Eval_eigenval, Eval_eigenvec, Eval_erf, Eval_erfc, Eval_exp, Eval_expand, Eval_expcos, Eval_expsin, Eval_factor, Eval_factorial, Eval_factorpoly, Eval_filter, Eval_float, Eval_floor, Eval_for, Eval_gamma, Eval_gcd, Eval_hermite, Eval_hilbert, Eval_imag, Eval_index, Eval_inner, Eval_integral, Eval_inv, Eval_invg, Eval_isinteger, Eval_isprime, Eval_laguerre, Eval_lcm, Eval_leading, Eval_legendre, Eval_log, Eval_mag, Eval_mod, Eval_multiply, Eval_noexpand, Eval_not, Eval_nroots, Eval_number, Eval_numerator, Eval_operator, Eval_or, Eval_outer, Eval_polar, Eval_power, Eval_predicate, Eval_prime, Eval_print, Eval_product, Eval_quote, Eval_quotient, Eval_rank, Eval_rationalize, Eval_real, Eval_rect, Eval_roots, Eval_setq, Eval_sgn, Eval_shape, Eval_simfac, Eval_simplify, Eval_sin, Eval_sinh, Eval_sqrt, Eval_stop, Eval_subst, Eval_sym, Eval_tan, Eval_tanh, Eval_taylor, Eval_tensor, Eval_test, Eval_testeq, Eval_testge, Eval_testgt, Eval_testle, Eval_testlt, Eval_transpose, Eval_unit, Eval_user_function, Eval_zero, Evalpoly, FACTOR, FACTORIAL, FACTORPOLY, FILTER, FLOATF, FLOOR, FOR, Find, GAMMA, GCD, HERMITE, HILBERT, IMAG, INDEX, INNER, INTEGRAL, INV, INVG, INV_check_arg, INV_decomp, ISINTEGER, ISPRIME, LAGUERRE, LAST, LCM, LEADING, LEGENDRE, LOG, M, MAG, MAXDIM, MAXPRIMETAB, MAX_PROGRAM_SIZE, MEQUAL, METAA, METAB, METAX, MLENGTH, MOD, MP_MAX_FREE, MP_MIN_SIZE, MSIGN, MULTIPLY, MZERO, N, NIL, NOT, NROOTS, NROOTS_ABS, NROOTS_DELTA, NROOTS_EPSILON, NROOTS_RANDOM, NROOTS_YMAX, NROOTS_divpoly, NSYM, NUM, NUMBER, NUMERATOR, OPERATOR, OR, OUTER, PI, POLAR, POWER, PRIME, PRINT, PRINTOUTRESULT, PRODUCT, QUOTE, QUOTIENT, RANK, RATIONALIZE, REAL, ROOTS, SECRETX, SELFTEST, SETQ, SGN, SHAPE, SIMPLIFY, SIN, SINH, SPACE_BETWEEN_COLUMNS, SPACE_BETWEEN_ROWS, SQRT, STOP, STR, SUBST, SUM, SYM, SYMBOL_A, SYMBOL_B, SYMBOL_C, SYMBOL_D, SYMBOL_I, SYMBOL_J, SYMBOL_N, SYMBOL_R, SYMBOL_S, SYMBOL_T, SYMBOL_X, SYMBOL_Y, SYMBOL_Z, TAN, TANH, TAYLOR, TENSOR, TEST, TESTEQ, TESTGE, TESTGT, TESTLE, TESTLT, TOS, TRACE, TRANSPOSE, TTY, T_DOUBLE, T_EQ, T_FUNCTION, T_GTEQ, T_INTEGER, T_LTEQ, T_NEWLINE, T_STRING, T_SYMBOL, U, UNIT, USR_SYMBOLS, YMAX, YYE, YYRECT, ZERO, __emit_char, __emit_str, __factor_add, __factorial, __is_negative, __is_radical_number, __lcm, __legendre, __legendre2, __legendre3, __normalize_radical_factors, __rationalize_tensor, absval, absval_tensor, ac, ad, add, add_all, add_numbers, add_terms, addf, adj, alloc_tensor, allocatedId, any_denominators, arccos, arccosh, arcsin, arcsinh, arctan, arctanh, arg, arglist, bake, bake_poly, bake_poly_term, besselj, bessely, bigInt, bignum_factorial, bignum_float, bignum_power_number, bignum_scan_float, bignum_scan_integer, bignum_truncate, binding, binomial, buffer, build_tensor, caaddr, caadr, caar, cadaddr, cadadr, cadar, caddaddr, caddadr, caddar, caddddr, cadddr, caddr, cadr, car, cdaddr, cdadr, cdar, cddaddr, cddar, cdddaddr, cddddr, cdddr, cddr, cdr, ceiling, charTabIndex, chartab, check_esc_flag, check_stack, choose, choose_check_args, circexp, clear, clear_symbols, clear_term, clockform, cmpGlyphs, cmp_args, cmp_expr, cmp_terms, cmp_terms_count, coeff, cofactor, collectResultLine, combine_factors, combine_gammas, combine_terms, compare_numbers, compare_rationals, compare_tensors, compatible, compute_fa, conjugate, cons, consCount, contract, convert_bignum_to_double, convert_rational_to_double, copy_tensor, cosine, cosine_of_angle, cosine_of_angle_sum, count, count_denominators, counter, d_scalar_scalar, d_scalar_scalar_1, d_scalar_tensor, d_tensor_scalar, d_tensor_tensor, dabs, darccos, darccosh, darcsin, darcsinh, darctan, darctanh, dbesselj0, dbesseljn, dbessely0, dbesselyn, dcos, dcosh, dd, decomp, decomp_product, decomp_sum, define_user_function, defn, defn_str, degree, denominator, derf, derfc, derivative, derivative_of_integral, det, determinant, detg, dfunction, dhermite, dirac, display, display_flag, displaychar, divide, divide_numbers, divisors, divisors_onstack, divpoly, dlog, doubleToReasonableString, dpow, dpower, dproduct, draw_flag, draw_stop_return, dsgn, dsin, dsinh, dsum, dtan, dtanh, dupl, echo_input, eigen, elelmIndex, elem, emit_denominator, emit_denominators, emit_expr, emit_factor, emit_factorial_function, emit_flat_tensor, emit_fraction, emit_function, emit_index_function, emit_multiply, emit_number, emit_numerators, emit_numerical_fraction, emit_power, emit_string, emit_subexpr, emit_symbol, emit_tensor, emit_tensor_inner, emit_term, emit_top_expr, emit_unsigned_expr, emit_x, equal, equaln, equalq, erfc, errorMessage, esc_flag, exec, expand, expand_get_A, expand_get_AF, expand_get_B, expand_get_C, expand_get_CF, expand_tensor, expanding, expcos, exponential, expr_level, expsin, f1, f2, f3, f4, f5, f9, f_equals_a, factor, factor_a, factor_again, factor_b, factor_number, factor_small_number, factor_term, factorial, factorpoly, factors, factpoly_expo, fill_buf, filter, filter_main, filter_sum, filter_tensor, findroot, fixed_top_level_eval, fixup_fraction, fixup_power, flag, fmt_index, fmt_level, fmt_x, frame, free_stack, gamma, gamma_of_sum, gammaf, gcd, gcd_expr, gcd_expr_expr, gcd_factor_term, gcd_main, gcd_numbers, gcd_term_factor, gcd_term_term, gen, get_arglist, get_binding, get_factor, get_next_token, get_printname, get_size, get_token, getdisplaystr, glyph, gp, guess, hasImaginaryCoeff, hermite, hilbert, imag, imaginaryunit, index_function, init, initNRoots, inited, inner, inner_f, input_str, integral, integral_of_form, integral_of_product, integral_of_sum, inv, inverse, invert_number, invg, is_denominator, is_factor, is_small_integer, is_square_matrix, isadd, isalnum, isalpha, iscomplexnumber, iscons, isdenominator, isdigit, isdouble, iseveninteger, isfactor, isfactorial, isfloating, isfraction, isimaginarynumber, isimaginaryunit, isinteger, isintegerfactor, iskeyword, isminusone, isminusoneoversqrttwo, ismultiply, isnegative, isnegativenumber, isnegativeterm, isnonnegativeinteger, isnpi, isnum, isoneover, isoneoversqrttwo, isplusone, ispoly, ispoly_expr, ispoly_factor, ispoly_term, isposint, ispower, isquarterturn, isrational, isspace, isstr, issymbol, issymbolic, istensor, iszero, itab, laguerre, laguerre2, lcm, leading, legendre, length, lessp, level, list, logarithm, logbuf, lookupsTotal, lu_decomp, madd, mag, makePositive, makeSignSameAs, mask, mcmp, mcmpint, mdiv, mdivrem, meta_mode, mgcd, mini_solve, mint, mmod, mmul, mod, monic, move, mp_clr_bit, mp_denominator, mp_numerator, mp_set_bit, mpow, mprime, mroot, mshiftright, msub, mtotal, multinomial_sum, multiply, multiply_all, multiply_all_noexpand, multiply_denominators, multiply_denominators_factor, multiply_denominators_term, multiply_noexpand, multiply_numbers, n_factor_number, negate, negate_expand, negate_noexpand, negate_number, new_string, newline_flag, nil_symbols, normalize_angle, nroots_a, nroots_b, nroots_c, nroots_df, nroots_dx, nroots_fa, nroots_fb, nroots_x, nroots_y, nterms, numerator, numericRootOfPolynomial, o, one, oneElement, out_buf, out_count, out_of_memory, outer, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, parse, parse_internal, parse_p1, parse_p2, partition, peek, peek2, polar, polycoeff, polyform, pop, pop_double, pop_frame, pop_integer, power, power_str, power_sum, power_tensor, prime, primetab, print1, print_a_over_b, print_char, print_denom, print_double, print_expr, print_factor, print_factorial_function, print_it, print_multiply_sign, print_number, print_str, print_subexpr, print_tensor, print_tensor_inner, print_term, printchar, printchar_nowrap, printline, program_buf, promote_tensor, push, push_cars, push_double, push_factor, push_frame, push_identity_matrix, push_integer, push_rational, push_symbol, push_term_factors, push_terms, push_zero_matrix, qadd, qdiv, qmul, qpow, qpowf, quickfactor, quickpower, rational, rationalize, rationalize_coefficients, real, reciprocate, rect, ref, ref1, remove_negative_exponents, reset_after_error, restore, rewrite_args, rewrite_args_tensor, roots, roots2, roots3, run, save, scalar_times_tensor, scan, scan_error, scan_expression, scan_factor, scan_function_call, scan_meta, scan_power, scan_relation, scan_stmt, scan_str, scan_string, scan_subexpr, scan_symbol, scan_term, scanned, setM, setSignTo, set_binding, set_binding_and_arglist, set_component, setq_indexed, sfac_product, sfac_product_f, sgn, shape, sign, sign_of_term, simfac, simfac_term, simplify, simplify_main, simplify_polar, simplify_tensor, simplify_trig, simplifyfactorials, sine, sine_of_angle, sine_of_angle_sum, sort_stack, square, ssqrt, stack, stackAddsCount, std_symbol, step, step2, stop, strcmp, stringToBePrinted, subf, subst, subtract, subtract_numbers, swap, symbol, symnum, symtab, tangent, taylor, tensor, tensor_plus_tensor, tensor_times_scalar, test_flag, text_metric, theRandom, token, token_buf, token_str, top_level_eval, tos, transform, transpose, trigmode, trivial_divide, try_kth_prime, ucmp, unique, unique_f, update_token_buf, usr_symbol, verbosing, will_be_displayed_as_fraction, ybinomial, ycosh, ydirac, yerf, yerfc, yfloor, yindex, ysinh, yyarg, yybesselj, yybessely, yyceiling, yycondense, yycontract, yycosh, yydegree, yydetg, yydivpoly, yyerf, yyerfc, yyexpand, yyfactorpoly, yyfloat, yyfloor, yyhermite, yyhermite2, yyinvg, yylcm, yylog, yymag, yymultiply, yyouter, yypower, yyrationalize, yysgn, yysimfac, yysinh, yytangent, zero,
-    slice = [].slice;
-
-  bigInt = require('big-integer');
-
-  SELFTEST = 1;
-
-  NSYM = 1000;
-
-  DEBUG = false;
-
-  PRINTOUTRESULT = false;
-
-  rational = (function() {
-    function rational() {}
-
-    rational.prototype.a = null;
-
-    rational.prototype.b = null;
-
-    return rational;
-
-  })();
-
-  U = (function() {
-    U.prototype.cons = null;
-
-    U.prototype.printname = "";
-
-    U.prototype.str = "";
-
-    U.prototype.tensor = null;
-
-    U.prototype.q = null;
-
-    U.prototype.d = 0.0;
-
-    U.prototype.k = 0;
-
-    U.prototype.tag = 0;
-
-    U.prototype.toString = function() {
-      return collectResultLine(this);
-    };
-
-    function U() {
-      this.cons = {};
-      this.cons.car = null;
-      this.cons.cdr = null;
-      this.q = new rational();
-    }
-
-    return U;
-
-  })();
-
-  errorMessage = "";
-
-  CONS = 0;
-
-  NUM = 1;
-
-  DOUBLE = 2;
-
-  STR = 3;
-
-  TENSOR = 4;
-
-  SYM = 5;
-
-  counter = 0;
-
-  ABS = counter++;
-
-  ADD = counter++;
-
-  ADJ = counter++;
-
-  AND = counter++;
-
-  ARCCOS = counter++;
-
-  ARCCOSH = counter++;
-
-  ARCSIN = counter++;
-
-  ARCSINH = counter++;
-
-  ARCTAN = counter++;
-
-  ARCTANH = counter++;
-
-  ARG = counter++;
-
-  ATOMIZE = counter++;
-
-  BESSELJ = counter++;
-
-  BESSELY = counter++;
-
-  BINDING = counter++;
-
-  BINOMIAL = counter++;
-
-  CEILING = counter++;
-
-  CHECK = counter++;
-
-  CHOOSE = counter++;
-
-  CIRCEXP = counter++;
-
-  CLEAR = counter++;
-
-  CLOCK = counter++;
-
-  COEFF = counter++;
-
-  COFACTOR = counter++;
-
-  CONDENSE = counter++;
-
-  CONJ = counter++;
-
-  CONTRACT = counter++;
-
-  COS = counter++;
-
-  COSH = counter++;
-
-  DECOMP = counter++;
-
-  DEFINT = counter++;
-
-  DEGREE = counter++;
-
-  DENOMINATOR = counter++;
-
-  DERIVATIVE = counter++;
-
-  DET = counter++;
-
-  DIM = counter++;
-
-  DIRAC = counter++;
-
-  DISPLAY = counter++;
-
-  DIVISORS = counter++;
-
-  DO = counter++;
-
-  DOT = counter++;
-
-  DRAW = counter++;
-
-  DSOLVE = counter++;
-
-  EIGEN = counter++;
-
-  EIGENVAL = counter++;
-
-  EIGENVEC = counter++;
-
-  ERF = counter++;
-
-  ERFC = counter++;
-
-  EVAL = counter++;
-
-  EXP = counter++;
-
-  EXPAND = counter++;
-
-  EXPCOS = counter++;
-
-  EXPSIN = counter++;
-
-  FACTOR = counter++;
-
-  FACTORIAL = counter++;
-
-  FACTORPOLY = counter++;
-
-  FILTER = counter++;
-
-  FLOATF = counter++;
-
-  FLOOR = counter++;
-
-  FOR = counter++;
-
-  GAMMA = counter++;
-
-  GCD = counter++;
-
-  HERMITE = counter++;
-
-  HILBERT = counter++;
-
-  IMAG = counter++;
-
-  INDEX = counter++;
-
-  INNER = counter++;
-
-  INTEGRAL = counter++;
-
-  INV = counter++;
-
-  INVG = counter++;
-
-  ISINTEGER = counter++;
-
-  ISPRIME = counter++;
-
-  LAGUERRE = counter++;
-
-  LCM = counter++;
-
-  LEADING = counter++;
-
-  LEGENDRE = counter++;
-
-  LOG = counter++;
-
-  MAG = counter++;
-
-  MOD = counter++;
-
-  MULTIPLY = counter++;
-
-  NOT = counter++;
-
-  NROOTS = counter++;
-
-  NUMBER = counter++;
-
-  NUMERATOR = counter++;
-
-  OPERATOR = counter++;
-
-  OR = counter++;
-
-  OUTER = counter++;
-
-  POLAR = counter++;
-
-  POWER = counter++;
-
-  PRIME = counter++;
-
-  PRINT = counter++;
-
-  PRODUCT = counter++;
-
-  QUOTE = counter++;
-
-  QUOTIENT = counter++;
-
-  RANK = counter++;
-
-  RATIONALIZE = counter++;
-
-  REAL = counter++;
-
-  YYRECT = counter++;
-
-  ROOTS = counter++;
-
-  SETQ = counter++;
-
-  SGN = counter++;
-
-  SIMPLIFY = counter++;
-
-  SIN = counter++;
-
-  SINH = counter++;
-
-  SHAPE = counter++;
-
-  SQRT = counter++;
-
-  STOP = counter++;
-
-  SUBST = counter++;
-
-  SUM = counter++;
-
-  TAN = counter++;
-
-  TANH = counter++;
-
-  TAYLOR = counter++;
-
-  TEST = counter++;
-
-  TESTEQ = counter++;
-
-  TESTGE = counter++;
-
-  TESTGT = counter++;
-
-  TESTLE = counter++;
-
-  TESTLT = counter++;
-
-  TRANSPOSE = counter++;
-
-  UNIT = counter++;
-
-  ZERO = counter++;
-
-  NIL = counter++;
-
-  AUTOEXPAND = counter++;
-
-  BAKE = counter++;
-
-  LAST = counter++;
-
-  TRACE = counter++;
-
-  TTY = counter++;
-
-  YYE = counter++;
-
-  DRAWX = counter++;
-
-  METAA = counter++;
-
-  METAB = counter++;
-
-  METAX = counter++;
-
-  SECRETX = counter++;
-
-  PI = counter++;
-
-  SYMBOL_A = counter++;
-
-  SYMBOL_B = counter++;
-
-  SYMBOL_C = counter++;
-
-  SYMBOL_D = counter++;
-
-  SYMBOL_I = counter++;
-
-  SYMBOL_J = counter++;
-
-  SYMBOL_N = counter++;
-
-  SYMBOL_R = counter++;
-
-  SYMBOL_S = counter++;
-
-  SYMBOL_T = counter++;
-
-  SYMBOL_X = counter++;
-
-  SYMBOL_Y = counter++;
-
-  SYMBOL_Z = counter++;
-
-  C1 = counter++;
-
-  C2 = counter++;
-
-  C3 = counter++;
-
-  C4 = counter++;
-
-  C5 = counter++;
-
-  C6 = counter++;
-
-  USR_SYMBOLS = counter++;
-
-  E = YYE;
-
-  TOS = 100000;
-
-  BUF = 10000;
-
-  MAX_PROGRAM_SIZE = 100001;
-
-  MAXPRIMETAB = 10000;
-
-  MAXDIM = 24;
-
-  tensor = (function() {
-    tensor.prototype.ndim = 0;
-
-    tensor.prototype.dim = null;
-
-    tensor.prototype.nelem = 0;
-
-    tensor.prototype.elem = null;
-
-    function tensor() {
-      this.dim = (function() {
-        var o, ref, results;
-        results = [];
-        for (o = 0, ref = MAXDIM; 0 <= ref ? o <= ref : o >= ref; 0 <= ref ? o++ : o--) {
-          results.push(0);
-        }
-        return results;
-      })();
-      this.elem = [];
-    }
-
-    return tensor;
-
-  })();
-
-  display = (function() {
-    function display() {}
-
-    display.prototype.h = 0;
-
-    display.prototype.w = 0;
-
-    display.prototype.n = 0;
-
-    display.prototype.a = [];
-
-    return display;
-
-  })();
-
-  text_metric = (function() {
-    function text_metric() {}
-
-    text_metric.prototype.ascent = 0;
-
-    text_metric.prototype.descent = 0;
-
-    text_metric.prototype.width = 0;
-
-    return text_metric;
-
-  })();
-
-  tos = 0;
-
-  expanding = 0;
-
-  fmt_x = 0;
-
-  fmt_index = 0;
-
-  fmt_level = 0;
-
-  verbosing = 0;
-
-  primetab = (function() {
-    var ceil, i, j, primes;
-    primes = [2];
-    i = 3;
-    while (primes.length < MAXPRIMETAB) {
-      j = 0;
-      ceil = Math.sqrt(i);
-      while (j < primes.length && primes[j] <= ceil) {
-        if (i % primes[j] === 0) {
-          j = -1;
-          break;
-        }
-        j++;
-      }
-      if (j !== -1) {
-        primes.push(i);
-      }
-      i += 2;
-    }
-    primes[MAXPRIMETAB] = 0;
-    return primes;
-  })();
-
-  esc_flag = 0;
-
-  draw_flag = 0;
-
-  mtotal = 0;
-
-  trigmode = 0;
-
-  logbuf = "";
-
-  program_buf = "";
-
-  symtab = [];
-
-  binding = [];
-
-  arglist = [];
-
-  stack = [];
-
-  frame = 0;
-
-  p0 = null;
-
-  p1 = null;
-
-  p2 = null;
-
-  p3 = null;
-
-  p4 = null;
-
-  p5 = null;
-
-  p6 = null;
-
-  p7 = null;
-
-  p8 = null;
-
-  p9 = null;
-
-  zero = null;
-
-  one = null;
-
-  imaginaryunit = null;
-
-  symtab = [];
-
-  out_buf = "";
-
-  out_count = 0;
-
-  test_flag = 0;
-
-  draw_stop_return = null;
-
-  symbol = function(x) {
-    return symtab[x];
-  };
-
-  iscons = function(p) {
-    return p.k === CONS;
-  };
-
-  isrational = function(p) {
-    return p.k === NUM;
-  };
-
-  isdouble = function(p) {
-    return p.k === DOUBLE;
-  };
-
-  isnum = function(p) {
-    return isrational(p) || isdouble(p);
-  };
-
-  isstr = function(p) {
-    return p.k === STR;
-  };
-
-  istensor = function(p) {
-    if (p == null) {
-      debugger;
-    } else {
-      return p.k === TENSOR;
-    }
-  };
-
-  issymbol = function(p) {
-    return p.k === SYM;
-  };
-
-  iskeyword = function(p) {
-    return issymbol(p) && symnum(p) < NIL;
-  };
-
-  car = function(p) {
-    if (iscons(p)) {
-      return p.cons.car;
-    } else {
-      return symbol(NIL);
-    }
-  };
-
-  cdr = function(p) {
-    if (iscons(p)) {
-      return p.cons.cdr;
-    } else {
-      return symbol(NIL);
-    }
-  };
-
-  caar = function(p) {
-    return car(car(p));
-  };
-
-  cadr = function(p) {
-    return car(cdr(p));
-  };
-
-  cdar = function(p) {
-    return cdr(car(p));
-  };
-
-  cddr = function(p) {
-    return cdr(cdr(p));
-  };
-
-  caadr = function(p) {
-    return car(car(cdr(p)));
-  };
-
-  caddr = function(p) {
-    return car(cdr(cdr(p)));
-  };
-
-  cadar = function(p) {
-    return car(cdr(car(p)));
-  };
-
-  cdadr = function(p) {
-    return cdr(car(cdr(p)));
-  };
-
-  cddar = function(p) {
-    return cdr(cdr(car(p)));
-  };
-
-  cdddr = function(p) {
-    return cdr(cdr(cdr(p)));
-  };
-
-  caaddr = function(p) {
-    return car(car(cdr(cdr(p))));
-  };
-
-  cadadr = function(p) {
-    return car(cdr(car(cdr(p))));
-  };
-
-  caddar = function(p) {
-    return car(cdr(cdr(car(p))));
-  };
-
-  cdaddr = function(p) {
-    return cdr(car(cdr(cdr(p))));
-  };
-
-  cadddr = function(p) {
-    return car(cdr(cdr(cdr(p))));
-  };
-
-  cddddr = function(p) {
-    return cdr(cdr(cdr(cdr(p))));
-  };
-
-  caddddr = function(p) {
-    return car(cdr(cdr(cdr(cdr(p)))));
-  };
-
-  cadaddr = function(p) {
-    return car(cdr(car(cdr(cdr(p)))));
-  };
-
-  cddaddr = function(p) {
-    return cdr(cdr(car(cdr(cdr(p)))));
-  };
-
-  caddadr = function(p) {
-    return car(cdr(cdr(car(cdr(p)))));
-  };
-
-  cdddaddr = function(p) {
-    return cdr(cdr(cdr(car(cdr(cdr(p))))));
-  };
-
-  caddaddr = function(p) {
-    return car(cdr(cdr(car(cdr(cdr(p))))));
-  };
-
-  isadd = function(p) {
-    return car(p) === symbol(ADD);
-  };
-
-  ismultiply = function(p) {
-    return car(p) === symbol(MULTIPLY);
-  };
-
-  ispower = function(p) {
-    return car(p) === symbol(POWER);
-  };
-
-  isfactorial = function(p) {
-    return car(p) === symbol(FACTORIAL);
-  };
-
-  MSIGN = function(p) {
-    if (p.isPositive()) {
-      return 1;
-    } else if (p.isZero()) {
-      return 0;
-    } else {
-      return -1;
-    }
-  };
-
-  MLENGTH = function(p) {
-    return p.toString().length;
-  };
-
-  MZERO = function(p) {
-    return p.isZero();
-  };
-
-  MEQUAL = function(p, n) {
-    if (p == null) {
-      debugger;
-    }
-    return p.equals(n);
-  };
-
-  $ = typeof exports !== "undefined" && exports !== null ? exports : this;
-
-  $.isadd = isadd;
-
-  $.ismultiply = ismultiply;
-
-  $.ispower = ispower;
-
-  $.isfactorial = isfactorial;
-
-  $.car = car;
-
-  $.cdr = cdr;
-
-  $.caar = caar;
-
-  $.cadr = cadr;
-
-  $.cdar = cdar;
-
-  $.cddr = cddr;
-
-  $.caadr = caadr;
-
-  $.caddr = caddr;
-
-  $.cadar = cadar;
-
-  $.cdadr = cdadr;
-
-  $.cddar = cddar;
-
-  $.cdddr = cdddr;
-
-  $.caaddr = caaddr;
-
-  $.cadadr = cadadr;
-
-  $.caddar = caddar;
-
-  $.cdaddr = cdaddr;
-
-  $.cadddr = cadddr;
-
-  $.cddddr = cddddr;
-
-  $.caddddr = caddddr;
-
-  $.cadaddr = cadaddr;
-
-  $.cddaddr = cddaddr;
-
-  $.caddadr = caddadr;
-
-  $.cdddaddr = cdddaddr;
-
-  $.caddaddr = caddaddr;
-
-  $.symbol = symbol;
-
-  $.iscons = iscons;
-
-  $.isrational = isrational;
-
-  $.isdouble = isdouble;
-
-  $.isnum = isnum;
-
-  $.isstr = isstr;
-
-  $.istensor = istensor;
-
-  $.issymbol = issymbol;
-
-  $.iskeyword = iskeyword;
-
-  $.CONS = CONS;
-
-  $.NUM = NUM;
-
-  $.DOUBLE = DOUBLE;
-
-  $.STR = STR;
-
-  $.TENSOR = TENSOR;
-
-  $.SYM = SYM;
-
-  Eval_abs = function() {
-    push(cadr(p1));
-    Eval();
-    return absval();
-  };
-
-  absval = function() {
-    var h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (istensor(p1)) {
-      absval_tensor();
-      restore();
-      return;
-    }
-    if (isnum(p1)) {
-      push(p1);
-      if (isnegativenumber(p1)) {
-        negate();
-      }
-      restore();
-      return;
-    }
-    if (iscomplexnumber(p1)) {
-      push(p1);
-      push(p1);
-      conjugate();
-      multiply();
-      push_rational(1, 2);
-      power();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(POWER) && isnegativeterm(caddr(p1))) {
-      push(p1);
-      reciprocate();
-      absval();
-      reciprocate();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      h = tos;
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        absval();
-        p1 = cdr(p1);
-      }
-      multiply_all(tos - h);
-      restore();
-      return;
-    }
-    if (isnegativeterm(p1) || (car(p1) === symbol(ADD) && isnegativeterm(cadr(p1)))) {
-      push(p1);
-      negate();
-      p1 = pop();
-    }
-    push_symbol(ABS);
-    push(p1);
-    list(2);
-    return restore();
-  };
-
-  absval_tensor = function() {
-    if (p1.tensor.ndim !== 1) {
-      stop("abs(tensor) with tensor rank > 1");
-    }
-    push(p1);
-    push(p1);
-    conjugate();
-    inner();
-    push_rational(1, 2);
-    power();
-    simplify();
-    return Eval();
-  };
-
-
-  /*
-   Symbolic addition
-  
-  	Terms in a sum are combined if they are identical modulo rational
-  	coefficients.
-  
-  	For example, A + 2A becomes 3A.
-  
-  	However, the sum A + sqrt(2) A is not modified.
-  
-  	Combining terms can lead to second-order effects.
-  
-  	For example, consider the case of
-  
-  		1/sqrt(2) A + 3/sqrt(2) A + sqrt(2) A
-  
-  	The first two terms are combined to yield 2 sqrt(2) A.
-  
-  	This result can now be combined with the third term to yield
-  
-  		3 sqrt(2) A
-   */
-
-  flag = 0;
-
-  Eval_add = function() {
-    var h;
-    h = tos;
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      p2 = pop();
-      push_terms(p2);
-      p1 = cdr(p1);
-    }
-    return add_terms(tos - h);
-  };
-
-  stackAddsCount = 0;
-
-  add_terms = function(n) {
-    var ac, ad, h, i, o, ref, ref1, results, s, subsetOfStack;
-    stackAddsCount++;
-    i = 0;
-    h = tos - n;
-    s = h;
-    if (DEBUG) {
-      console.log("stack before adding terms #" + stackAddsCount);
-    }
-    if (DEBUG) {
-      for (i = o = 0, ref = tos; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-        print1(stack[i]);
-      }
-    }
-    for (i = ac = 0; ac < 10; i = ++ac) {
-      if (n < 2) {
-        break;
-      }
-      flag = 0;
-      subsetOfStack = stack.slice(h, h + n);
-      subsetOfStack.sort(cmp_terms);
-      stack = stack.slice(0, h).concat(subsetOfStack).concat(stack.slice(h + n));
-      if (flag === 0) {
-        break;
-      }
-      n = combine_terms(h, n);
-    }
-    tos = h + n;
-    switch (n) {
-      case 0:
-        push_integer(0);
-        break;
-      case 1:
-        break;
-      default:
-        list(n);
-        p1 = pop();
-        push_symbol(ADD);
-        push(p1);
-        cons();
-    }
-    if (DEBUG) {
-      console.log("stack after adding terms #" + stackAddsCount);
-    }
-    if (DEBUG) {
-      results = [];
-      for (i = ad = 0, ref1 = tos; 0 <= ref1 ? ad < ref1 : ad > ref1; i = 0 <= ref1 ? ++ad : --ad) {
-        results.push(print1(stack[i]));
-      }
-      return results;
-    }
-  };
-
-  cmp_terms_count = 0;
-
-  cmp_terms = function(p1, p2) {
-    var i, o, ref, t;
-    cmp_terms_count++;
-    i = 0;
-    if (isnum(p1) && isnum(p2)) {
-      flag = 1;
-      return 0;
-    }
-    if (istensor(p1) && istensor(p2)) {
-      if (p1.tensor.ndim < p2.tensor.ndim) {
-        return -1;
-      }
-      if (p1.tensor.ndim > p2.tensor.ndim) {
-        return 1;
-      }
-      for (i = o = 0, ref = p1.tensor.ndim; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-        if (p1.tensor.dim[i] < p2.tensor.dim[i]) {
-          return -1;
-        }
-        if (p1.tensor.dim[i] > p2.tensor.dim[i]) {
-          return 1;
-        }
-      }
-      flag = 1;
-      return 0;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      if (isnum(car(p1))) {
-        p1 = cdr(p1);
-        if (cdr(p1) === symbol(NIL)) {
-          p1 = car(p1);
-        }
-      }
-    }
-    if (car(p2) === symbol(MULTIPLY)) {
-      p2 = cdr(p2);
-      if (isnum(car(p2))) {
-        p2 = cdr(p2);
-        if (cdr(p2) === symbol(NIL)) {
-          p2 = car(p2);
-        }
-      }
-    }
-    t = cmp_expr(p1, p2);
-    if (t === 0) {
-      flag = 1;
-    }
-    return t;
-  };
-
-
-  /*
-   Compare adjacent terms in s[] and combine if possible.
-  
-  	Returns the number of terms remaining in s[].
-  
-  	n	number of terms in s[] initially
-   */
-
-  combine_terms = function(s, n) {
-    var ac, ad, ae, af, i, j, o, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, t;
-    i = 0;
-    while (i < (n - 1)) {
-      check_esc_flag();
-      p3 = stack[s + i];
-      p4 = stack[s + i + 1];
-      if (istensor(p3) && istensor(p4)) {
-        push(p3);
-        push(p4);
-        tensor_plus_tensor();
-        p1 = pop();
-        if (p1 !== symbol(NIL)) {
-          stack[s + i] = p1;
-          for (j = o = ref = i + 1, ref1 = n - 1; ref <= ref1 ? o < ref1 : o > ref1; j = ref <= ref1 ? ++o : --o) {
-            stack[s + j] = stack[s + j + 1];
-          }
-          n--;
-          i--;
-        }
-        i++;
-        continue;
-      }
-      if (istensor(p3) || istensor(p4)) {
-        i++;
-        continue;
-      }
-      if (isnum(p3) && isnum(p4)) {
-        push(p3);
-        push(p4);
-        add_numbers();
-        p1 = pop();
-        if (iszero(p1)) {
-          for (j = ac = ref2 = i, ref3 = n - 2; ref2 <= ref3 ? ac < ref3 : ac > ref3; j = ref2 <= ref3 ? ++ac : --ac) {
-            stack[s + j] = stack[s + j + 2];
-          }
-          n -= 2;
-        } else {
-          stack[s + i] = p1;
-          for (j = ad = ref4 = i + 1, ref5 = n - 1; ref4 <= ref5 ? ad < ref5 : ad > ref5; j = ref4 <= ref5 ? ++ad : --ad) {
-            stack[s + j] = stack[s + j + 1];
-          }
-          n--;
-        }
-        i--;
-        i++;
-        continue;
-      }
-      if (isnum(p3) || isnum(p4)) {
-        i++;
-        continue;
-      }
-      p1 = one;
-      p2 = one;
-      t = 0;
-      if (car(p3) === symbol(MULTIPLY)) {
-        p3 = cdr(p3);
-        t = 1;
-        if (isnum(car(p3))) {
-          p1 = car(p3);
-          p3 = cdr(p3);
-          if (cdr(p3) === symbol(NIL)) {
-            p3 = car(p3);
-            t = 0;
-          }
-        }
-      }
-      if (car(p4) === symbol(MULTIPLY)) {
-        p4 = cdr(p4);
-        if (isnum(car(p4))) {
-          p2 = car(p4);
-          p4 = cdr(p4);
-          if (cdr(p4) === symbol(NIL)) {
-            p4 = car(p4);
-          }
-        }
-      }
-      if (!equal(p3, p4)) {
-        i++;
-        continue;
-      }
-      push(p1);
-      push(p2);
-      add_numbers();
-      p1 = pop();
-      if (iszero(p1)) {
-        for (j = ae = ref6 = i, ref7 = n - 2; ref6 <= ref7 ? ae < ref7 : ae > ref7; j = ref6 <= ref7 ? ++ae : --ae) {
-          stack[s + j] = stack[s + j + 2];
-        }
-        n -= 2;
-        i--;
-        i++;
-        continue;
-      }
-      push(p1);
-      if (t) {
-        push(symbol(MULTIPLY));
-        push(p3);
-        cons();
-      } else {
-        push(p3);
-      }
-      multiply();
-      stack[s + i] = pop();
-      for (j = af = ref8 = i + 1, ref9 = n - 1; ref8 <= ref9 ? af < ref9 : af > ref9; j = ref8 <= ref9 ? ++af : --af) {
-        stack[s + j] = stack[s + j + 1];
-      }
-      n--;
-      i--;
-      i++;
-    }
-    return n;
-  };
-
-  push_terms = function(p) {
-    var results;
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        push(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else if (!iszero(p)) {
-      return push(p);
-    }
-  };
-
-  add = function() {
-    var h;
-    save();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    push_terms(p1);
-    push_terms(p2);
-    add_terms(tos - h);
-    return restore();
-  };
-
-  add_all = function(k) {
-    var h, i, o, ref, s;
-    i = 0;
-    save();
-    s = tos - k;
-    h = tos;
-    for (i = o = 0, ref = k; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push_terms(stack[s + i]);
-    }
-    add_terms(tos - h);
-    p1 = pop();
-    tos -= k;
-    push(p1);
-    return restore();
-  };
-
-  subtract = function() {
-    negate();
-    return add();
-  };
-
-  Eval_adj = function() {
-    push(cadr(p1));
-    Eval();
-    return adj();
-  };
-
-  adj = function() {
-    var ac, doNothing, i, j, n, o, ref, ref1;
-    i = 0;
-    j = 0;
-    n = 0;
-    save();
-    p1 = pop();
-    if (istensor(p1) && p1.tensor.ndim === 2 && p1.tensor.dim[0] === p1.tensor.dim[1]) {
-      doNothing = 1;
-    } else {
-      stop("adj: square matrix expected");
-    }
-    n = p1.tensor.dim[0];
-    p2 = alloc_tensor(n * n);
-    p2.tensor.ndim = 2;
-    p2.tensor.dim[0] = n;
-    p2.tensor.dim[1] = n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        cofactor(p1, n, i, j);
-        p2.tensor.elem[n * j + i] = pop();
-      }
-    }
-    push(p2);
-    return restore();
-  };
-
-  Eval_arccos = function() {
-    push(cadr(p1));
-    Eval();
-    return arccos();
-  };
-
-  arccos = function() {
-    var d, errno, n;
-    n = 0;
-    d = 0.0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(COS)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      errno = 0;
-      d = Math.acos(p1.d);
-      if (errno) {
-        stop("arccos function argument is not in the interval [-1,1]");
-      }
-      push_double(d);
-      restore();
-      return;
-    }
-    if (isoneoversqrttwo(p1)) {
-      push_rational(1, 4);
-      push_symbol(PI);
-      multiply();
-      restore();
-      return;
-    }
-    if (isminusoneoversqrttwo(p1)) {
-      push_rational(3, 4);
-      push_symbol(PI);
-      multiply();
-      restore();
-      return;
-    }
-    if (!isrational(p1)) {
-      push_symbol(ARCCOS);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    push(p1);
-    push_integer(2);
-    multiply();
-    n = pop_integer();
-    switch (n) {
-      case -2:
-        push_symbol(PI);
-        break;
-      case -1:
-        push_rational(2, 3);
-        push_symbol(PI);
-        multiply();
-        break;
-      case 0:
-        push_rational(1, 2);
-        push_symbol(PI);
-        multiply();
-        break;
-      case 1:
-        push_rational(1, 3);
-        push_symbol(PI);
-        multiply();
-        break;
-      case 2:
-        push(zero);
-        break;
-      default:
-        push_symbol(ARCCOS);
-        push(p1);
-        list(2);
-    }
-    return restore();
-  };
-
-  Eval_arccosh = function() {
-    push(cadr(p1));
-    Eval();
-    return arccosh();
-  };
-
-  arccosh = function() {
-    var d;
-    d = 0.0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(COSH)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      d = p1.d;
-      if (d < 1.0) {
-        stop("arccosh function argument is less than 1.0");
-      }
-      d = Math.log(d + Math.sqrt(d * d - 1.0));
-      push_double(d);
-      restore();
-      return;
-    }
-    if (isplusone(p1)) {
-      push(zero);
-      restore();
-      return;
-    }
-    push_symbol(ARCCOSH);
-    push(p1);
-    list(2);
-    return restore();
-  };
-
-  Eval_arcsin = function() {
-    push(cadr(p1));
-    Eval();
-    return arcsin();
-  };
-
-  arcsin = function() {
-    var d, errno, n;
-    n = 0;
-    d = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(SIN)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      errno = 0;
-      d = Math.asin(p1.d);
-      if (errno) {
-        stop("arcsin function argument is not in the interval [-1,1]");
-      }
-      push_double(d);
-      restore();
-      return;
-    }
-    if (isoneoversqrttwo(p1)) {
-      push_rational(1, 4);
-      push_symbol(PI);
-      multiply();
-      restore();
-      return;
-    }
-    if (isminusoneoversqrttwo(p1)) {
-      push_rational(-1, 4);
-      push_symbol(PI);
-      multiply();
-      restore();
-      return;
-    }
-    if (!isrational(p1)) {
-      push_symbol(ARCSIN);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    push(p1);
-    push_integer(2);
-    multiply();
-    n = pop_integer();
-    switch (n) {
-      case -2:
-        push_rational(-1, 2);
-        push_symbol(PI);
-        multiply();
-        break;
-      case -1:
-        push_rational(-1, 6);
-        push_symbol(PI);
-        multiply();
-        break;
-      case 0:
-        push(zero);
-        break;
-      case 1:
-        push_rational(1, 6);
-        push_symbol(PI);
-        multiply();
-        break;
-      case 2:
-        push_rational(1, 2);
-        push_symbol(PI);
-        multiply();
-        break;
-      default:
-        push_symbol(ARCSIN);
-        push(p1);
-        list(2);
-    }
-    return restore();
-  };
-
-  Eval_arcsinh = function() {
-    push(cadr(p1));
-    Eval();
-    return arcsinh();
-  };
-
-  arcsinh = function() {
-    var d;
-    d = 0.0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(SINH)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      d = p1.d;
-      d = Math.log(d + Math.sqrt(d * d + 1.0));
-      push_double(d);
-      restore();
-      return;
-    }
-    if (iszero(p1)) {
-      push(zero);
-      restore();
-      return;
-    }
-    push_symbol(ARCSINH);
-    push(p1);
-    list(2);
-    return restore();
-  };
-
-  Eval_arctan = function() {
-    push(cadr(p1));
-    Eval();
-    return arctan();
-  };
-
-  arctan = function() {
-    var d, errno;
-    d = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(TAN)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      errno = 0;
-      d = Math.atan(p1.d);
-      if (errno) {
-        stop("arctan function error");
-      }
-      push_double(d);
-      restore();
-      return;
-    }
-    if (iszero(p1)) {
-      push(zero);
-      restore();
-      return;
-    }
-    if (isnegative(p1)) {
-      push(p1);
-      negate();
-      arctan();
-      negate();
-      restore();
-      return;
-    }
-    if (Find(p1, symbol(SIN)) && Find(p1, symbol(COS))) {
-      push(p1);
-      numerator();
-      p2 = pop();
-      push(p1);
-      denominator();
-      p3 = pop();
-      if (car(p2) === symbol(SIN) && car(p3) === symbol(COS) && equal(cadr(p2), cadr(p3))) {
-        push(cadr(p2));
-        restore();
-        return;
-      }
-    }
-    if (car(p1) === symbol(POWER) && equaln(cadr(p1), 3) && equalq(caddr(p1), -1, 2)) {
-      push_rational(1, 6);
-      push(symbol(PI));
-      multiply();
-      restore();
-      return;
-    }
-    if (equaln(p1, 1)) {
-      push_rational(1, 4);
-      push(symbol(PI));
-      multiply();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(POWER) && equaln(cadr(p1), 3) && equalq(caddr(p1), 1, 2)) {
-      push_rational(1, 3);
-      push(symbol(PI));
-      multiply();
-      restore();
-      return;
-    }
-    push_symbol(ARCTAN);
-    push(p1);
-    list(2);
-    return restore();
-  };
-
-  Eval_arctanh = function() {
-    push(cadr(p1));
-    Eval();
-    return arctanh();
-  };
-
-  arctanh = function() {
-    var d;
-    d = 0.0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(TANH)) {
-      push(cadr(p1));
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      d = p1.d;
-      if (d < -1.0 || d > 1.0) {
-        stop("arctanh function argument is not in the interval [-1,1]");
-      }
-      d = Math.log((1.0 + d) / (1.0 - d)) / 2.0;
-      push_double(d);
-      restore();
-      return;
-    }
-    if (iszero(p1)) {
-      push(zero);
-      restore();
-      return;
-    }
-    push_symbol(ARCTANH);
-    push(p1);
-    list(2);
-    return restore();
-  };
-
-
-  /*
-   Argument (angle) of complex z
-  
-  	z		arg(z)
-  	-		------
-  
-  	a		0
-  
-  	-a		-pi			See note 3 below
-  
-  	(-1)^a		a pi
-  
-  	exp(a + i b)	b
-  
-  	a b		arg(a) + arg(b)
-  
-  	a + i b		arctan(b/a)
-  
-  Result by quadrant
-  
-  	z		arg(z)
-  	-		------
-  
-  	1 + i		1/4 pi
-  
-  	1 - i		-1/4 pi
-  
-  	-1 + i		3/4 pi
-  
-  	-1 - i		-3/4 pi
-  
-  Notes
-  
-  	1. Handles mixed polar and rectangular forms, e.g. 1 + exp(i pi/3)
-  
-  	2. Symbols in z are assumed to be positive and real.
-  
-  	3. Negative direction adds -pi to angle.
-  
-  	   Example: z = (-1)^(1/3), mag(z) = 1/3 pi, mag(-z) = -2/3 pi
-  
-  	4. jean-francois.debroux reports that when z=(a+i*b)/(c+i*d) then
-  
-  		arg(numerator(z)) - arg(denominator(z))
-  
-  	   must be used to get the correct answer. Now the operation is
-  	   automatic.
-   */
-
-  Eval_arg = function() {
-    push(cadr(p1));
-    Eval();
-    return arg();
-  };
-
-  arg = function() {
-    save();
-    p1 = pop();
-    push(p1);
-    numerator();
-    yyarg();
-    push(p1);
-    denominator();
-    yyarg();
-    subtract();
-    return restore();
-  };
-
-  yyarg = function() {
-    save();
-    p1 = pop();
-    if (isnegativenumber(p1)) {
-      push(symbol(PI));
-      negate();
-    } else if (car(p1) === symbol(POWER) && equaln(cadr(p1), -1)) {
-      push(symbol(PI));
-      push(caddr(p1));
-      multiply();
-    } else if (car(p1) === symbol(POWER) && cadr(p1) === symbol(E)) {
-      push(caddr(p1));
-      imag();
-    } else if (car(p1) === symbol(MULTIPLY)) {
-      push_integer(0);
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        arg();
-        add();
-        p1 = cdr(p1);
-      }
-    } else if (car(p1) === symbol(ADD)) {
-      push(p1);
-      rect();
-      p1 = pop();
-      push(p1);
-      real();
-      p2 = pop();
-      push(p1);
-      imag();
-      p3 = pop();
-      if (iszero(p2)) {
-        push(symbol(PI));
-        if (isnegative(p3)) {
-          negate();
-        }
-      } else {
-        push(p3);
-        push(p2);
-        divide();
-        arctan();
-        if (isnegative(p2)) {
-          push_symbol(PI);
-          if (isnegative(p3)) {
-            subtract();
-          } else {
-            add();
-          }
-        }
-      }
-    } else {
-      push_integer(0);
-    }
-    return restore();
-  };
-
-  bake = function() {
-    var h, s, t, x, y, z;
-    h = 0;
-    s = 0;
-    t = 0;
-    x = 0;
-    y = 0;
-    z = 0;
-    expanding++;
-    save();
-    p1 = pop();
-    s = ispoly(p1, symbol(SYMBOL_S));
-    t = ispoly(p1, symbol(SYMBOL_T));
-    x = ispoly(p1, symbol(SYMBOL_X));
-    y = ispoly(p1, symbol(SYMBOL_Y));
-    z = ispoly(p1, symbol(SYMBOL_Z));
-    if (s === 1 && t === 0 && x === 0 && y === 0 && z === 0) {
-      p2 = symbol(SYMBOL_S);
-      bake_poly();
-    } else if (s === 0 && t === 1 && x === 0 && y === 0 && z === 0) {
-      p2 = symbol(SYMBOL_T);
-      bake_poly();
-    } else if (s === 0 && t === 0 && x === 1 && y === 0 && z === 0) {
-      p2 = symbol(SYMBOL_X);
-      bake_poly();
-    } else if (s === 0 && t === 0 && x === 0 && y === 1 && z === 0) {
-      p2 = symbol(SYMBOL_Y);
-      bake_poly();
-    } else if (s === 0 && t === 0 && x === 0 && y === 0 && z === 1) {
-      p2 = symbol(SYMBOL_Z);
-      bake_poly();
-    } else if (iscons(p1)) {
-      h = tos;
-      push(car(p1));
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        bake();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-    } else {
-      push(p1);
-    }
-    restore();
-    return expanding--;
-  };
-
-  polyform = function() {
-    var h;
-    h = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (ispoly(p1, p2)) {
-      bake_poly();
-    } else if (iscons(p1)) {
-      h = tos;
-      push(car(p1));
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        polyform();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  bake_poly = function() {
-    var a, h, i, k, n, o, ref;
-    h = 0;
-    i = 0;
-    k = 0;
-    n = 0;
-    a = tos;
-    push(p1);
-    push(p2);
-    k = coeff();
-    h = tos;
-    for (i = o = ref = k - 1; o >= 0; i = o += -1) {
-      p1 = stack[a + i];
-      bake_poly_term(i);
-    }
-    n = tos - h;
-    if (n > 1) {
-      list(n);
-      push(symbol(ADD));
-      swap();
-      cons();
-    }
-    p1 = pop();
-    tos -= k;
-    return push(p1);
-  };
-
-  bake_poly_term = function(k) {
-    var h, n;
-    h = 0;
-    n = 0;
-    if (iszero(p1)) {
-      return;
-    }
-    if (k === 0) {
-      if (car(p1) === symbol(ADD)) {
-        p1 = cdr(p1);
-        while (iscons(p1)) {
-          push(car(p1));
-          p1 = cdr(p1);
-        }
-      } else {
-        push(p1);
-      }
-      return;
-    }
-    h = tos;
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        p1 = cdr(p1);
-      }
-    } else if (!equaln(p1, 1)) {
-      push(p1);
-    }
-    if (k === 1) {
-      push(p2);
-    } else {
-      push(symbol(POWER));
-      push(p2);
-      push_integer(k);
-      list(3);
-    }
-    n = tos - h;
-    if (n > 1) {
-      list(n);
-      push(symbol(MULTIPLY));
-      swap();
-      return cons();
-    }
-  };
-
-
-  /*
-   Bessel J function
-  
-  	1st arg		x
-  
-  	2nd arg		n
-  
-  Recurrence relation
-  
-  	besselj(x,n) = (2/x) (n-1) besselj(x,n-1) - besselj(x,n-2)
-  
-  	besselj(x,1/2) = sqrt(2/pi/x) sin(x)
-  
-  	besselj(x,-1/2) = sqrt(2/pi/x) cos(x)
-  
-  For negative n, reorder the recurrence relation as
-  
-  	besselj(x,n-2) = (2/x) (n-1) besselj(x,n-1) - besselj(x,n)
-  
-  Substitute n+2 for n to obtain
-  
-  	besselj(x,n) = (2/x) (n+1) besselj(x,n+1) - besselj(x,n+2)
-  
-  Examples
-  
-  	besselj(x,3/2) = (1/x) besselj(x,1/2) - besselj(x,-1/2)
-  
-  	besselj(x,-3/2) = -(1/x) besselj(x,-1/2) - besselj(x,1/2)
-   */
-
-  Eval_besselj = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return besselj();
-  };
-
-  besselj = function() {
-    save();
-    yybesselj();
-    return restore();
-  };
-
-  yybesselj = function() {
-    var d, n;
-    d = 0.0;
-    n = 0;
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    n = pop_integer();
-    if (isdouble(p1) && n !== 0x80000000) {
-      d = jn(n, p1.d);
-      push_double(d);
-      return;
-    }
-    if (iszero(p1) && iszero(p2)) {
-      push_integer(1);
-      return;
-    }
-    if (iszero(p1) && n !== 0x80000000) {
-      push_integer(0);
-      return;
-    }
-    if (p2.k === NUM && MEQUAL(p2.q.b, 2)) {
-      if (MEQUAL(p2.q.a, 1)) {
-        push_integer(2);
-        push_symbol(PI);
-        divide();
-        push(p1);
-        divide();
-        push_rational(1, 2);
-        power();
-        push(p1);
-        sine();
-        multiply();
-        return;
-      }
-      if (MEQUAL(p2.q.a, -1)) {
-        push_integer(2);
-        push_symbol(PI);
-        divide();
-        push(p1);
-        divide();
-        push_rational(1, 2);
-        power();
-        push(p1);
-        cosine();
-        multiply();
-        return;
-      }
-      push_integer(MSIGN(p2.q.a));
-      p3 = pop();
-      push_integer(2);
-      push(p1);
-      divide();
-      push(p2);
-      push(p3);
-      subtract();
-      multiply();
-      push(p1);
-      push(p2);
-      push(p3);
-      subtract();
-      besselj();
-      multiply();
-      push(p1);
-      push(p2);
-      push_integer(2);
-      push(p3);
-      multiply();
-      subtract();
-      besselj();
-      subtract();
-      return;
-    }
-    if (isnegativeterm(p1)) {
-      push(p1);
-      negate();
-      push(p2);
-      power();
-      push(p1);
-      push(p2);
-      negate();
-      power();
-      multiply();
-      push_symbol(BESSELJ);
-      push(p1);
-      negate();
-      push(p2);
-      list(3);
-      multiply();
-      return;
-    }
-    if (isnegativeterm(p2)) {
-      push_integer(-1);
-      push(p2);
-      power();
-      push_symbol(BESSELJ);
-      push(p1);
-      push(p2);
-      negate();
-      list(3);
-      multiply();
-      return;
-    }
-    push(symbol(BESSELJ));
-    push(p1);
-    push(p2);
-    return list(3);
-  };
-
-  Eval_bessely = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return bessely();
-  };
-
-  bessely = function() {
-    save();
-    yybessely();
-    return restore();
-  };
-
-  yybessely = function() {
-    var d, n;
-    d = 0.0;
-    n = 0;
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    n = pop_integer();
-    if (isdouble(p1) && n !== 0x80000000) {
-      d = yn(n, p1.d);
-      push_double(d);
-      return;
-    }
-    if (isnegativeterm(p2)) {
-      push_integer(-1);
-      push(p2);
-      power();
-      push_symbol(BESSELY);
-      push(p1);
-      push(p2);
-      negate();
-      list(3);
-      multiply();
-      return;
-    }
-    push_symbol(BESSELY);
-    push(p1);
-    push(p2);
-    list(3);
-  };
-
-  MP_MIN_SIZE = 2;
-
-  MP_MAX_FREE = 1000;
-
-  mtotal = 0;
-
-  free_stack = [];
-
-  mint = function(a) {
-    return bigInt(a);
-  };
-
-  setSignTo = function(a, b) {
-    if (a.isPositive()) {
-      if (b < 0) {
-        return a.multiply(bigInt(-1));
-      }
-    } else {
-      if (b > 0) {
-        return a.multiply(bigInt(-1));
-      }
-    }
-    return a;
-  };
-
-  makeSignSameAs = function(a, b) {
-    if (a.isPositive()) {
-      if (b.isNegative()) {
-        return a.multiply(bigInt(-1));
-      }
-    } else {
-      if (b.isPositive()) {
-        return a.multiply(bigInt(-1));
-      }
-    }
-    return a;
-  };
-
-  makePositive = function(a) {
-    if (a.isNegative()) {
-      return a.multiply(bigInt(-1));
-    }
-    return a;
-  };
-
-
-  /*
-  mnew = (n) ->
-  	if (n < MP_MIN_SIZE)
-  		n = MP_MIN_SIZE
-  	if (n == MP_MIN_SIZE && mfreecount)
-  		p = free_stack[--mfreecount]
-  	else
-  		p = [] #(unsigned int *) malloc((n + 3) * sizeof (int))
-  		#if (p == 0)
-  		 *	stop("malloc failure")
-  	p[0] = n
-  	mtotal += n
-  	return p[3]
-   */
-
-
-  /*
-  mfree = (array, p) ->
-  	p -= 3
-  	mtotal -= array[p]
-  	if (array[p] == MP_MIN_SIZE && mfreecount < MP_MAX_FREE)
-  		free_stack[mfreecount++] = p
-  	else
-  		free(p)
-   */
-
-
-  /*
-  mint = (n) ->
-  	p = mnew(1)
-  	if (n < 0)
-  		 * !!! this is FU
-  		 * MSIGN(p) = -1
-  		fu = true
-  	else
-  		 * !!! this is FU
-  		#MSIGN(p) = 1
-  		fu = true
-  	 * !!! this is FU
-  	#MLENGTH(p) = 1
-  	p[0] = Math.abs(n)
-  	return p
-   */
-
-
-  /*
-  mcopy = (a) ->
-  	#unsigned int *b
-  
-  	b = mnew(MLENGTH(a))
-  
-  	 * !!! fu
-  	#MSIGN(b) = MSIGN(a)
-  	#MLENGTH(b) = MLENGTH(a)
-  
-  	for i in [0...MLENGTH(a)]
-  		b[i] = a[i]
-  
-  	return b
-   */
-
-
-  /*
-   * 
-   * ge not invoked from anywhere - is you need ge
-   * just use the bigNum's ge implementation
-   * leaving it here just in case I decide to backport to C
-   *
-   * a >= b ?
-   * and and b arrays of ints, len is an int
-  ge = (a, b, len) ->
-  	i = 0
-  	for i in [0...len]
-  		if (a[i] == b[i])
-  			continue
-  		else
-  			break
-  	if (a[i] >= b[i])
-  		return 1
-  	else
-  		return 0
-   */
-
-  add_numbers = function() {
-    var a, b, theResult;
-    a = 1.0;
-    b = 1.0;
-    if (isrational(stack[tos - 1]) && isrational(stack[tos - 2])) {
-      qadd();
-      return;
-    }
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (isdouble(p1)) {
-      a = p1.d;
-    } else {
-      a = convert_rational_to_double(p1);
-    }
-    if (isdouble(p2)) {
-      b = p2.d;
-    } else {
-      b = convert_rational_to_double(p2);
-    }
-    theResult = a + b;
-    push_double(theResult);
-    return restore();
-  };
-
-  subtract_numbers = function() {
-    var a, b;
-    a = 0.0;
-    b = 0.0;
-    if (isrational(stack[tos - 1]) && isrational(stack[tos - 2])) {
-      qsub();
-      return;
-    }
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (isdouble(p1)) {
-      a = p1.d;
-    } else {
-      a = convert_rational_to_double(p1);
-    }
-    if (isdouble(p2)) {
-      b = p2.d;
-    } else {
-      b = convert_rational_to_double(p2);
-    }
-    push_double(a - b);
-    return restore();
-  };
-
-  multiply_numbers = function() {
-    var a, b;
-    a = 0.0;
-    b = 0.0;
-    if (isrational(stack[tos - 1]) && isrational(stack[tos - 2])) {
-      qmul();
-      return;
-    }
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (isdouble(p1)) {
-      a = p1.d;
-    } else {
-      a = convert_rational_to_double(p1);
-    }
-    if (isdouble(p2)) {
-      b = p2.d;
-    } else {
-      b = convert_rational_to_double(p2);
-    }
-    push_double(a * b);
-    return restore();
-  };
-
-  divide_numbers = function() {
-    var a, b;
-    a = 0.0;
-    b = 0.0;
-    if (isrational(stack[tos - 1]) && isrational(stack[tos - 2])) {
-      qdiv();
-      return;
-    }
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (iszero(p2)) {
-      stop("divide by zero");
-    }
-    if (isdouble(p1)) {
-      a = p1.d;
-    } else {
-      a = convert_rational_to_double(p1);
-    }
-    if (isdouble(p2)) {
-      b = p2.d;
-    } else {
-      b = convert_rational_to_double(p2);
-    }
-    push_double(a / b);
-    return restore();
-  };
-
-  invert_number = function() {
-    var a, b;
-    save();
-    p1 = pop();
-    if (iszero(p1)) {
-      stop("divide by zero");
-    }
-    if (isdouble(p1)) {
-      push_double(1 / p1.d);
-      restore();
-      return;
-    }
-    a = bigInt(p1.q.a);
-    b = bigInt(p1.q.b);
-    b = makeSignSameAs(b, a);
-    a = setSignTo(a, 1);
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = b;
-    p1.q.b = a;
-    push(p1);
-    return restore();
-  };
-
-  compare_rationals = function(a, b) {
-    var ab, ba, t;
-    t = 0;
-    ab = mmul(a.q.a, b.q.b);
-    ba = mmul(a.q.b, b.q.a);
-    t = mcmp(ab, ba);
-    return t;
-  };
-
-  compare_numbers = function(a, b) {
-    var x, y;
-    x = 0.0;
-    y = 0.0;
-    if (isrational(a) && isrational(b)) {
-      return compare_rationals(a, b);
-    }
-    if (isdouble(a)) {
-      x = a.d;
-    } else {
-      x = convert_rational_to_double(a);
-    }
-    if (isdouble(b)) {
-      y = b.d;
-    } else {
-      y = convert_rational_to_double(b);
-    }
-    if (x < y) {
-      return -1;
-    }
-    if (x > y) {
-      return 1;
-    }
-    return 0;
-  };
-
-  negate_number = function() {
-    save();
-    p1 = pop();
-    if (iszero(p1)) {
-      push(p1);
-      restore();
-      return;
-    }
-    switch (p1.k) {
-      case NUM:
-        p2 = new U();
-        p2.k = NUM;
-        p2.q.a = bigInt(p1.q.a.multiply(bigInt.minusOne));
-        p2.q.b = bigInt(p1.q.b);
-        push(p2);
-        break;
-      case DOUBLE:
-        push_double(-p1.d);
-        break;
-      default:
-        stop("bug caught in mp_negate_number");
-    }
-    return restore();
-  };
-
-  bignum_truncate = function() {
-    var a;
-    save();
-    p1 = pop();
-    a = mdiv(p1.q.a, p1.q.b);
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = a;
-    p1.q.b = bigInt(1);
-    push(p1);
-    return restore();
-  };
-
-  mp_numerator = function() {
-    save();
-    p1 = pop();
-    if (p1.k !== NUM) {
-      push(one);
-      restore();
-      return;
-    }
-    p2 = new U();
-    p2.k = NUM;
-    p2.q.a = bigInt(p1.q.a);
-    p2.q.b = bigInt(1);
-    push(p2);
-    return restore();
-  };
-
-  mp_denominator = function() {
-    save();
-    p1 = pop();
-    if (p1.k !== NUM) {
-      push(one);
-      restore();
-      return;
-    }
-    p2 = new U();
-    p2.k = NUM;
-    p2.q.a = bigInt(p1.q.b);
-    p2.q.b = bigInt(1);
-    push(p2);
-    return restore();
-  };
-
-  bignum_power_number = function(expo) {
-    var a, b, t;
-    save();
-    p1 = pop();
-    a = mpow(p1.q.a, Math.abs(expo));
-    b = mpow(p1.q.b, Math.abs(expo));
-    if (expo < 0) {
-      t = a;
-      a = b;
-      b = t;
-      a = makeSignSameAs(a, b);
-      b = setSignTo(b, 1);
-    }
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = a;
-    p1.q.b = b;
-    push(p1);
-    return restore();
-  };
-
-  convert_bignum_to_double = function(p) {
-    return p.toJSNumber();
-  };
-
-  convert_rational_to_double = function(p) {
-    var quotientAndRemainder, result;
-    if (p.q == null) {
-      debugger;
-    }
-    quotientAndRemainder = p.q.a.divmod(p.q.b);
-    result = quotientAndRemainder.quotient + quotientAndRemainder.remainder / p.q.b.toJSNumber();
-    return result;
-  };
-
-  push_integer = function(n) {
-    if (DEBUG) {
-      console.log("pushing integer " + n);
-    }
-    save();
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = bigInt(n);
-    p1.q.b = bigInt(1);
-    push(p1);
-    return restore();
-  };
-
-  push_double = function(d) {
-    save();
-    p1 = new U();
-    p1.k = DOUBLE;
-    p1.d = d;
-    push(p1);
-    return restore();
-  };
-
-  push_rational = function(a, b) {
-
-    /*
-    	save()
-    	p1 = new U()
-    	p1.k = NUM
-    	p1.q.a = bigInt(a)
-    	p1.q.b = bigInt(b)
-    	## FIXME -- normalize ##
-    	push(p1)
-    	restore()
-     */
-    var p;
-    p = new U();
-    p.k = NUM;
-    p.q.a = bigInt(a);
-    p.q.b = bigInt(b);
-    return push(p);
-  };
-
-  pop_integer = function() {
-    var n;
-    n = 0;
-    save();
-    p1 = pop();
-    switch (p1.k) {
-      case NUM:
-        if (isinteger(p1) && p1.q.a.isSmall) {
-          n = p1.q.a.toJSNumber();
-        } else {
-          n = 0x80000000;
-        }
-        break;
-      case DOUBLE:
-        n = Math.floor(p1.q.a);
-        break;
-      default:
-        n = 0x80000000;
-    }
-    restore();
-    return n;
-  };
-
-  print_double = function(p, flag) {
-    var buf;
-    buf = "";
-    buf = "" + doubleToReasonableString(p.d);
-    if (flag === 1 && buf === '-') {
-      return print_str(buf + 1);
-    } else {
-      return print_str(buf);
-    }
-  };
-
-  bignum_scan_integer = function(s) {
-    var a, scounter, sign_;
-    save();
-    scounter = 0;
-    sign_ = s[scounter];
-    if (sign_ === '+' || sign_ === '-') {
-      scounter++;
-    }
-    a = bigInt(s.substring(scounter));
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = a;
-    p1.q.b = bigInt(1);
-    push(p1);
-    if (sign_ === '-') {
-      negate();
-    }
-    return restore();
-  };
-
-  bignum_scan_float = function(s) {
-    return push_double(parseFloat(s));
-  };
-
-  print_number = function(p, accumulator) {
-    var aAsString, buf, denominatorString, topLevelCall;
-    topLevelCall = false;
-    if (accumulator == null) {
-      topLevelCall = true;
-      accumulator = "";
-    }
-    denominatorString = "";
-    buf = "";
-    switch (p.k) {
-      case NUM:
-        aAsString = p.q.a.toString();
-        if (aAsString[0] === "-") {
-          aAsString = aAsString.substring(1);
-        }
-        accumulator += aAsString;
-        stringToBePrinted += aAsString;
-        if (isfraction(p)) {
-          accumulator += "/";
-          stringToBePrinted += "/";
-          denominatorString = p.q.b.toString();
-          accumulator += denominatorString;
-          stringToBePrinted += denominatorString;
-        }
-        break;
-      case DOUBLE:
-        aAsString = "" + doubleToReasonableString(p.d);
-        if (aAsString[0] === "-") {
-          aAsString = aAsString.substring(1);
-        }
-        accumulator += aAsString;
-        stringToBePrinted += aAsString;
-    }
-    return accumulator;
-  };
-
-  gcd_numbers = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    p3 = new U();
-    p3.k = NUM;
-    p3.q.a = mgcd(p1.q.a, p2.q.a);
-    p3.q.b = mgcd(p1.q.b, p2.q.b);
-    p3.q.a = setSignTo(p3.q.a, 1);
-    push(p3);
-    return restore();
-  };
-
-  pop_double = function() {
-    var d;
-    d = 0.0;
-    save();
-    p1 = pop();
-    switch (p1.k) {
-      case NUM:
-        d = convert_rational_to_double(p1);
-        break;
-      case DOUBLE:
-        d = p1.d;
-        break;
-      default:
-        d = 0.0;
-    }
-    restore();
-    return d;
-  };
-
-  bignum_float = function() {
-    var d;
-    d = 0.0;
-    d = convert_rational_to_double(pop());
-    return push_double(d);
-  };
-
-  bignum_factorial = function(n) {
-    save();
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = __factorial(n);
-    p1.q.b = bigInt(1);
-    push(p1);
-    return restore();
-  };
-
-  __factorial = function(n) {
-    var a, b, i, o, ref, t;
-    i = 0;
-    if (n === 0 || n === 1) {
-      a = bigInt(1);
-      return a;
-    }
-    a = bigInt(2);
-    b = bigInt(0);
-    if (3 <= n) {
-      for (i = o = 3, ref = n; 3 <= ref ? o <= ref : o >= ref; i = 3 <= ref ? ++o : --o) {
-        b = bigInt(i);
-        t = mmul(a, b);
-        a = t;
-      }
-    }
-    return a;
-  };
-
-  mask = [0x00000001, 0x00000002, 0x00000004, 0x00000008, 0x00000010, 0x00000020, 0x00000040, 0x00000080, 0x00000100, 0x00000200, 0x00000400, 0x00000800, 0x00001000, 0x00002000, 0x00004000, 0x00008000, 0x00010000, 0x00020000, 0x00040000, 0x00080000, 0x00100000, 0x00200000, 0x00400000, 0x00800000, 0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000];
-
-  mp_set_bit = function(x, k) {
-    console.log("not implemented yet");
-    debugger;
-    return x[k / 32] |= mask[k % 32];
-  };
-
-  mp_clr_bit = function(x, k) {
-    console.log("not implemented yet");
-    debugger;
-    return x[k / 32] &= ~mask[k % 32];
-  };
-
-  mshiftright = function(a) {
-    return a = a.shiftRight();
-  };
-
-  Eval_binomial = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return binomial();
-  };
-
-  binomial = function() {
-    save();
-    ybinomial();
-    return restore();
-  };
-
-  ybinomial = function() {
-    p2 = pop();
-    p1 = pop();
-    if (BINOM_check_args() === 0) {
-      push(zero);
-      return;
-    }
-    push(p1);
-    factorial();
-    push(p2);
-    factorial();
-    divide();
-    push(p1);
-    push(p2);
-    subtract();
-    factorial();
-    return divide();
-  };
-
-  BINOM_check_args = function() {
-    if (isnum(p1) && lessp(p1, zero)) {
-      return 0;
-    } else if (isnum(p2) && lessp(p2, zero)) {
-      return 0;
-    } else if (isnum(p1) && isnum(p2) && lessp(p1, p2)) {
-      return 0;
-    } else {
-      return 1;
-    }
-  };
-
-  Eval_ceiling = function() {
-    push(cadr(p1));
-    Eval();
-    return ceiling();
-  };
-
-  ceiling = function() {
-    save();
-    yyceiling();
-    return restore();
-  };
-
-  yyceiling = function() {
-    var d, doNothing;
-    d = 0.0;
-    p1 = pop();
-    if (!isnum(p1)) {
-      push_symbol(CEILING);
-      push(p1);
-      list(2);
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.ceil(p1.d);
-      push_double(d);
-      return;
-    }
-    if (isinteger(p1)) {
-      push(p1);
-      return;
-    }
-    p3 = new U();
-    p3.k = NUM;
-    p3.q.a = mdiv(p1.q.a, p1.q.b);
-    p3.q.b = mint(1);
-    push(p3);
-    if (isnegativenumber(p1)) {
-      return doNothing = 1;
-    } else {
-      push_integer(1);
-      return add();
-    }
-  };
-
-  Eval_choose = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return choose();
-  };
-
-  choose = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (choose_check_args() === 0) {
-      push_integer(0);
-      restore();
-      return;
-    }
-    push(p1);
-    factorial();
-    push(p2);
-    factorial();
-    divide();
-    push(p1);
-    push(p2);
-    subtract();
-    factorial();
-    divide();
-    return restore();
-  };
-
-  choose_check_args = function() {
-    if (isnum(p1) && lessp(p1, zero)) {
-      return 0;
-    } else if (isnum(p2) && lessp(p2, zero)) {
-      return 0;
-    } else if (isnum(p1) && isnum(p2) && lessp(p1, p2)) {
-      return 0;
-    } else {
-      return 1;
-    }
-  };
-
-  Eval_circexp = function() {
-    push(cadr(p1));
-    Eval();
-    circexp();
-    return Eval();
-  };
-
-  circexp = function() {
-    var h, i, o, ref;
-    i = 0;
-    h = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(COS)) {
-      push(cadr(p1));
-      expcos();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(SIN)) {
-      push(cadr(p1));
-      expsin();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(TAN)) {
-      p1 = cadr(p1);
-      push(imaginaryunit);
-      push(p1);
-      multiply();
-      exponential();
-      p2 = pop();
-      push(imaginaryunit);
-      push(p1);
-      multiply();
-      negate();
-      exponential();
-      p3 = pop();
-      push(p3);
-      push(p2);
-      subtract();
-      push(imaginaryunit);
-      multiply();
-      push(p2);
-      push(p3);
-      add();
-      divide();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(COSH)) {
-      p1 = cadr(p1);
-      push(p1);
-      exponential();
-      push(p1);
-      negate();
-      exponential();
-      add();
-      push_rational(1, 2);
-      multiply();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(SINH)) {
-      p1 = cadr(p1);
-      push(p1);
-      exponential();
-      push(p1);
-      negate();
-      exponential();
-      subtract();
-      push_rational(1, 2);
-      multiply();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(TANH)) {
-      p1 = cadr(p1);
-      push(p1);
-      push_integer(2);
-      multiply();
-      exponential();
-      p1 = pop();
-      push(p1);
-      push_integer(1);
-      subtract();
-      push(p1);
-      push_integer(1);
-      add();
-      divide();
-      restore();
-      return;
-    }
-    if (iscons(p1)) {
-      h = tos;
-      while (iscons(p1)) {
-        push(car(p1));
-        circexp();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-      restore();
-      return;
-    }
-    if (p1.k === TENSOR) {
-      push(p1);
-      copy_tensor();
-      p1 = pop();
-      for (i = o = 0, ref = p1.tensor.nelem; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-        push(p1.tensor.elem[i]);
-        circexp();
-        p1.tensor.elem[i] = pop();
-      }
-      push(p1);
-      restore();
-      return;
-    }
-    push(p1);
-    return restore();
-  };
-
-  Eval_clear = function() {
-    if (test_flag === 0) {
-      clear_term();
-    }
-    clear_symbols();
-    defn();
-    return push(symbol(NIL));
-  };
-
-  clear = function() {
-    return run("clear");
-  };
-
-
-  /*
-   Convert complex z to clock form
-  
-  	Input:		push	z
-  
-  	Output:		Result on stack
-  
-  	clock(z) = mag(z) * (-1) ^ (arg(z) / pi)
-  
-  	For example, clock(exp(i pi/3)) gives the result (-1)^(1/3)
-   */
-
-  Eval_clock = function() {
-    push(cadr(p1));
-    Eval();
-    return clockform();
-  };
-
-  clockform = function() {
-    save();
-    p1 = pop();
-    push(p1);
-    mag();
-    push_integer(-1);
-    push(p1);
-    arg();
-    push(symbol(PI));
-    divide();
-    power();
-    multiply();
-
-    /*
-    	p1 = pop()
-    	push(p1)
-    	mag()
-    	push(symbol(E))
-    	push(p1)
-    	arg()
-    	push(imaginaryunit)
-    	multiply()
-    	power()
-    	multiply()
-     */
-    return restore();
-  };
-
-  Eval_coeff = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadddr(p1));
-    Eval();
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    if (p3 === symbol(NIL)) {
-      p3 = p2;
-      p2 = symbol(SYMBOL_X);
-    }
-    push(p1);
-    push(p2);
-    push(p3);
-    power();
-    divide();
-    push(p2);
-    return filter();
-  };
-
-  coeff = function() {
-    var h, n;
-    save();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    while (1) {
-      push(p1);
-      push(p2);
-      push(zero);
-      subst();
-      Eval();
-      p3 = pop();
-      push(p3);
-      push(p1);
-      push(p3);
-      subtract();
-      p1 = pop();
-      if (equal(p1, zero)) {
-        n = tos - h;
-        restore();
-        return n;
-      }
-      push(p1);
-      push(p2);
-      divide();
-      p1 = pop();
-    }
-  };
-
-  Eval_cofactor = function() {
-    var doNothing, i, j, n;
-    i = 0;
-    j = 0;
-    n = 0;
-    push(cadr(p1));
-    Eval();
-    p2 = pop();
-    if (istensor(p2) && p2.tensor.ndim === 2 && p2.tensor.dim[0] === p2.tensor.dim[1]) {
-      doNothing = 1;
-    } else {
-      stop("cofactor: 1st arg: square matrix expected");
-    }
-    n = p2.tensor.dim[0];
-    push(caddr(p1));
-    Eval();
-    i = pop_integer();
-    if (i < 1 || i > n) {
-      stop("cofactor: 2nd arg: row index expected");
-    }
-    push(cadddr(p1));
-    Eval();
-    j = pop_integer();
-    if (j < 1 || j > n) {
-      stop("cofactor: 3rd arg: column index expected");
-    }
-    return cofactor(p2, n, i - 1, j - 1);
-  };
-
-  cofactor = function(p, n, row, col) {
-    var ac, i, j, o, ref, ref1;
-    i = 0;
-    j = 0;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        if (i !== row && j !== col) {
-          push(p.tensor.elem[n * i + j]);
-        }
-      }
-    }
-    determinant(n - 1);
-    if ((row + col) % 2) {
-      return negate();
-    }
-  };
-
-  Eval_condense = function() {
-    push(cadr(p1));
-    Eval();
-    return Condense();
-  };
-
-  Condense = function() {
-    var tmp;
-    tmp = 0;
-    tmp = expanding;
-    save();
-    yycondense();
-    restore();
-    return expanding = tmp;
-  };
-
-  yycondense = function() {
-    expanding = 0;
-    p1 = pop();
-    if (car(p1) !== symbol(ADD)) {
-      push(p1);
-      return;
-    }
-    p3 = cdr(p1);
-    push(car(p3));
-    p3 = cdr(p3);
-    while (iscons(p3)) {
-      push(car(p3));
-      gcd();
-      p3 = cdr(p3);
-    }
-    inverse();
-    p2 = pop();
-    push(zero);
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      push(p2);
-      push(car(p3));
-      multiply();
-      add();
-      p3 = cdr(p3);
-    }
-    yyexpand();
-    push(p2);
-    return divide();
-  };
-
-  Eval_conj = function() {
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    push(p1);
-    if (!Find(p1, imaginaryunit)) {
-      polar();
-      conjugate();
-      return clockform();
-    } else {
-      return conjugate();
-    }
-  };
-
-  conjugate = function() {
-    push(imaginaryunit);
-    push(imaginaryunit);
-    negate();
-    subst();
-    return Eval();
-  };
-
-  consCount = 0;
-
-  cons = function() {
-    var p;
-    consCount++;
-    if (DEBUG) {
-      console.log("cons tos: " + tos + " # " + consCount);
-    }
-    p = new U();
-    p.k = CONS;
-    p.cons.cdr = pop();
-    if (p === p.cons.cdr) {
-      debugger;
-      console.log("something wrong p == its cdr");
-    }
-    p.cons.car = pop();
-
-    /*
-    	console.log "cons new cdr.k = " + p.cons.cdr.k + "\nor more in detail:"
-    	print1 p.cons.cdr
-    	console.log "cons new car.k = " + p.cons.car.k + "\nor more in detail:"
-    	print1 p.cons.car
-     */
-    return push(p);
-  };
-
-  Eval_contract = function() {
-    push(cadr(p1));
-    Eval();
-    if (cddr(p1) === symbol(NIL)) {
-      push_integer(1);
-      push_integer(2);
-    } else {
-      push(caddr(p1));
-      Eval();
-      push(cadddr(p1));
-      Eval();
-    }
-    return contract();
-  };
-
-  contract = function() {
-    save();
-    yycontract();
-    return restore();
-  };
-
-  yycontract = function() {
-    var a, ac, ad, ae, af, ag, ah, ai, an, b, h, i, j, k, l, m, n, ndim, nelem, o, ref, ref1, ref2, ref3, ref4, ref5, ref6;
-    h = 0;
-    i = 0;
-    j = 0;
-    k = 0;
-    l = 0;
-    m = 0;
-    n = 0;
-    ndim = 0;
-    nelem = 0;
-    ai = [];
-    an = [];
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    if (!istensor(p1)) {
-      if (!iszero(p1)) {
-        stop("contract: tensor expected, 1st arg is not a tensor");
-      }
-      push(zero);
-      return;
-    }
-    push(p2);
-    l = pop_integer();
-    push(p3);
-    m = pop_integer();
-    ndim = p1.tensor.ndim;
-    if (l < 1 || l > ndim || m < 1 || m > ndim || l === m || p1.tensor.dim[l - 1] !== p1.tensor.dim[m - 1]) {
-      stop("contract: index out of range");
-    }
-    l--;
-    m--;
-    n = p1.tensor.dim[l];
-    nelem = 1;
-    for (i = o = 0, ref = ndim; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      if (i !== l && i !== m) {
-        nelem *= p1.tensor.dim[i];
-      }
-    }
-    p2 = alloc_tensor(nelem);
-    p2.tensor.ndim = ndim - 2;
-    j = 0;
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      if (i !== l && i !== m) {
-        p2.tensor.dim[j++] = p1.tensor.dim[i];
-      }
-    }
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    for (i = ad = 0, ref2 = ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      ai[i] = 0;
-      an[i] = p1.tensor.dim[i];
-    }
-    for (i = ae = 0, ref3 = nelem; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      push(zero);
-      for (j = af = 0, ref4 = n; 0 <= ref4 ? af < ref4 : af > ref4; j = 0 <= ref4 ? ++af : --af) {
-        ai[l] = j;
-        ai[m] = j;
-        h = 0;
-        for (k = ag = 0, ref5 = ndim; 0 <= ref5 ? ag < ref5 : ag > ref5; k = 0 <= ref5 ? ++ag : --ag) {
-          h = (h * an[k]) + ai[k];
-        }
-        push(a[h]);
-        add();
-      }
-      b[i] = pop();
-      for (j = ah = ref6 = ndim - 1; ref6 <= 0 ? ah <= 0 : ah >= 0; j = ref6 <= 0 ? ++ah : --ah) {
-        if (j === l || j === m) {
-          continue;
-        }
-        if (++ai[j] < an[j]) {
-          break;
-        }
-        ai[j] = 0;
-      }
-    }
-    if (nelem === 1) {
-      return push(b[0]);
-    } else {
-      return push(p2);
-    }
-  };
-
-  Eval_cos = function() {
-    push(cadr(p1));
-    Eval();
-    return cosine();
-  };
-
-  cosine = function() {
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      cosine_of_angle_sum();
-    } else {
-      cosine_of_angle();
-    }
-    return restore();
-  };
-
-  cosine_of_angle_sum = function() {
-    p2 = cdr(p1);
-    while (iscons(p2)) {
-      p4 = car(p2);
-      if (isnpi(p4)) {
-        push(p1);
-        push(p4);
-        subtract();
-        p3 = pop();
-        push(p3);
-        cosine();
-        push(p4);
-        cosine();
-        multiply();
-        push(p3);
-        sine();
-        push(p4);
-        sine();
-        multiply();
-        subtract();
-        return;
-      }
-      p2 = cdr(p2);
-    }
-    return cosine_of_angle();
-  };
-
-  cosine_of_angle = function() {
-    var d, n;
-    if (car(p1) === symbol(ARCCOS)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.cos(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (isnegative(p1)) {
-      push(p1);
-      negate();
-      p1 = pop();
-    }
-    if (car(p1) === symbol(ARCTAN)) {
-      push_integer(1);
-      push(cadr(p1));
-      push_integer(2);
-      power();
-      add();
-      push_rational(-1, 2);
-      power();
-      return;
-    }
-    push(p1);
-    push_integer(180);
-    multiply();
-    push_symbol(PI);
-    divide();
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push(symbol(COS));
-      push(p1);
-      list(2);
-      return;
-    }
-    switch (n % 360) {
-      case 90:
-      case 270:
-        return push_integer(0);
-      case 60:
-      case 300:
-        return push_rational(1, 2);
-      case 120:
-      case 240:
-        return push_rational(-1, 2);
-      case 45:
-      case 315:
-        push_rational(1, 2);
-        push_integer(2);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 135:
-      case 225:
-        push_rational(-1, 2);
-        push_integer(2);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 30:
-      case 330:
-        push_rational(1, 2);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 150:
-      case 210:
-        push_rational(-1, 2);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 0:
-        return push_integer(1);
-      case 180:
-        return push_integer(-1);
-      default:
-        push(symbol(COS));
-        push(p1);
-        return list(2);
-    }
-  };
-
-  Eval_cosh = function() {
-    push(cadr(p1));
-    Eval();
-    return ycosh();
-  };
-
-  ycosh = function() {
-    save();
-    yycosh();
-    return restore();
-  };
-
-  yycosh = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (car(p1) === symbol(ARCCOSH)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.cosh(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (iszero(p1)) {
-      push(one);
-      return;
-    }
-    push_symbol(COSH);
-    push(p1);
-    return list(2);
-  };
-
-  Eval_decomp = function() {
-    var h;
-    h = tos;
-    push(symbol(NIL));
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p1 = pop();
-    if (p1 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p1);
-    }
-    decomp();
-    return list(tos - h);
-  };
-
-  decomp = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (Find(p1, p2) === 0) {
-      push(p1);
-      restore();
-      return;
-    }
-    if (isadd(p1)) {
-      decomp_sum();
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      decomp_product();
-      restore();
-      return;
-    }
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      push(car(p3));
-      push(p2);
-      decomp();
-      p3 = cdr(p3);
-    }
-    return restore();
-  };
-
-  decomp_sum = function() {
-    var h;
-    h = 0;
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      if (Find(car(p3), p2)) {
-        push(car(p3));
-        push(p2);
-        decomp();
-      }
-      p3 = cdr(p3);
-    }
-    h = tos;
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      if (Find(car(p3), p2) === 0) {
-        push(car(p3));
-      }
-      p3 = cdr(p3);
-    }
-    if (tos - h) {
-      add_all(tos - h);
-      p3 = pop();
-      push(p3);
-      push(p3);
-      return negate();
-    }
-  };
-
-  decomp_product = function() {
-    var h;
-    h = 0;
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      if (Find(car(p3), p2)) {
-        push(car(p3));
-        push(p2);
-        decomp();
-      }
-      p3 = cdr(p3);
-    }
-    h = tos;
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      if (Find(car(p3), p2) === 0) {
-        push(car(p3));
-      }
-      p3 = cdr(p3);
-    }
-    if (tos - h) {
-      return multiply_all(tos - h);
-    }
-  };
-
-  define_user_function = function() {
-    p3 = caadr(p1);
-    p4 = cdadr(p1);
-    p5 = caddr(p1);
-    if (!issymbol(p3)) {
-      stop("function name?");
-    }
-    if (car(p5) === symbol(EVAL)) {
-      push(cadr(p5));
-      Eval();
-      p5 = pop();
-    }
-    set_binding_and_arglist(p3, p5, p4);
-    return push_symbol(NIL);
-  };
-
-  Eval_defint = function() {
-    push(cadr(p1));
-    Eval();
-    p2 = pop();
-    p1 = cddr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      p1 = cdr(p1);
-      Eval();
-      p3 = pop();
-      push(car(p1));
-      p1 = cdr(p1);
-      Eval();
-      p4 = pop();
-      push(car(p1));
-      p1 = cdr(p1);
-      Eval();
-      p5 = pop();
-      push(p2);
-      push(p3);
-      integral();
-      p2 = pop();
-      push(p2);
-      push(p3);
-      push(p5);
-      subst();
-      Eval();
-      push(p2);
-      push(p3);
-      push(p4);
-      subst();
-      Eval();
-      subtract();
-      p2 = pop();
-    }
-    return push(p2);
-  };
-
-  Eval_degree = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p1 = pop();
-    if (p1 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p1);
-    }
-    return degree();
-  };
-
-  degree = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    p3 = zero;
-    yydegree(p1);
-    push(p3);
-    return restore();
-  };
-
-  yydegree = function(p) {
-    var results;
-    if (equal(p, p2)) {
-      if (iszero(p3)) {
-        return p3 = one;
-      }
-    } else if (car(p) === symbol(POWER)) {
-      if (equal(cadr(p), p2) && isnum(caddr(p)) && lessp(p3, caddr(p))) {
-        return p3 = caddr(p);
-      }
-    } else if (iscons(p)) {
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        yydegree(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    }
-  };
-
-  Eval_denominator = function() {
-    push(cadr(p1));
-    Eval();
-    return denominator();
-  };
-
-  denominator = function() {
-    var h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      push(p1);
-      rationalize();
-      p1 = pop();
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      h = tos;
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        denominator();
-        p1 = cdr(p1);
-      }
-      multiply_all(tos - h);
-    } else if (isrational(p1)) {
-      push(p1);
-      mp_denominator();
-    } else if (car(p1) === symbol(POWER) && isnegativeterm(caddr(p1))) {
-      push(p1);
-      reciprocate();
-    } else {
-      push(one);
-    }
-    return restore();
-  };
-
-  Eval_derivative = function() {
-    var ac, doNothing, i, n, o, ref, ref1;
-    i = 0;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-      push(symbol(NIL));
-    } else if (isnum(p2)) {
-      guess();
-      push(p2);
-    } else {
-      push(p2);
-      p1 = cdr(p1);
-      push(car(p1));
-      Eval();
-    }
-    p5 = pop();
-    p4 = pop();
-    p3 = pop();
-    while (1.) {
-      if (isnum(p5)) {
-        push(p5);
-        n = pop_integer();
-        if (n === 0x80000000) {
-          stop("nth derivative: check n");
-        }
-      } else {
-        n = 1;
-      }
-      push(p3);
-      if (n >= 0) {
-        for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-          push(p4);
-          derivative();
-        }
-      } else {
-        n = -n;
-        for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-          push(p4);
-          integral();
-        }
-      }
-      p3 = pop();
-      if (p5 === symbol(NIL)) {
-        break;
-      }
-      if (isnum(p5)) {
-        p1 = cdr(p1);
-        push(car(p1));
-        Eval();
-        p5 = pop();
-        if (p5 === symbol(NIL)) {
-          break;
-        }
-        if (isnum(p5)) {
-          doNothing = 1;
-        } else {
-          p4 = p5;
-          p1 = cdr(p1);
-          push(car(p1));
-          Eval();
-          p5 = pop();
-        }
-      } else {
-        p4 = p5;
-        p1 = cdr(p1);
-        push(car(p1));
-        Eval();
-        p5 = pop();
-      }
-    }
-    return push(p3);
-  };
-
-  derivative = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (isnum(p2)) {
-      stop("undefined function");
-    }
-    if (istensor(p1)) {
-      if (istensor(p2)) {
-        d_tensor_tensor();
-      } else {
-        d_tensor_scalar();
-      }
-    } else {
-      if (istensor(p2)) {
-        d_scalar_tensor();
-      } else {
-        d_scalar_scalar();
-      }
-    }
-    return restore();
-  };
-
-  d_scalar_scalar = function() {
-    if (issymbol(p2)) {
-      return d_scalar_scalar_1();
-    } else {
-      push(p1);
-      push(p2);
-      push(symbol(SECRETX));
-      subst();
-      push(symbol(SECRETX));
-      derivative();
-      push(symbol(SECRETX));
-      push(p2);
-      return subst();
-    }
-  };
-
-  d_scalar_scalar_1 = function() {
-    if (equal(p1, p2)) {
-      push(one);
-      return;
-    }
-    if (!iscons(p1)) {
-      push(zero);
-      return;
-    }
-    if (isadd(p1)) {
-      dsum();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      dproduct();
-      return;
-    }
-    if (car(p1) === symbol(POWER)) {
-      dpower();
-      return;
-    }
-    if (car(p1) === symbol(DERIVATIVE)) {
-      dd();
-      return;
-    }
-    if (car(p1) === symbol(LOG)) {
-      dlog();
-      return;
-    }
-    if (car(p1) === symbol(SIN)) {
-      dsin();
-      return;
-    }
-    if (car(p1) === symbol(COS)) {
-      dcos();
-      return;
-    }
-    if (car(p1) === symbol(TAN)) {
-      dtan();
-      return;
-    }
-    if (car(p1) === symbol(ARCSIN)) {
-      darcsin();
-      return;
-    }
-    if (car(p1) === symbol(ARCCOS)) {
-      darccos();
-      return;
-    }
-    if (car(p1) === symbol(ARCTAN)) {
-      darctan();
-      return;
-    }
-    if (car(p1) === symbol(SINH)) {
-      dsinh();
-      return;
-    }
-    if (car(p1) === symbol(COSH)) {
-      dcosh();
-      return;
-    }
-    if (car(p1) === symbol(TANH)) {
-      dtanh();
-      return;
-    }
-    if (car(p1) === symbol(ARCSINH)) {
-      darcsinh();
-      return;
-    }
-    if (car(p1) === symbol(ARCCOSH)) {
-      darccosh();
-      return;
-    }
-    if (car(p1) === symbol(ARCTANH)) {
-      darctanh();
-      return;
-    }
-    if (car(p1) === symbol(ABS)) {
-      dabs();
-      return;
-    }
-    if (car(p1) === symbol(SGN)) {
-      dsgn();
-      return;
-    }
-    if (car(p1) === symbol(HERMITE)) {
-      dhermite();
-      return;
-    }
-    if (car(p1) === symbol(ERF)) {
-      derf();
-      return;
-    }
-    if (car(p1) === symbol(ERFC)) {
-      derfc();
-      return;
-    }
-    if (car(p1) === symbol(BESSELJ)) {
-      if (iszero(caddr(p1))) {
-        dbesselj0();
-      } else {
-        dbesseljn();
-      }
-      return;
-    }
-    if (car(p1) === symbol(BESSELY)) {
-      if (iszero(caddr(p1))) {
-        dbessely0();
-      } else {
-        dbesselyn();
-      }
-      return;
-    }
-    if (car(p1) === symbol(INTEGRAL) && caddr(p1) === p2) {
-      derivative_of_integral();
-      return;
-    }
-    return dfunction();
-  };
-
-  dsum = function() {
-    var h;
-    h = tos;
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      push(p2);
-      derivative();
-      p1 = cdr(p1);
-    }
-    return add_all(tos - h);
-  };
-
-  dproduct = function() {
-    var ac, i, j, n, o, ref, ref1;
-    i = 0;
-    j = 0;
-    n = 0;
-    n = length(p1) - 1;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p3 = cdr(p1);
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        push(car(p3));
-        if (i === j) {
-          push(p2);
-          derivative();
-        }
-        p3 = cdr(p3);
-      }
-      multiply_all(n);
-    }
-    return add_all(n);
-  };
-
-  dpower = function() {
-    push(caddr(p1));
-    push(cadr(p1));
-    divide();
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    multiply();
-    push(cadr(p1));
-    logarithm();
-    push(caddr(p1));
-    push(p2);
-    derivative();
-    multiply();
-    add();
-    push(p1);
-    return multiply();
-  };
-
-  dlog = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    return divide();
-  };
-
-  dd = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    p3 = pop();
-    if (car(p3) === symbol(DERIVATIVE)) {
-      push_symbol(DERIVATIVE);
-      push_symbol(DERIVATIVE);
-      push(cadr(p3));
-      if (lessp(caddr(p3), caddr(p1))) {
-        push(caddr(p3));
-        list(3);
-        push(caddr(p1));
-      } else {
-        push(caddr(p1));
-        list(3);
-        push(caddr(p3));
-      }
-      return list(3);
-    } else {
-      push(p3);
-      push(caddr(p1));
-      return derivative();
-    }
-  };
-
-  dfunction = function() {
-    p3 = cdr(p1);
-    if (p3 === symbol(NIL) || Find(p3, p2)) {
-      push_symbol(DERIVATIVE);
-      push(p1);
-      push(p2);
-      return list(3);
-    } else {
-      return push(zero);
-    }
-  };
-
-  dsin = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    cosine();
-    return multiply();
-  };
-
-  dcos = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    sine();
-    multiply();
-    return negate();
-  };
-
-  dtan = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    cosine();
-    push_integer(-2);
-    power();
-    return multiply();
-  };
-
-  darcsin = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push_integer(1);
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    subtract();
-    push_rational(-1, 2);
-    power();
-    return multiply();
-  };
-
-  darccos = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push_integer(1);
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    subtract();
-    push_rational(-1, 2);
-    power();
-    multiply();
-    return negate();
-  };
-
-  darctan = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push_integer(1);
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    add();
-    inverse();
-    multiply();
-    return simplify();
-  };
-
-  dsinh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    ycosh();
-    return multiply();
-  };
-
-  dcosh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    ysinh();
-    return multiply();
-  };
-
-  dtanh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    ycosh();
-    push_integer(-2);
-    power();
-    return multiply();
-  };
-
-  darcsinh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    push_integer(1);
-    add();
-    push_rational(-1, 2);
-    power();
-    return multiply();
-  };
-
-  darccosh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    push_integer(-1);
-    add();
-    push_rational(-1, 2);
-    power();
-    return multiply();
-  };
-
-  darctanh = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push_integer(1);
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    subtract();
-    inverse();
-    return multiply();
-  };
-
-  dabs = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    sgn();
-    return multiply();
-  };
-
-  dsgn = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    dirac();
-    multiply();
-    push_integer(2);
-    return multiply();
-  };
-
-  dhermite = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push_integer(2);
-    push(caddr(p1));
-    multiply();
-    multiply();
-    push(cadr(p1));
-    push(caddr(p1));
-    push_integer(-1);
-    add();
-    hermite();
-    return multiply();
-  };
-
-  derf = function() {
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    push_integer(-1);
-    multiply();
-    exponential();
-    push_symbol(PI);
-    push_rational(-1, 2);
-    power();
-    multiply();
-    push_integer(2);
-    multiply();
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    return multiply();
-  };
-
-  derfc = function() {
-    push(cadr(p1));
-    push_integer(2);
-    power();
-    push_integer(-1);
-    multiply();
-    exponential();
-    push_symbol(PI);
-    push_rational(-1, 2);
-    power();
-    multiply();
-    push_integer(-2);
-    multiply();
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    return multiply();
-  };
-
-  dbesselj0 = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push_integer(1);
-    besselj();
-    multiply();
-    push_integer(-1);
-    return multiply();
-  };
-
-  dbesseljn = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push(caddr(p1));
-    push_integer(-1);
-    add();
-    besselj();
-    push(caddr(p1));
-    push_integer(-1);
-    multiply();
-    push(cadr(p1));
-    divide();
-    push(cadr(p1));
-    push(caddr(p1));
-    besselj();
-    multiply();
-    add();
-    return multiply();
-  };
-
-  dbessely0 = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push_integer(1);
-    besselj();
-    multiply();
-    push_integer(-1);
-    return multiply();
-  };
-
-  dbesselyn = function() {
-    push(cadr(p1));
-    push(p2);
-    derivative();
-    push(cadr(p1));
-    push(caddr(p1));
-    push_integer(-1);
-    add();
-    bessely();
-    push(caddr(p1));
-    push_integer(-1);
-    multiply();
-    push(cadr(p1));
-    divide();
-    push(cadr(p1));
-    push(caddr(p1));
-    bessely();
-    multiply();
-    add();
-    return multiply();
-  };
-
-  derivative_of_integral = function() {
-    return push(cadr(p1));
-  };
-
-  DET_check_arg = function() {
-    if (!istensor(p1)) {
-      return 0;
-    } else if (p1.tensor.ndim !== 2) {
-      return 0;
-    } else if (p1.tensor.dim[0] !== p1.tensor.dim[1]) {
-      return 0;
-    } else {
-      return 1;
-    }
-  };
-
-  det = function() {
-    var a, ac, i, n, o, ref, ref1;
-    i = 0;
-    n = 0;
-    save();
-    p1 = pop();
-    if (DET_check_arg() === 0) {
-      push_symbol(DET);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    n = p1.tensor.nelem;
-    a = p1.tensor.elem;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      if (!isnum(a[i])) {
-        break;
-      }
-    }
-    if (i === n) {
-      yydetg();
-    } else {
-      for (i = ac = 0, ref1 = p1.tensor.nelem; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        push(p1.tensor.elem[i]);
-      }
-      determinant(p1.tensor.dim[0]);
-    }
-    return restore();
-  };
-
-  determinant = function(n) {
-    var a, ac, breakFromOutherWhile, h, i, j, k, o, q, ref, ref1, s, sign_, t;
-    h = 0;
-    i = 0;
-    j = 0;
-    k = 0;
-    q = 0;
-    s = 0;
-    sign_ = 0;
-    t = 0;
-    a = [];
-    h = tos - n * n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      a[i] = i;
-      a[i + n] = 0;
-      a[i + n + n] = 1;
-    }
-    sign_ = 1;
-    push(zero);
-    while (1) {
-      if (sign_ === 1) {
-        push_integer(1);
-      } else {
-        push_integer(-1);
-      }
-      for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        k = n * a[i] + i;
-        push(stack[h + k]);
-        multiply();
-      }
-      add();
-      j = n - 1;
-      s = 0;
-      breakFromOutherWhile = false;
-      while (1) {
-        q = a[n + j] + a[n + n + j];
-        if (q < 0) {
-          a[n + n + j] = -a[n + n + j];
-          j--;
-          continue;
-        }
-        if (q === j + 1) {
-          if (j === 0) {
-            breakFromOutherWhile = true;
-            break;
-          }
-          s++;
-          a[n + n + j] = -a[n + n + j];
-          j--;
-          continue;
-        }
-        break;
-      }
-      if (breakFromOutherWhile) {
-        break;
-      }
-      t = a[j - a[n + j] + s];
-      a[j - a[n + j] + s] = a[j - q + s];
-      a[j - q + s] = t;
-      a[n + j] = q;
-      sign_ = -sign_;
-    }
-    stack[h] = stack[tos - 1];
-    return tos = h + 1;
-  };
-
-  detg = function() {
-    save();
-    p1 = pop();
-    if (DET_check_arg() === 0) {
-      push_symbol(DET);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    yydetg();
-    return restore();
-  };
-
-  yydetg = function() {
-    var i, n, o, ref;
-    i = 0;
-    n = 0;
-    n = p1.tensor.dim[0];
-    for (i = o = 0, ref = n * n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push(p1.tensor.elem[i]);
-    }
-    lu_decomp(n);
-    tos -= n * n;
-    return push(p1);
-  };
-
-  M = function(h, n, i, j) {
-    return stack[h + n * i + j];
-  };
-
-  setM = function(h, n, i, j, value) {
-    return stack[h + n * i + j] = value;
-  };
-
-  lu_decomp = function(n) {
-    var ac, ad, ae, af, d, h, i, j, o, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8;
-    d = 0;
-    h = 0;
-    i = 0;
-    j = 0;
-    h = tos - n * n;
-    p1 = one;
-    for (d = o = 0, ref = n - 1; 0 <= ref ? o < ref : o > ref; d = 0 <= ref ? ++o : --o) {
-      if (equal(M(h, n, d, d), zero)) {
-        for (i = ac = ref1 = d + 1, ref2 = n; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-          if (!equal(M(h, n, i, d), zero)) {
-            break;
-          }
-        }
-        if (i === n) {
-          p1 = zero;
-          break;
-        }
-        for (j = ad = ref3 = d, ref4 = n; ref3 <= ref4 ? ad < ref4 : ad > ref4; j = ref3 <= ref4 ? ++ad : --ad) {
-          p2 = M(h, n, d, j);
-          setM(h, n, d, j, M(h, n, i, j));
-          setM(h, n, i, j, p2);
-        }
-        push(p1);
-        negate();
-        p1 = pop();
-      }
-      push(p1);
-      push(M(h, n, d, d));
-      multiply();
-      p1 = pop();
-      for (i = ae = ref5 = d + 1, ref6 = n; ref5 <= ref6 ? ae < ref6 : ae > ref6; i = ref5 <= ref6 ? ++ae : --ae) {
-        push(M(h, n, i, d));
-        push(M(h, n, d, d));
-        divide();
-        negate();
-        p2 = pop();
-        setM(h, n, i, d, zero);
-        for (j = af = ref7 = d + 1, ref8 = n; ref7 <= ref8 ? af < ref8 : af > ref8; j = ref7 <= ref8 ? ++af : --af) {
-          push(M(h, n, d, j));
-          push(p2);
-          multiply();
-          push(M(h, n, i, j));
-          add();
-          setM(h, n, i, j, pop());
-        }
-      }
-    }
-    push(p1);
-    push(M(h, n, n - 1, n - 1));
-    multiply();
-    return p1 = pop();
-  };
-
-  Eval_dirac = function() {
-    push(cadr(p1));
-    Eval();
-    return dirac();
-  };
-
-  dirac = function() {
-    save();
-    ydirac();
-    return restore();
-  };
-
-  ydirac = function() {
-    p1 = pop();
-    if (isdouble(p1)) {
-      if (p1.d === 0) {
-        push_integer(1);
-        return;
-      } else {
-        push_integer(0);
-        return;
-      }
-    }
-    if (isrational(p1)) {
-      if (MZERO(mmul(p1.q.a, p1.q.b))) {
-        push_integer(1);
-        return;
-      } else {
-        push_integer(0);
-        return;
-      }
-    }
-    if (car(p1) === symbol(POWER)) {
-      push_symbol(DIRAC);
-      push(cadr(p1));
-      list(2);
-      return;
-    }
-    if (isnegativeterm(p1)) {
-      push_symbol(DIRAC);
-      push(p1);
-      negate();
-      list(2);
-      return;
-    }
-    if (isnegativeterm(p1) || (car(p1) === symbol(ADD) && isnegativeterm(cadr(p1)))) {
-      push(p1);
-      negate();
-      p1 = pop();
-    }
-    push_symbol(DIRAC);
-    push(p1);
-    return list(2);
-  };
-
-  divisors = function() {
-    var h, i, n, o, ref, subsetOfStack;
-    i = 0;
-    h = 0;
-    n = 0;
-    save();
-    h = tos - 1;
-    divisors_onstack();
-    n = tos - h;
-    subsetOfStack = stack.slice(h, h + n);
-    subsetOfStack.sort(cmp_expr);
-    stack = stack.slice(0, h).concat(subsetOfStack).concat(stack.slice(h + n));
-    p1 = alloc_tensor(n);
-    p1.tensor.ndim = 1;
-    p1.tensor.dim[0] = n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p1.tensor.elem[i] = stack[h + i];
-    }
-    tos = h;
-    push(p1);
-    return restore();
-  };
-
-  divisors_onstack = function() {
-    var h, i, k, n, o, ref;
-    h = 0;
-    i = 0;
-    k = 0;
-    n = 0;
-    save();
-    p1 = pop();
-    h = tos;
-    if (isnum(p1)) {
-      push(p1);
-      factor_small_number();
-    } else if (car(p1) === symbol(ADD)) {
-      push(p1);
-      __factor_add();
-    } else if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      if (isnum(car(p1))) {
-        push(car(p1));
-        factor_small_number();
-        p1 = cdr(p1);
-      }
-      while (iscons(p1)) {
-        p2 = car(p1);
-        if (car(p2) === symbol(POWER)) {
-          push(cadr(p2));
-          push(caddr(p2));
-        } else {
-          push(p2);
-          push(one);
-        }
-        p1 = cdr(p1);
-      }
-    } else if (car(p1) === symbol(POWER)) {
-      push(cadr(p1));
-      push(caddr(p1));
-    } else {
-      push(p1);
-      push(one);
-    }
-    k = tos;
-    push(one);
-    gen(h, k);
-    n = tos - k;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      stack[h + i] = stack[k + i];
-    }
-    tos = h + n;
-    return restore();
-  };
-
-  gen = function(h, k) {
-    var expo, i, o, ref;
-    expo = 0;
-    i = 0;
-    save();
-    p1 = pop();
-    if (h === k) {
-      push(p1);
-      restore();
-      return;
-    }
-    p2 = stack[h + 0];
-    p3 = stack[h + 1];
-    push(p3);
-    expo = pop_integer();
-    if (expo !== 0x80000000) {
-      for (i = o = 0, ref = Math.abs(expo); 0 <= ref ? o <= ref : o >= ref; i = 0 <= ref ? ++o : --o) {
-        push(p1);
-        push(p2);
-        push_integer(sign(expo) * i);
-        power();
-        multiply();
-        gen(h + 2, k);
-      }
-    }
-    return restore();
-  };
-
-  __factor_add = function() {
-    save();
-    p1 = pop();
-    p3 = cdr(p1);
-    push(car(p3));
-    p3 = cdr(p3);
-    while (iscons(p3)) {
-      push(car(p3));
-      gcd();
-      p3 = cdr(p3);
-    }
-    p2 = pop();
-    if (isplusone(p2)) {
-      push(p1);
-      push(one);
-      restore();
-      return;
-    }
-    if (isnum(p2)) {
-      push(p2);
-      factor_small_number();
-    } else if (car(p2) === symbol(MULTIPLY)) {
-      p3 = cdr(p2);
-      if (isnum(car(p3))) {
-        push(car(p3));
-        factor_small_number();
-      } else {
-        push(car(p3));
-        push(one);
-      }
-      p3 = cdr(p3);
-      while (iscons(p3)) {
-        push(car(p3));
-        push(one);
-        p3 = cdr(p3);
-      }
-    } else {
-      push(p2);
-      push(one);
-    }
-    push(p2);
-    inverse();
-    p2 = pop();
-    push(zero);
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      push(p2);
-      push(car(p3));
-      multiply();
-      add();
-      p3 = cdr(p3);
-    }
-    push(one);
-    return restore();
-  };
-
-  dpow = function() {
-    var a, b, base, expo, result, theta;
-    a = 0.0;
-    b = 0.0;
-    base = 0.0;
-    expo = 0.0;
-    result = 0.0;
-    theta = 0.0;
-    expo = pop_double();
-    base = pop_double();
-    if (base === 0.0 && expo < 0.0) {
-      stop("divide by zero");
-    }
-    if (base >= 0.0 || (expo % 1.0) === 0.0) {
-      result = Math.pow(base, expo);
-      push_double(result);
-      return;
-    }
-    result = Math.pow(Math.abs(base), expo);
-    theta = Math.PI * expo;
-    if ((expo % 0.5) === 0.0) {
-      a = 0.0;
-      b = Math.sin(theta);
-    } else {
-      a = Math.cos(theta);
-      b = Math.sin(theta);
-    }
-    push_double(a * result);
-    push_double(b * result);
-    push(imaginaryunit);
-    multiply();
-    return add();
-  };
-
-  EIG_N = 0;
-
-  EIG_yydd = [];
-
-  EIG_yyqq = [];
-
-  Eval_eigen = function() {
-    if (EIG_check_arg() === 0) {
-      stop("eigen: argument is not a square matrix");
-    }
-    eigen(EIGEN);
-    p1 = usr_symbol("D");
-    set_binding(p1, p2);
-    p1 = usr_symbol("Q");
-    set_binding(p1, p3);
-    return push(symbol(NIL));
-  };
-
-  Eval_eigenval = function() {
-    if (EIG_check_arg() === 0) {
-      push_symbol(EIGENVAL);
-      push(p1);
-      list(2);
-      return;
-    }
-    eigen(EIGENVAL);
-    return push(p2);
-  };
-
-  Eval_eigenvec = function() {
-    if (EIG_check_arg() === 0) {
-      push_symbol(EIGENVEC);
-      push(p1);
-      list(2);
-      return;
-    }
-    eigen(EIGENVEC);
-    return push(p3);
-  };
-
-  EIG_check_arg = function() {
-    var ac, ad, ae, i, j, o, ref, ref1, ref2, ref3, ref4;
-    i = 0;
-    j = 0;
-    push(cadr(p1));
-    Eval();
-    yyfloat();
-    Eval();
-    p1 = pop();
-    if (!istensor(p1)) {
-      return 0;
-    }
-    if (p1.tensor.ndim !== 2 || p1.tensor.dim[0] !== p1.tensor.dim[1]) {
-      stop("eigen: argument is not a square matrix");
-    }
-    EIG_N = p1.tensor.dim[0];
-    for (i = o = 0, ref = EIG_N; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = EIG_N; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        if (!isdouble(p1.tensor.elem[EIG_N * i + j])) {
-          stop("eigen: matrix is not numerical");
-        }
-      }
-    }
-    for (i = ad = 0, ref2 = EIG_N - 1; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      for (j = ae = ref3 = i + 1, ref4 = EIG_N; ref3 <= ref4 ? ae < ref4 : ae > ref4; j = ref3 <= ref4 ? ++ae : --ae) {
-        if (Math.abs(p1.tensor.elem[EIG_N * i + j].d - p1.tensor.elem[EIG_N * j + i].d) > 1e-10) {
-          stop("eigen: matrix is not symmetrical");
-        }
-      }
-    }
-    return 1;
-  };
-
-  eigen = function(op) {
-    var ac, ad, ae, af, ag, ah, aj, al, am, i, j, o, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, results;
-    i = 0;
-    j = 0;
-    for (i = o = 0, ref = EIG_N * EIG_N; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      EIG_yydd[i] = 0.0;
-    }
-    for (i = ac = 0, ref1 = EIG_N * EIG_N; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      EIG_yyqq[i] = 0.0;
-    }
-    for (i = ad = 0, ref2 = EIG_N; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      EIG_yydd[EIG_N * i + i] = p1.tensor.elem[EIG_N * i + i].d;
-      for (j = ae = ref3 = i + 1, ref4 = EIG_N; ref3 <= ref4 ? ae < ref4 : ae > ref4; j = ref3 <= ref4 ? ++ae : --ae) {
-        EIG_yydd[EIG_N * i + j] = p1.tensor.elem[EIG_N * i + j].d;
-        EIG_yydd[EIG_N * j + i] = p1.tensor.elem[EIG_N * i + j].d;
-      }
-    }
-    for (i = af = 0, ref5 = EIG_N; 0 <= ref5 ? af < ref5 : af > ref5; i = 0 <= ref5 ? ++af : --af) {
-      EIG_yyqq[EIG_N * i + i] = 1.0;
-      for (j = ag = ref6 = i + 1, ref7 = EIG_N; ref6 <= ref7 ? ag < ref7 : ag > ref7; j = ref6 <= ref7 ? ++ag : --ag) {
-        EIG_yyqq[EIG_N * i + j] = 0.0;
-        EIG_yyqq[EIG_N * j + i] = 0.0;
-      }
-    }
-    for (i = ah = 0; ah < 100; i = ++ah) {
-      if (step() === 0) {
-        break;
-      }
-    }
-    if (i === 100) {
-      printstr("\nnote: eigen did not converge\n");
-    }
-    if (op === EIGEN || op === EIGENVAL) {
-      push(p1);
-      copy_tensor();
-      p2 = pop();
-      for (i = aj = 0, ref8 = EIG_N; 0 <= ref8 ? aj < ref8 : aj > ref8; i = 0 <= ref8 ? ++aj : --aj) {
-        for (j = al = 0, ref9 = EIG_N; 0 <= ref9 ? al < ref9 : al > ref9; j = 0 <= ref9 ? ++al : --al) {
-          push_double(EIG_yydd[EIG_N * i + j]);
-          p2.tensor.elem[EIG_N * i + j] = pop();
-        }
-      }
-    }
-    if (op === EIGEN || op === EIGENVEC) {
-      push(p1);
-      copy_tensor();
-      p3 = pop();
-      results = [];
-      for (i = am = 0, ref10 = EIG_N; 0 <= ref10 ? am < ref10 : am > ref10; i = 0 <= ref10 ? ++am : --am) {
-        results.push((function() {
-          var ao, ref11, results1;
-          results1 = [];
-          for (j = ao = 0, ref11 = EIG_N; 0 <= ref11 ? ao < ref11 : ao > ref11; j = 0 <= ref11 ? ++ao : --ao) {
-            push_double(EIG_yyqq[EIG_N * i + j]);
-            results1.push(p3.tensor.elem[EIG_N * i + j] = pop());
-          }
-          return results1;
-        })());
-      }
-      return results;
-    }
-  };
-
-  step = function() {
-    var ac, count, i, j, o, ref, ref1, ref2;
-    i = 0;
-    j = 0;
-    count = 0;
-    for (i = o = 0, ref = EIG_N - 1; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = ref1 = i + 1, ref2 = EIG_N; ref1 <= ref2 ? ac < ref2 : ac > ref2; j = ref1 <= ref2 ? ++ac : --ac) {
-        if (EIG_yydd[EIG_N * i + j] !== 0.0) {
-          step2(i, j);
-          count++;
-        }
-      }
-    }
-    return count;
-  };
-
-  step2 = function(p, q) {
-    var ac, ad, c, cc, k, o, ref, ref1, ref2, s, ss, t, theta;
-    k = 0;
-    t = 0.0;
-    theta = 0.0;
-    c = 0.0;
-    cc = 0.0;
-    s = 0.0;
-    ss = 0.0;
-    theta = 0.5 * (EIG_yydd[EIG_N * p + p] - EIG_yydd[EIG_N * q + q]) / EIG_yydd[EIG_N * p + q];
-    t = 1.0 / (Math.abs(theta) + Math.sqrt(theta * theta + 1.0));
-    if (theta < 0.0) {
-      t = -t;
-    }
-    c = 1.0 / Math.sqrt(t * t + 1.0);
-    s = t * c;
-    for (k = o = 0, ref = EIG_N; 0 <= ref ? o < ref : o > ref; k = 0 <= ref ? ++o : --o) {
-      cc = EIG_yydd[EIG_N * p + k];
-      ss = EIG_yydd[EIG_N * q + k];
-      EIG_yydd[EIG_N * p + k] = c * cc + s * ss;
-      EIG_yydd[EIG_N * q + k] = c * ss - s * cc;
-    }
-    for (k = ac = 0, ref1 = EIG_N; 0 <= ref1 ? ac < ref1 : ac > ref1; k = 0 <= ref1 ? ++ac : --ac) {
-      cc = EIG_yydd[EIG_N * k + p];
-      ss = EIG_yydd[EIG_N * k + q];
-      EIG_yydd[EIG_N * k + p] = c * cc + s * ss;
-      EIG_yydd[EIG_N * k + q] = c * ss - s * cc;
-    }
-    for (k = ad = 0, ref2 = EIG_N; 0 <= ref2 ? ad < ref2 : ad > ref2; k = 0 <= ref2 ? ++ad : --ad) {
-      cc = EIG_yyqq[EIG_N * p + k];
-      ss = EIG_yyqq[EIG_N * q + k];
-      EIG_yyqq[EIG_N * p + k] = c * cc + s * ss;
-      EIG_yyqq[EIG_N * q + k] = c * ss - s * cc;
-    }
-    EIG_yydd[EIG_N * p + q] = 0.0;
-    return EIG_yydd[EIG_N * q + p] = 0.0;
-  };
-
-  Eval_erf = function() {
-    push(cadr(p1));
-    Eval();
-    return yerf();
-  };
-
-  yerf = function() {
-    save();
-    yyerf();
-    return restore();
-  };
-
-  yyerf = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (isdouble(p1)) {
-      d = 1.0 - erfc(p1.d);
-      push_double(d);
-      return;
-    }
-    if (isnegativeterm(p1)) {
-      push_symbol(ERF);
-      push(p1);
-      negate();
-      list(2);
-      negate();
-      return;
-    }
-    push_symbol(ERF);
-    push(p1);
-    list(2);
-  };
-
-  Eval_erfc = function() {
-    push(cadr(p1));
-    Eval();
-    return yerfc();
-  };
-
-  yerfc = function() {
-    save();
-    yyerfc();
-    return restore();
-  };
-
-  yyerfc = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (isdouble(p1)) {
-      d = erfc(p1.d);
-      push_double(d);
-      return;
-    }
-    push_symbol(ERFC);
-    push(p1);
-    list(2);
-  };
-
-  erfc = function(x) {
-    var ans, t, z;
-    t = 0.0;
-    z = 0.0;
-    ans = 0.0;
-    z = Math.abs(x);
-    t = 1.0 / (1.0 + 0.5 * z);
-    ans = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
-    if (x >= 0.0) {
-      return ans;
-    } else {
-      return 2.0 - ans;
-    }
-  };
-
-
-  /*
-  	 * commented-out test
-  	"float(erfc(1))",
-  	"0.157299",
-   */
-
-  Eval = function() {
-    check_esc_flag();
-    save();
-    p1 = pop();
-    if (p1 == null) {
-      debugger;
-    }
-    switch (p1.k) {
-      case CONS:
-        Eval_cons();
-        break;
-      case NUM:
-        push(p1);
-        break;
-      case DOUBLE:
-        push(p1);
-        break;
-      case STR:
-        push(p1);
-        break;
-      case TENSOR:
-        Eval_tensor();
-        break;
-      case SYM:
-        Eval_sym();
-        break;
-      default:
-        stop("atom?");
-    }
-    return restore();
-  };
-
-  Eval_sym = function() {
-    if (iskeyword(p1)) {
-      push(p1);
-      push(symbol(LAST));
-      list(2);
-      Eval();
-      return;
-    }
-    p2 = get_binding(p1);
-    push(p2);
-    if (p1 !== p2) {
-      return Eval();
-    }
-  };
-
-  Eval_cons = function() {
-    if (!issymbol(car(p1))) {
-      stop("cons?");
-    }
-    switch (symnum(car(p1))) {
-      case ABS:
-        return Eval_abs();
-      case ADD:
-        return Eval_add();
-      case ADJ:
-        return Eval_adj();
-      case AND:
-        return Eval_and();
-      case ARCCOS:
-        return Eval_arccos();
-      case ARCCOSH:
-        return Eval_arccosh();
-      case ARCSIN:
-        return Eval_arcsin();
-      case ARCSINH:
-        return Eval_arcsinh();
-      case ARCTAN:
-        return Eval_arctan();
-      case ARCTANH:
-        return Eval_arctanh();
-      case ARG:
-        return Eval_arg();
-      case ATOMIZE:
-        return Eval_atomize();
-      case BESSELJ:
-        return Eval_besselj();
-      case BESSELY:
-        return Eval_bessely();
-      case BINDING:
-        return Eval_binding();
-      case BINOMIAL:
-        return Eval_binomial();
-      case CEILING:
-        return Eval_ceiling();
-      case CHECK:
-        return Eval_check();
-      case CHOOSE:
-        return Eval_choose();
-      case CIRCEXP:
-        return Eval_circexp();
-      case CLEAR:
-        return Eval_clear();
-      case CLOCK:
-        return Eval_clock();
-      case COEFF:
-        return Eval_coeff();
-      case COFACTOR:
-        return Eval_cofactor();
-      case CONDENSE:
-        return Eval_condense();
-      case CONJ:
-        return Eval_conj();
-      case CONTRACT:
-        return Eval_contract();
-      case COS:
-        return Eval_cos();
-      case COSH:
-        return Eval_cosh();
-      case DECOMP:
-        return Eval_decomp();
-      case DEGREE:
-        return Eval_degree();
-      case DEFINT:
-        return Eval_defint();
-      case DENOMINATOR:
-        return Eval_denominator();
-      case DERIVATIVE:
-        return Eval_derivative();
-      case DET:
-        return Eval_det();
-      case DIM:
-        return Eval_dim();
-      case DIRAC:
-        return Eval_dirac();
-      case DISPLAY:
-        return Eval_display();
-      case DIVISORS:
-        return Eval_divisors();
-      case DO:
-        return Eval_do();
-      case DOT:
-        return Eval_inner();
-      case DRAW:
-        return Eval_draw();
-      case DSOLVE:
-        return Eval_dsolve();
-      case EIGEN:
-        return Eval_eigen();
-      case EIGENVAL:
-        return Eval_eigenval();
-      case EIGENVEC:
-        return Eval_eigenvec();
-      case ERF:
-        return Eval_erf();
-      case ERFC:
-        return Eval_erfc();
-      case EVAL:
-        return Eval_Eval();
-      case EXP:
-        return Eval_exp();
-      case EXPAND:
-        return Eval_expand();
-      case EXPCOS:
-        return Eval_expcos();
-      case EXPSIN:
-        return Eval_expsin();
-      case FACTOR:
-        return Eval_factor();
-      case FACTORIAL:
-        return Eval_factorial();
-      case FACTORPOLY:
-        return Eval_factorpoly();
-      case FILTER:
-        return Eval_filter();
-      case FLOATF:
-        return Eval_float();
-      case FLOOR:
-        return Eval_floor();
-      case FOR:
-        return Eval_for();
-      case GAMMA:
-        return Eval_gamma();
-      case GCD:
-        return Eval_gcd();
-      case HERMITE:
-        return Eval_hermite();
-      case HILBERT:
-        return Eval_hilbert();
-      case IMAG:
-        return Eval_imag();
-      case INDEX:
-        return Eval_index();
-      case INNER:
-        return Eval_inner();
-      case INTEGRAL:
-        return Eval_integral();
-      case INV:
-        return Eval_inv();
-      case INVG:
-        return Eval_invg();
-      case ISINTEGER:
-        return Eval_isinteger();
-      case ISPRIME:
-        return Eval_isprime();
-      case LAGUERRE:
-        return Eval_laguerre();
-      case LCM:
-        return Eval_lcm();
-      case LEADING:
-        return Eval_leading();
-      case LEGENDRE:
-        return Eval_legendre();
-      case LOG:
-        return Eval_log();
-      case MAG:
-        return Eval_mag();
-      case MOD:
-        return Eval_mod();
-      case MULTIPLY:
-        return Eval_multiply();
-      case NOT:
-        return Eval_not();
-      case NROOTS:
-        return Eval_nroots();
-      case NUMBER:
-        return Eval_number();
-      case NUMERATOR:
-        return Eval_numerator();
-      case OPERATOR:
-        return Eval_operator();
-      case OR:
-        return Eval_or();
-      case OUTER:
-        return Eval_outer();
-      case POLAR:
-        return Eval_polar();
-      case POWER:
-        return Eval_power();
-      case PRIME:
-        return Eval_prime();
-      case PRINT:
-        return Eval_display();
-      case PRODUCT:
-        return Eval_product();
-      case QUOTE:
-        return Eval_quote();
-      case QUOTIENT:
-        return Eval_quotient();
-      case RANK:
-        return Eval_rank();
-      case RATIONALIZE:
-        return Eval_rationalize();
-      case REAL:
-        return Eval_real();
-      case YYRECT:
-        return Eval_rect();
-      case ROOTS:
-        return Eval_roots();
-      case SETQ:
-        return Eval_setq();
-      case SGN:
-        return Eval_sgn();
-      case SIMPLIFY:
-        return Eval_simplify();
-      case SIN:
-        return Eval_sin();
-      case SINH:
-        return Eval_sinh();
-      case SHAPE:
-        return Eval_shape();
-      case SQRT:
-        return Eval_sqrt();
-      case STOP:
-        return Eval_stop();
-      case SUBST:
-        return Eval_subst();
-      case SUM:
-        return Eval_sum();
-      case TAN:
-        return Eval_tan();
-      case TANH:
-        return Eval_tanh();
-      case TAYLOR:
-        return Eval_taylor();
-      case TEST:
-        return Eval_test();
-      case TESTEQ:
-        return Eval_testeq();
-      case TESTGE:
-        return Eval_testge();
-      case TESTGT:
-        return Eval_testgt();
-      case TESTLE:
-        return Eval_testle();
-      case TESTLT:
-        return Eval_testlt();
-      case TRANSPOSE:
-        return Eval_transpose();
-      case UNIT:
-        return Eval_unit();
-      case ZERO:
-        return Eval_zero();
-      default:
-        return Eval_user_function();
-    }
-  };
-
-  Eval_binding = function() {
-    return push(get_binding(cadr(p1)));
-  };
-
-  Eval_check = function() {
-    push(cadr(p1));
-    Eval_predicate();
-    p1 = pop();
-    if (iszero(p1)) {
-      stop("check(arg): arg is zero");
-    }
-    return push(symbol(NIL));
-  };
-
-  Eval_det = function() {
-    push(cadr(p1));
-    Eval();
-    return det();
-  };
-
-  Eval_dim = function() {
-    var n;
-    push(cadr(p1));
-    Eval();
-    p2 = pop();
-    if (iscons(cddr(p1))) {
-      push(caddr(p1));
-      Eval();
-      n = pop_integer();
-    } else {
-      n = 1;
-    }
-    if (!istensor(p2)) {
-      return push_integer(1);
-    } else if (n < 1 || n > p2.tensor.ndim) {
-      return push(p1);
-    } else {
-      return push_integer(p2.tensor.dim[n - 1]);
-    }
-  };
-
-  Eval_divisors = function() {
-    push(cadr(p1));
-    Eval();
-    return divisors();
-  };
-
-  Eval_do = function() {
-    var results;
-    push(car(p1));
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      pop();
-      push(car(p1));
-      Eval();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  Eval_dsolve = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadddr(p1));
-    Eval();
-    return dsolve();
-  };
-
-  Eval_Eval = function() {
-    push(cadr(p1));
-    Eval();
-    p1 = cddr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      push(cadr(p1));
-      Eval();
-      subst();
-      p1 = cddr(p1);
-    }
-    return Eval();
-  };
-
-  Eval_exp = function() {
-    push(cadr(p1));
-    Eval();
-    return exponential();
-  };
-
-  Eval_factorial = function() {
-    push(cadr(p1));
-    Eval();
-    return factorial();
-  };
-
-  Eval_factorpoly = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    factorpoly();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      factorpoly();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  Eval_hermite = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return hermite();
-  };
-
-  Eval_hilbert = function() {
-    push(cadr(p1));
-    Eval();
-    return hilbert();
-  };
-
-  Eval_index = function() {
-    var h;
-    h = tos;
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      p1 = cdr(p1);
-    }
-    return index_function(tos - h);
-  };
-
-  Eval_inv = function() {
-    push(cadr(p1));
-    Eval();
-    return inv();
-  };
-
-  Eval_invg = function() {
-    push(cadr(p1));
-    Eval();
-    return invg();
-  };
-
-  Eval_isinteger = function() {
-    var n;
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    if (isrational(p1)) {
-      if (isinteger(p1)) {
-        push(one);
-      } else {
-        push(zero);
-      }
-      return;
-    }
-    if (isdouble(p1)) {
-      n = Math.floor(p1.d);
-      if (n === p1.d) {
-        push(one);
-      } else {
-        push(zero);
-      }
-      return;
-    }
-    push_symbol(ISINTEGER);
-    push(p1);
-    return list(2);
-  };
-
-  Eval_multiply = function() {
-    var results;
-    push(cadr(p1));
-    Eval();
-    p1 = cddr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      multiply();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  Eval_number = function() {
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    if (p1.k === NUM || p1.k === DOUBLE) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_operator = function() {
-    var h;
-    h = tos;
-    push_symbol(OPERATOR);
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      p1 = cdr(p1);
-    }
-    return list(tos - h);
-  };
-
-  Eval_print = function() {
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      if (equaln(get_binding(symbol(TTY)), 1)) {
-        printline(pop());
-      } else {
-        display(pop());
-      }
-      p1 = cdr(p1);
-    }
-    return push(symbol(NIL));
-  };
-
-  Eval_quote = function() {
-    return push(cadr(p1));
-  };
-
-  Eval_rank = function() {
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    if (istensor(p1)) {
-      return push_integer(p1.tensor.ndim);
-    } else {
-      return push(zero);
-    }
-  };
-
-  setq_indexed = function() {
-    var h;
-    p4 = cadadr(p1);
-    if (!issymbol(p4)) {
-      stop("indexed assignment: error in symbol");
-    }
-    h = tos;
-    push(caddr(p1));
-    Eval();
-    p2 = cdadr(p1);
-    while (iscons(p2)) {
-      push(car(p2));
-      Eval();
-      p2 = cdr(p2);
-    }
-    set_component(tos - h);
-    p3 = pop();
-    set_binding(p4, p3);
-    return push(symbol(NIL));
-  };
-
-  Eval_setq = function() {
-    if (caadr(p1) === symbol(INDEX)) {
-      setq_indexed();
-      return;
-    }
-    if (iscons(cadr(p1))) {
-      define_user_function();
-      return;
-    }
-    if (!issymbol(cadr(p1))) {
-      stop("symbol assignment: error in symbol");
-    }
-    push(caddr(p1));
-    Eval();
-    p2 = pop();
-    set_binding(cadr(p1), p2);
-    return push(symbol(NIL));
-  };
-
-  Eval_sqrt = function() {
-    push(cadr(p1));
-    Eval();
-    push_rational(1, 2);
-    return power();
-  };
-
-  Eval_stop = function() {
-    return stop("user stop");
-  };
-
-  Eval_subst = function() {
-    push(cadddr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadr(p1));
-    Eval();
-    subst();
-    return Eval();
-  };
-
-  Eval_unit = function() {
-    var i, n, o, ref;
-    i = 0;
-    n = 0;
-    push(cadr(p1));
-    Eval();
-    n = pop_integer();
-    if (n < 2) {
-      push(p1);
-      return;
-    }
-    p1 = alloc_tensor(n * n);
-    p1.tensor.ndim = 2;
-    p1.tensor.dim[0] = n;
-    p1.tensor.dim[1] = n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p1.tensor.elem[n * i + i] = one;
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    return push(p1);
-  };
-
-  Eval_noexpand = function() {
-    var x;
-    x = expanding;
-    expanding = 0;
-    Eval();
-    return expanding = x;
-  };
-
-  Eval_predicate = function() {
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(SETQ)) {
-      Eval_testeq();
-    } else {
-      push(p1);
-      Eval();
-    }
-    return restore();
-  };
-
-  Eval_expand = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p2);
-    }
-    return expand();
-  };
-
-  expand = function() {
-    save();
-    p9 = pop();
-    p5 = pop();
-    if (istensor(p5)) {
-      expand_tensor();
-      restore();
-      return;
-    }
-    if (car(p5) === symbol(ADD)) {
-      push_integer(0);
-      p1 = cdr(p5);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p9);
-        expand();
-        add();
-        p1 = cdr(p1);
-      }
-      restore();
-      return;
-    }
-    push(p5);
-    numerator();
-    p3 = pop();
-    push(p5);
-    denominator();
-    p2 = pop();
-    remove_negative_exponents();
-    push(p3);
-    push(p2);
-    push(p9);
-    if (isone(p3) || isone(p2)) {
-      if (!ispoly(p2, p9) || isone(p2)) {
-        pop();
-        pop();
-        pop();
-        push(p5);
-        restore();
-        return;
-      }
-    }
-    divpoly();
-    p7 = pop();
-    push(p3);
-    push(p2);
-    push(p7);
-    multiply();
-    subtract();
-    p3 = pop();
-    if (iszero(p3)) {
-      push(p7);
-      restore();
-      return;
-    }
-    push(p2);
-    push(p9);
-    factorpoly();
-    p2 = pop();
-    expand_get_C();
-    expand_get_B();
-    expand_get_A();
-    if (istensor(p4)) {
-      push(p4);
-      inv();
-      push(p3);
-      inner();
-      push(p2);
-      inner();
-    } else {
-      push(p3);
-      push(p4);
-      divide();
-      push(p2);
-      multiply();
-    }
-    push(p7);
-    add();
-    return restore();
-  };
-
-  expand_tensor = function() {
-    var i, o, ref;
-    i = 0;
-    push(p5);
-    copy_tensor();
-    p5 = pop();
-    for (i = o = 0, ref = p5.tensor.nelem; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push(p5.tensor.elem[i]);
-      push(p9);
-      expand();
-      p5.tensor.elem[i] = pop();
-    }
-    return push(p5);
-  };
-
-  remove_negative_exponents = function() {
-    var h, i, j, k, n, o, ref;
-    h = 0;
-    i = 0;
-    j = 0;
-    k = 0;
-    n = 0;
-    h = tos;
-    factors(p2);
-    factors(p3);
-    n = tos - h;
-    j = 0;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p1 = stack[h + i];
-      if (car(p1) !== symbol(POWER)) {
-        continue;
-      }
-      if (cadr(p1) !== p9) {
-        continue;
-      }
-      push(caddr(p1));
-      k = pop_integer();
-      if (k === 0x80000000) {
-        continue;
-      }
-      if (k < j) {
-        j = k;
-      }
-    }
-    tos = h;
-    if (j === 0) {
-      return;
-    }
-    push(p2);
-    push(p9);
-    push_integer(-j);
-    power();
-    multiply();
-    p2 = pop();
-    push(p3);
-    push(p9);
-    push_integer(-j);
-    power();
-    multiply();
-    return p3 = pop();
-  };
-
-  expand_get_C = function() {
-    var a, ac, h, i, j, n, o, ref, ref1;
-    h = 0;
-    i = 0;
-    j = 0;
-    n = 0;
-    h = tos;
-    if (car(p2) === symbol(MULTIPLY)) {
-      p1 = cdr(p2);
-      while (iscons(p1)) {
-        p5 = car(p1);
-        expand_get_CF();
-        p1 = cdr(p1);
-      }
-    } else {
-      p5 = p2;
-      expand_get_CF();
-    }
-    n = tos - h;
-    if (n === 1) {
-      p4 = pop();
-      return;
-    }
-    p4 = alloc_tensor(n * n);
-    p4.tensor.ndim = 2;
-    p4.tensor.dim[0] = n;
-    p4.tensor.dim[1] = n;
-    a = h;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        push(stack[a + j]);
-        push(p9);
-        push_integer(i);
-        power();
-        divide();
-        push(p9);
-        filter();
-        p4.tensor.elem[n * i + j] = pop();
-      }
-    }
-    return tos -= n;
-  };
-
-  expand_get_CF = function() {
-    var d, i, j, n, o, ref, results;
-    d = 0;
-    i = 0;
-    j = 0;
-    n = 0;
-    if (!Find(p5, p9)) {
-      return;
-    }
-    trivial_divide();
-    if (car(p5) === symbol(POWER)) {
-      push(caddr(p5));
-      n = pop_integer();
-      p6 = cadr(p5);
-    } else {
-      n = 1;
-      p6 = p5;
-    }
-    push(p6);
-    push(p9);
-    degree();
-    d = pop_integer();
-    results = [];
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      results.push((function() {
-        var ac, ref1, results1;
-        results1 = [];
-        for (j = ac = 0, ref1 = d; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-          push(p8);
-          push(p6);
-          push_integer(i);
-          power();
-          multiply();
-          push(p9);
-          push_integer(j);
-          power();
-          results1.push(multiply());
-        }
-        return results1;
-      })());
-    }
-    return results;
-  };
-
-  trivial_divide = function() {
-    var h;
-    h = 0;
-    if (car(p2) === symbol(MULTIPLY)) {
-      h = tos;
-      p0 = cdr(p2);
-      while (iscons(p0)) {
-        if (!equal(car(p0), p5)) {
-          push(car(p0));
-          Eval();
-        }
-        p0 = cdr(p0);
-      }
-      multiply_all(tos - h);
-    } else {
-      push_integer(1);
-    }
-    return p8 = pop();
-  };
-
-  expand_get_B = function() {
-    var i, n, o, ref;
-    i = 0;
-    n = 0;
-    if (!istensor(p4)) {
-      return;
-    }
-    n = p4.tensor.dim[0];
-    p8 = alloc_tensor(n);
-    p8.tensor.ndim = 1;
-    p8.tensor.dim[0] = n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push(p3);
-      push(p9);
-      push_integer(i);
-      power();
-      divide();
-      push(p9);
-      filter();
-      p8.tensor.elem[i] = pop();
-    }
-    return p3 = p8;
-  };
-
-  expand_get_A = function() {
-    var h, i, n, o, ref;
-    h = 0;
-    i = 0;
-    n = 0;
-    if (!istensor(p4)) {
-      push(p2);
-      reciprocate();
-      p2 = pop();
-      return;
-    }
-    h = tos;
-    if (car(p2) === symbol(MULTIPLY)) {
-      p8 = cdr(p2);
-      while (iscons(p8)) {
-        p5 = car(p8);
-        expand_get_AF();
-        p8 = cdr(p8);
-      }
-    } else {
-      p5 = p2;
-      expand_get_AF();
-    }
-    n = tos - h;
-    p8 = alloc_tensor(n);
-    p8.tensor.ndim = 1;
-    p8.tensor.dim[0] = n;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p8.tensor.elem[i] = stack[h + i];
-    }
-    tos = h;
-    return p2 = p8;
-  };
-
-  expand_get_AF = function() {
-    var d, i, j, n, o, ref, results;
-    d = 0;
-    i = 0;
-    j = 0;
-    n = 1;
-    if (!Find(p5, p9)) {
-      return;
-    }
-    if (car(p5) === symbol(POWER)) {
-      push(caddr(p5));
-      n = pop_integer();
-      p5 = cadr(p5);
-    }
-    push(p5);
-    push(p9);
-    degree();
-    d = pop_integer();
-    results = [];
-    for (i = o = ref = n; ref <= 0 ? o < 0 : o > 0; i = ref <= 0 ? ++o : --o) {
-      results.push((function() {
-        var ac, ref1, results1;
-        results1 = [];
-        for (j = ac = 0, ref1 = d; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-          push(p5);
-          push_integer(i);
-          power();
-          reciprocate();
-          push(p9);
-          push_integer(j);
-          power();
-          results1.push(multiply());
-        }
-        return results1;
-      })());
-    }
-    return results;
-  };
-
-  Eval_expcos = function() {
-    push(cadr(p1));
-    Eval();
-    return expcos();
-  };
-
-  expcos = function() {
-    save();
-    p1 = pop();
-    push(imaginaryunit);
-    push(p1);
-    multiply();
-    exponential();
-    push_rational(1, 2);
-    multiply();
-    push(imaginaryunit);
-    negate();
-    push(p1);
-    multiply();
-    exponential();
-    push_rational(1, 2);
-    multiply();
-    add();
-    return restore();
-  };
-
-  Eval_expsin = function() {
-    push(cadr(p1));
-    Eval();
-    return expsin();
-  };
-
-  expsin = function() {
-    save();
-    p1 = pop();
-    push(imaginaryunit);
-    push(p1);
-    multiply();
-    exponential();
-    push(imaginaryunit);
-    divide();
-    push_rational(1, 2);
-    multiply();
-    push(imaginaryunit);
-    negate();
-    push(p1);
-    multiply();
-    exponential();
-    push(imaginaryunit);
-    divide();
-    push_rational(1, 2);
-    multiply();
-    subtract();
-    return restore();
-  };
-
-  Eval_factor = function() {
-    var results;
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p2);
-    }
-    factor();
-    p1 = cdddr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      factor_again();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  factor_again = function() {
-    var h, n;
-    save();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        factor_term();
-        p1 = cdr(p1);
-      }
-    } else {
-      push(p1);
-      push(p2);
-      factor_term();
-    }
-    n = tos - h;
-    if (n > 1) {
-      multiply_all_noexpand(n);
-    }
-    return restore();
-  };
-
-  factor_term = function() {
-    save();
-    factorpoly();
-    p1 = pop();
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        p1 = cdr(p1);
-      }
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  factor = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (isinteger(p1)) {
-      push(p1);
-      factor_number();
-    } else {
-      push(p1);
-      push(p2);
-      factorpoly();
-    }
-    return restore();
-  };
-
-  factor_small_number = function() {
-    var d, expo, i, n, o, ref;
-    i = 0;
-    save();
-    n = pop_integer();
-    if (n === 0x80000000) {
-      stop("number too big to factor");
-    }
-    if (n < 0) {
-      n = -n;
-    }
-    for (i = o = 0, ref = MAXPRIMETAB; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      d = primetab[i];
-      if (d > n / d) {
-        break;
-      }
-      expo = 0;
-      while (n % d === 0) {
-        n /= d;
-        expo++;
-      }
-      if (expo) {
-        push_integer(d);
-        push_integer(expo);
-      }
-    }
-    if (n > 1) {
-      push_integer(n);
-      push_integer(1);
-    }
-    return restore();
-  };
-
-  factorial = function() {
-    var n;
-    n = 0;
-    save();
-    p1 = pop();
-    push(p1);
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push_symbol(FACTORIAL);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    bignum_factorial(n);
-    return restore();
-  };
-
-  simplifyfactorials = function() {
-    var x;
-    x = 0;
-    save();
-    x = expanding;
-    expanding = 0;
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      push(zero);
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        simplifyfactorials();
-        add();
-        p1 = cdr(p1);
-      }
-      expanding = x;
-      restore();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      sfac_product();
-      expanding = x;
-      restore();
-      return;
-    }
-    push(p1);
-    expanding = x;
-    return restore();
-  };
-
-  sfac_product = function() {
-    var ac, ad, i, j, n, o, ref, ref1, ref2, ref3, s;
-    i = 0;
-    j = 0;
-    n = 0;
-    s = tos;
-    p1 = cdr(p1);
-    n = 0;
-    while (iscons(p1)) {
-      push(car(p1));
-      p1 = cdr(p1);
-      n++;
-    }
-    for (i = o = 0, ref = n - 1; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      if (stack[s + i] === symbol(NIL)) {
-        continue;
-      }
-      for (j = ac = ref1 = i + 1, ref2 = n; ref1 <= ref2 ? ac < ref2 : ac > ref2; j = ref1 <= ref2 ? ++ac : --ac) {
-        if (stack[s + j] === symbol(NIL)) {
-          continue;
-        }
-        sfac_product_f(s, i, j);
-      }
-    }
-    push(one);
-    for (i = ad = 0, ref3 = n; 0 <= ref3 ? ad < ref3 : ad > ref3; i = 0 <= ref3 ? ++ad : --ad) {
-      if (stack[s + i] === symbol(NIL)) {
-        continue;
-      }
-      push(stack[s + i]);
-      multiply();
-    }
-    p1 = pop();
-    tos -= n;
-    return push(p1);
-  };
-
-  sfac_product_f = function(s, a, b) {
-    var i, n, o, ref;
-    i = 0;
-    n = 0;
-    p1 = stack[s + a];
-    p2 = stack[s + b];
-    if (ispower(p1)) {
-      p3 = caddr(p1);
-      p1 = cadr(p1);
-    } else {
-      p3 = one;
-    }
-    if (ispower(p2)) {
-      p4 = caddr(p2);
-      p2 = cadr(p2);
-    } else {
-      p4 = one;
-    }
-    if (isfactorial(p1) && isfactorial(p2)) {
-      push(p3);
-      push(p4);
-      add();
-      yyexpand();
-      n = pop_integer();
-      if (n !== 0) {
-        return;
-      }
-      push(cadr(p1));
-      push(cadr(p2));
-      subtract();
-      yyexpand();
-      n = pop_integer();
-      if (n === 0 || n === 0x80000000) {
-        return;
-      }
-      if (n < 0) {
-        n = -n;
-        p5 = p1;
-        p1 = p2;
-        p2 = p5;
-        p5 = p3;
-        p3 = p4;
-        p4 = p5;
-      }
-      push(one);
-      for (i = o = 1, ref = n; 1 <= ref ? o <= ref : o >= ref; i = 1 <= ref ? ++o : --o) {
-        push(cadr(p2));
-        push_integer(i);
-        add();
-        push(p3);
-        power();
-        multiply();
-      }
-      stack[s + a] = pop();
-      return stack[s + b] = symbol(NIL);
-    }
-  };
-
-  polycoeff = 0;
-
-  factpoly_expo = 0;
-
-  factorpoly = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (!Find(p1, p2)) {
-      push(p1);
-      restore();
-      return;
-    }
-    if (!ispoly(p1, p2)) {
-      push(p1);
-      restore();
-      return;
-    }
-    if (!issymbol(p2)) {
-      push(p1);
-      restore();
-      return;
-    }
-    push(p1);
-    push(p2);
-    yyfactorpoly();
-    return restore();
-  };
-
-  yyfactorpoly = function() {
-    var h, i, o, ref;
-    h = 0;
-    i = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    if (isfloating(p1)) {
-      stop("floating point numbers in polynomial");
-    }
-    polycoeff = tos;
-    push(p1);
-    push(p2);
-    factpoly_expo = coeff() - 1;
-    rationalize_coefficients(h);
-    while (factpoly_expo > 0) {
-      if (iszero(stack[polycoeff + 0])) {
-        push_integer(1);
-        p4 = pop();
-        push_integer(0);
-        p5 = pop();
-      } else if (get_factor() === 0) {
-        if (verbosing) {
-          printf("no factor found\n");
-        }
-        break;
-      }
-      push(p4);
-      push(p2);
-      multiply();
-      push(p5);
-      add();
-      p8 = pop();
-      if (verbosing) {
-        printf("success\nFACTOR=");
-        print(p8);
-        printf("\n");
-      }
-
-      /*
-      		if (isnegativeterm(p4))
-      			push(p8)
-      			negate()
-      			p8 = pop()
-      			push(p7)
-      			negate_noexpand()
-      			p7 = pop()
-       */
-      push(p7);
-      push(p8);
-      multiply_noexpand();
-      p7 = pop();
-      yydivpoly();
-      while (factpoly_expo && iszero(stack[polycoeff + factpoly_expo])) {
-        factpoly_expo--;
-      }
-    }
-    push(zero);
-    for (i = o = 0, ref = factpoly_expo; 0 <= ref ? o <= ref : o >= ref; i = 0 <= ref ? ++o : --o) {
-      push(stack[polycoeff + i]);
-      push(p2);
-      push_integer(i);
-      power();
-      multiply();
-      add();
-    }
-    p1 = pop();
-    if (verbosing) {
-      printf("POLY=");
-      print(p1);
-      printf("\n");
-    }
-    if (factpoly_expo > 0 && isnegativeterm(stack[polycoeff + factpoly_expo])) {
-      push(p1);
-      negate();
-      p1 = pop();
-      push(p7);
-      negate_noexpand();
-      p7 = pop();
-    }
-    push(p7);
-    push(p1);
-    multiply_noexpand();
-    p7 = pop();
-    if (verbosing) {
-      printf("RESULT=");
-      print(p7);
-      printf("\n");
-    }
-    stack[h] = p7;
-    tos = h + 1;
-    return restore();
-  };
-
-  rationalize_coefficients = function(h) {
-    var ac, i, o, ref, ref1, ref2, ref3;
-    i = 0;
-    p7 = one;
-    for (i = o = ref = h, ref1 = tos; ref <= ref1 ? o < ref1 : o > ref1; i = ref <= ref1 ? ++o : --o) {
-      push(stack[i]);
-      denominator();
-      push(p7);
-      lcm();
-      p7 = pop();
-    }
-    for (i = ac = ref2 = h, ref3 = tos; ref2 <= ref3 ? ac < ref3 : ac > ref3; i = ref2 <= ref3 ? ++ac : --ac) {
-      push(p7);
-      push(stack[i]);
-      multiply();
-      stack[i] = pop();
-    }
-    push(p7);
-    reciprocate();
-    p7 = pop();
-    if (DEBUG) {
-      return console.log("rationalize_coefficients result");
-    }
-  };
-
-  get_factor = function() {
-    var a0, ac, ad, ae, af, an, h, i, j, na0, nan, o, ref, ref1, ref2, ref3, ref4, rootsTries_i, rootsTries_j;
-    i = 0;
-    j = 0;
-    h = 0;
-    a0 = 0;
-    an = 0;
-    na0 = 0;
-    nan = 0;
-    if (verbosing) {
-      push(zero);
-      for (i = o = 0, ref = factpoly_expo; 0 <= ref ? o <= ref : o >= ref; i = 0 <= ref ? ++o : --o) {
-        push(stack[polycoeff + i]);
-        push(p2);
-        push_integer(i);
-        power();
-        multiply();
-        add();
-      }
-      p1 = pop();
-      printf("POLY=");
-      print(p1);
-      printf("\n");
-    }
-    h = tos;
-    an = tos;
-    push(stack[polycoeff + factpoly_expo]);
-    divisors_onstack();
-    nan = tos - an;
-    a0 = tos;
-    push(stack[polycoeff + 0]);
-    divisors_onstack();
-    na0 = tos - a0;
-    if (verbosing) {
-      printf("divisors of base term");
-      for (i = ac = 0, ref1 = na0; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        printf(", ");
-        print(stack[a0 + i]);
-      }
-      printf("\n");
-      printf("divisors of leading term");
-      for (i = ad = 0, ref2 = nan; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-        printf(", ");
-        print(stack[an + i]);
-      }
-      printf("\n");
-    }
-    for (rootsTries_i = ae = 0, ref3 = nan; 0 <= ref3 ? ae < ref3 : ae > ref3; rootsTries_i = 0 <= ref3 ? ++ae : --ae) {
-      for (rootsTries_j = af = 0, ref4 = na0; 0 <= ref4 ? af < ref4 : af > ref4; rootsTries_j = 0 <= ref4 ? ++af : --af) {
-        p4 = stack[an + rootsTries_i];
-        p5 = stack[a0 + rootsTries_j];
-        push(p5);
-        push(p4);
-        divide();
-        negate();
-        p3 = pop();
-        Evalpoly();
-        if (verbosing) {
-          printf("try A=");
-          print(p4);
-          printf(", B=");
-          print(p5);
-          printf(", root ");
-          print(p2);
-          printf("=-B/A=");
-          print(p3);
-          printf(", POLY(");
-          print(p3);
-          printf(")=");
-          print(p6);
-          printf("\n");
-        }
-        if (iszero(p6)) {
-          tos = h;
-          if (DEBUG) {
-            console.log("get_factor returning 1");
-          }
-          return 1;
-        }
-        push(p5);
-        negate();
-        p5 = pop();
-        push(p3);
-        negate();
-        p3 = pop();
-        Evalpoly();
-        if (verbosing) {
-          printf("try A=");
-          print(p4);
-          printf(", B=");
-          print(p5);
-          printf(", root ");
-          print(p2);
-          printf("=-B/A=");
-          print(p3);
-          printf(", POLY(");
-          print(p3);
-          printf(")=");
-          print(p6);
-          printf("\n");
-        }
-        if (iszero(p6)) {
-          tos = h;
-          if (DEBUG) {
-            console.log("get_factor returning 1");
-          }
-          return 1;
-        }
-      }
-    }
-    tos = h;
-    if (DEBUG) {
-      console.log("get_factor returning 0");
-    }
-    return 0;
-  };
-
-  yydivpoly = function() {
-    var i, o, ref;
-    i = 0;
-    p6 = zero;
-    for (i = o = ref = factpoly_expo; ref <= 0 ? o < 0 : o > 0; i = ref <= 0 ? ++o : --o) {
-      push(stack[polycoeff + i]);
-      stack[polycoeff + i] = p6;
-      push(p4);
-      divide();
-      p6 = pop();
-      push(stack[polycoeff + i - 1]);
-      push(p6);
-      push(p5);
-      multiply();
-      subtract();
-      stack[polycoeff + i - 1] = pop();
-    }
-    stack[polycoeff + 0] = p6;
-    if (DEBUG) {
-      return console.log("yydivpoly Q:");
-    }
-  };
-
-  Evalpoly = function() {
-    var i, o, ref;
-    i = 0;
-    push(zero);
-    for (i = o = ref = factpoly_expo; ref <= 0 ? o <= 0 : o >= 0; i = ref <= 0 ? ++o : --o) {
-      push(p3);
-      multiply();
-      push(stack[polycoeff + i]);
-      if (DEBUG) {
-        console.log("Evalpoly top of stack:");
-        print1(stack[tos - i]);
-      }
-      add();
-    }
-    return p6 = pop();
-  };
-
-  factors = function(p) {
-    var h;
-    h = tos;
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      while (iscons(p)) {
-        push_term_factors(car(p));
-        p = cdr(p);
-      }
-    } else {
-      push_term_factors(p);
-    }
-    return tos - h;
-  };
-
-  push_term_factors = function(p) {
-    var results;
-    if (car(p) === symbol(MULTIPLY)) {
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        push(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      return push(p);
-    }
-  };
-
-
-  /*
-  Remove terms that involve a given symbol or expression. For example...
-  
-  	filter(x^2 + x + 1, x)		=>	1
-  
-  	filter(x^2 + x + 1, x^2)	=>	x + 1
-   */
-
-  Eval_filter = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      filter();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-
-  /*
-   For example...
-  
-  	push(F)
-  	push(X)
-  	filter()
-  	F = pop()
-   */
-
-  filter = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    filter_main();
-    return restore();
-  };
-
-  filter_main = function() {
-    if (car(p1) === symbol(ADD)) {
-      return filter_sum();
-    } else if (istensor(p1)) {
-      return filter_tensor();
-    } else if (Find(p1, p2)) {
-      return push_integer(0);
-    } else {
-      return push(p1);
-    }
-  };
-
-  filter_sum = function() {
-    var results;
-    push_integer(0);
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      push(p2);
-      filter();
-      add();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  filter_tensor = function() {
-    var ac, i, n, o, ref, ref1;
-    i = 0;
-    n = 0;
-    n = p1.tensor.nelem;
-    p3 = alloc_tensor(n);
-    p3.tensor.ndim = p1.tensor.ndim;
-    for (i = o = 0, ref = p1.tensor.ndim; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(p1.tensor.elem[i]);
-      push(p2);
-      filter();
-      p3.tensor.elem[i] = pop();
-    }
-    return push(p3);
-  };
-
-  Eval_float = function() {
-    push(cadr(p1));
-    Eval();
-    yyfloat();
-    return Eval();
-  };
-
-  yyfloat = function() {
-    var h, i, o, ref;
-    i = 0;
-    h = 0;
-    save();
-    p1 = pop();
-    if (iscons(p1)) {
-      h = tos;
-      while (iscons(p1)) {
-        push(car(p1));
-        yyfloat();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-    } else if (p1.k === TENSOR) {
-      push(p1);
-      copy_tensor();
-      p1 = pop();
-      for (i = o = 0, ref = p1.tensor.nelem; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-        push(p1.tensor.elem[i]);
-        yyfloat();
-        p1.tensor.elem[i] = pop();
-      }
-      push(p1);
-    } else if (p1.k === NUM) {
-      push(p1);
-      bignum_float();
-    } else if (p1 === symbol(PI)) {
-      push_double(Math.PI);
-    } else if (p1 === symbol(E)) {
-      push_double(Math.E);
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  Eval_floor = function() {
-    push(cadr(p1));
-    Eval();
-    return yfloor();
-  };
-
-  yfloor = function() {
-    save();
-    yyfloor();
-    return restore();
-  };
-
-  yyfloor = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (!isnum(p1)) {
-      push_symbol(FLOOR);
-      push(p1);
-      list(2);
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.floor(p1.d);
-      push_double(d);
-      return;
-    }
-    if (isinteger(p1)) {
-      push(p1);
-      return;
-    }
-    p3 = new U();
-    p3.k = NUM;
-    p3.q.a = mdiv(p1.q.a, p1.q.b);
-    p3.q.b = mint(1);
-    push(p3);
-    if (isnegativenumber(p1)) {
-      push_integer(-1);
-      return add();
-    }
-  };
-
-  Eval_for = function() {
-    var i, j, k, o, ref, ref1;
-    i = 0;
-    j = 0;
-    k = 0;
-    p6 = cadr(p1);
-    if (!issymbol(p6)) {
-      stop("for: 1st arg?");
-    }
-    push(caddr(p1));
-    Eval();
-    j = pop_integer();
-    if (j === 0x80000000) {
-      stop("for: 2nd arg?");
-    }
-    push(cadddr(p1));
-    Eval();
-    k = pop_integer();
-    if (k === 0x80000000) {
-      stop("for: 3rd arg?");
-    }
-    p1 = cddddr(p1);
-    p4 = get_binding(p6);
-    p3 = get_arglist(p6);
-    for (i = o = ref = j, ref1 = k; ref <= ref1 ? o <= ref1 : o >= ref1; i = ref <= ref1 ? ++o : --o) {
-      push_integer(i);
-      p5 = pop();
-      set_binding(p6, p5);
-      p2 = p1;
-      while (iscons(p2)) {
-        push(car(p2));
-        Eval();
-        pop();
-        p2 = cdr(p2);
-      }
-    }
-    set_binding_and_arglist(p6, p4, p3);
-    return push_symbol(NIL);
-  };
-
-  Eval_gamma = function() {
-    push(cadr(p1));
-    Eval();
-    return gamma();
-  };
-
-  gamma = function() {
-    save();
-    gammaf();
-    return restore();
-  };
-
-  gammaf = function() {
-    p1 = pop();
-    if (isrational(p1) && MEQUAL(p1.q.a, 1) && MEQUAL(p1.q.b, 2)) {
-      push_symbol(PI);
-      push_rational(1, 2);
-      power();
-      return;
-    }
-    if (isrational(p1) && MEQUAL(p1.q.a, 3) && MEQUAL(p1.q.b, 2)) {
-      push_symbol(PI);
-      push_rational(1, 2);
-      power();
-      push_rational(1, 2);
-      multiply();
-      return;
-    }
-    if (isnegativeterm(p1)) {
-      push_symbol(PI);
-      push_integer(-1);
-      multiply();
-      push_symbol(PI);
-      push(p1);
-      multiply();
-      sine();
-      push(p1);
-      multiply();
-      push(p1);
-      negate();
-      gamma();
-      multiply();
-      divide();
-      return;
-    }
-    if (car(p1) === symbol(ADD)) {
-      gamma_of_sum();
-      return;
-    }
-    push_symbol(GAMMA);
-    push(p1);
-    list(2);
-  };
-
-  gamma_of_sum = function() {
-    p3 = cdr(p1);
-    if (isrational(car(p3)) && MEQUAL(car(p3).q.a, 1) && MEQUAL(car(p3).q.b, 1)) {
-      push(cadr(p3));
-      push(cadr(p3));
-      gamma();
-      return multiply();
-    } else {
-      if (isrational(car(p3)) && MEQUAL(car(p3).q.a, -1) && MEQUAL(car(p3).q.b, 1)) {
-        push(cadr(p3));
-        gamma();
-        push(cadr(p3));
-        push_integer(-1);
-        add();
-        return divide();
-      } else {
-        push_symbol(GAMMA);
-        push(p1);
-        list(2);
-      }
-    }
-  };
-
-  Eval_gcd = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      gcd();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  gcd = function() {
-    var x;
-    x = expanding;
-    save();
-    gcd_main();
-    restore();
-    return expanding = x;
-  };
-
-  gcd_main = function() {
-    expanding = 1;
-    p2 = pop();
-    p1 = pop();
-    if (equal(p1, p2)) {
-      push(p1);
-      return;
-    }
-    if (isrational(p1) && isrational(p2)) {
-      push(p1);
-      push(p2);
-      gcd_numbers();
-      return;
-    }
-    if (car(p1) === symbol(ADD) && car(p2) === symbol(ADD)) {
-      gcd_expr_expr();
-      return;
-    }
-    if (car(p1) === symbol(ADD)) {
-      gcd_expr(p1);
-      p1 = pop();
-    }
-    if (car(p2) === symbol(ADD)) {
-      gcd_expr(p2);
-      p2 = pop();
-    }
-    if (car(p1) === symbol(MULTIPLY) && car(p2) === symbol(MULTIPLY)) {
-      gcd_term_term();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      gcd_term_factor();
-      return;
-    }
-    if (car(p2) === symbol(MULTIPLY)) {
-      gcd_factor_term();
-      return;
-    }
-    if (car(p1) === symbol(POWER)) {
-      p3 = caddr(p1);
-      p1 = cadr(p1);
-    } else {
-      p3 = one;
-    }
-    if (car(p2) === symbol(POWER)) {
-      p4 = caddr(p2);
-      p2 = cadr(p2);
-    } else {
-      p4 = one;
-    }
-    if (!equal(p1, p2)) {
-      push(one);
-      return;
-    }
-    if (isnum(p3) && isnum(p4)) {
-      push(p1);
-      if (lessp(p3, p4)) {
-        push(p3);
-      } else {
-        push(p4);
-      }
-      power();
-      return;
-    }
-    push(p3);
-    push(p4);
-    divide();
-    p5 = pop();
-    if (isnum(p5)) {
-      push(p1);
-      if (car(p3) === symbol(MULTIPLY) && isnum(cadr(p3))) {
-        p5 = cadr(p3);
-      } else {
-        p5 = one;
-      }
-      if (car(p4) === symbol(MULTIPLY) && isnum(cadr(p4))) {
-        p6 = cadr(p4);
-      } else {
-        p6 = one;
-      }
-      if (lessp(p5, p6)) {
-        push(p3);
-      } else {
-        push(p4);
-      }
-      power();
-      return;
-    }
-    push(p3);
-    push(p4);
-    subtract();
-    p5 = pop();
-    if (!isnum(p5)) {
-      push(one);
-      return;
-    }
-    push(p1);
-    if (isnegativenumber(p5)) {
-      push(p3);
-    } else {
-      push(p4);
-    }
-    return power();
-  };
-
-  gcd_expr_expr = function() {
-    if (length(p1) !== length(p2)) {
-      push(one);
-      return;
-    }
-    p3 = cdr(p1);
-    push(car(p3));
-    p3 = cdr(p3);
-    while (iscons(p3)) {
-      push(car(p3));
-      gcd();
-      p3 = cdr(p3);
-    }
-    p3 = pop();
-    p4 = cdr(p2);
-    push(car(p4));
-    p4 = cdr(p4);
-    while (iscons(p4)) {
-      push(car(p4));
-      gcd();
-      p4 = cdr(p4);
-    }
-    p4 = pop();
-    push(p1);
-    push(p3);
-    divide();
-    p5 = pop();
-    push(p2);
-    push(p4);
-    divide();
-    p6 = pop();
-    if (equal(p5, p6)) {
-      push(p5);
-      push(p3);
-      push(p4);
-      gcd();
-      return multiply();
-    } else {
-      return push(one);
-    }
-  };
-
-  gcd_expr = function(p) {
-    var results;
-    p = cdr(p);
-    push(car(p));
-    p = cdr(p);
-    results = [];
-    while (iscons(p)) {
-      push(car(p));
-      gcd();
-      results.push(p = cdr(p));
-    }
-    return results;
-  };
-
-  gcd_term_term = function() {
-    var results;
-    push(one);
-    p3 = cdr(p1);
-    results = [];
-    while (iscons(p3)) {
-      p4 = cdr(p2);
-      while (iscons(p4)) {
-        push(car(p3));
-        push(car(p4));
-        gcd();
-        multiply();
-        p4 = cdr(p4);
-      }
-      results.push(p3 = cdr(p3));
-    }
-    return results;
-  };
-
-  gcd_term_factor = function() {
-    var results;
-    push(one);
-    p3 = cdr(p1);
-    results = [];
-    while (iscons(p3)) {
-      push(car(p3));
-      push(p2);
-      gcd();
-      multiply();
-      results.push(p3 = cdr(p3));
-    }
-    return results;
-  };
-
-  gcd_factor_term = function() {
-    var results;
-    push(one);
-    p4 = cdr(p2);
-    results = [];
-    while (iscons(p4)) {
-      push(p1);
-      push(car(p4));
-      gcd();
-      multiply();
-      results.push(p4 = cdr(p4));
-    }
-    return results;
-  };
-
-  guess = function() {
-    var p;
-    p = pop();
-    push(p);
-    if (Find(p, symbol(SYMBOL_X))) {
-      return push_symbol(SYMBOL_X);
-    } else if (Find(p, symbol(SYMBOL_Y))) {
-      return push_symbol(SYMBOL_Y);
-    } else if (Find(p, symbol(SYMBOL_Z))) {
-      return push_symbol(SYMBOL_Z);
-    } else if (Find(p, symbol(SYMBOL_T))) {
-      return push_symbol(SYMBOL_T);
-    } else if (Find(p, symbol(SYMBOL_S))) {
-      return push_symbol(SYMBOL_S);
-    } else {
-      return push_symbol(SYMBOL_X);
-    }
-  };
-
-  hermite = function() {
-    save();
-    yyhermite();
-    return restore();
-  };
-
-  yyhermite = function() {
-    var n;
-    n = 0;
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push_symbol(HERMITE);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    if (issymbol(p1)) {
-      return yyhermite2(n);
-    } else {
-      p3 = p1;
-      p1 = symbol(SECRETX);
-      yyhermite2(n);
-      p1 = p3;
-      push(symbol(SECRETX));
-      push(p1);
-      subst();
-      return Eval();
-    }
-  };
-
-  yyhermite2 = function(n) {
-    var i, o, ref, results;
-    i = 0;
-    push_integer(1);
-    push_integer(0);
-    p4 = pop();
-    results = [];
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p5 = p4;
-      p4 = pop();
-      push(p1);
-      push(p4);
-      multiply();
-      push_integer(i);
-      push(p5);
-      multiply();
-      subtract();
-      push_integer(2);
-      results.push(multiply());
-    }
-    return results;
-  };
-
-  hilbert = function() {
-    var ac, i, j, n, o, ref, ref1;
-    i = 0;
-    j = 0;
-    n = 0;
-    save();
-    p2 = pop();
-    push(p2);
-    n = pop_integer();
-    if (n < 2) {
-      push_symbol(HILBERT);
-      push(p2);
-      list(2);
-      restore();
-      return;
-    }
-    push_zero_matrix(n, n);
-    p1 = pop();
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        push_integer(i + j + 1);
-        inverse();
-        p1.tensor.elem[i * n + j] = pop();
-      }
-    }
-    push(p1);
-    return restore();
-  };
-
-
-  /*
-   Returns the coefficient of the imaginary part of complex z
-  
-  	z		imag(z)
-  	-		-------
-  
-  	a + i b		b
-  
-  	exp(i a)	sin(a)
-   */
-
-  Eval_imag = function() {
-    push(cadr(p1));
-    Eval();
-    return imag();
-  };
-
-  imag = function() {
-    save();
-    rect();
-    p1 = pop();
-    push(p1);
-    push(p1);
-    conjugate();
-    subtract();
-    push_integer(2);
-    divide();
-    push(imaginaryunit);
-    divide();
-    return restore();
-  };
-
-  index_function = function(n) {
-    var ac, ad, ae, af, i, k, m, ndim, nelem, o, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, s, t;
-    i = 0;
-    k = 0;
-    m = 0;
-    ndim = 0;
-    nelem = 0;
-    t = 0;
-    save();
-    s = tos - n;
-    p1 = stack[s];
-    if (!istensor(p1)) {
-      tos -= n;
-      push(p1);
-      restore();
-      return;
-    }
-    ndim = p1.tensor.ndim;
-    m = n - 1;
-    if (m > ndim) {
-      stop("too many indices for tensor");
-    }
-    k = 0;
-    for (i = o = 0, ref = m; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push(stack[s + i + 1]);
-      t = pop_integer();
-      if (t < 1 || t > p1.tensor.dim[i]) {
-        stop("index out of range");
-      }
-      k = k * p1.tensor.dim[i] + t - 1;
-    }
-    if (ndim === m) {
-      tos -= n;
-      push(p1.tensor.elem[k]);
-      restore();
-      return;
-    }
-    for (i = ac = ref1 = m, ref2 = ndim; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-      k = k * p1.tensor.dim[i] + 0;
-    }
-    nelem = 1;
-    for (i = ad = ref3 = m, ref4 = ndim; ref3 <= ref4 ? ad < ref4 : ad > ref4; i = ref3 <= ref4 ? ++ad : --ad) {
-      nelem *= p1.tensor.dim[i];
-    }
-    p2 = alloc_tensor(nelem);
-    p2.tensor.ndim = ndim - m;
-    for (i = ae = ref5 = m, ref6 = ndim; ref5 <= ref6 ? ae < ref6 : ae > ref6; i = ref5 <= ref6 ? ++ae : --ae) {
-      p2.tensor.dim[i - m] = p1.tensor.dim[i];
-    }
-    for (i = af = 0, ref7 = nelem; 0 <= ref7 ? af < ref7 : af > ref7; i = 0 <= ref7 ? ++af : --af) {
-      p2.tensor.elem[i] = p1.tensor.elem[k + i];
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    tos -= n;
-    push(p2);
-    return restore();
-  };
-
-  set_component = function(n) {
-    var ac, ad, ae, af, ag, i, k, m, ndim, o, ref, ref1, ref2, ref3, ref4, ref5, ref6, s, t;
-    i = 0;
-    k = 0;
-    m = 0;
-    ndim = 0;
-    t = 0;
-    save();
-    if (n < 3) {
-      stop("error in indexed assign");
-    }
-    s = tos - n;
-    p2 = stack[s];
-    p1 = stack[s + 1];
-    if (!istensor(p1)) {
-      stop("error in indexed assign");
-    }
-    ndim = p1.tensor.ndim;
-    m = n - 2;
-    if (m > ndim) {
-      stop("error in indexed assign");
-    }
-    k = 0;
-    for (i = o = 0, ref = m; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      push(stack[s + i + 2]);
-      t = pop_integer();
-      if (t < 1 || t > p1.tensor.dim[i]) {
-        stop("error in indexed assign\n");
-      }
-      k = k * p1.tensor.dim[i] + t - 1;
-    }
-    for (i = ac = ref1 = m, ref2 = ndim; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-      k = k * p1.tensor.dim[i] + 0;
-    }
-    p3 = alloc_tensor(p1.tensor.nelem);
-    p3.tensor.ndim = p1.tensor.ndim;
-    for (i = ad = 0, ref3 = p1.tensor.ndim; 0 <= ref3 ? ad < ref3 : ad > ref3; i = 0 <= ref3 ? ++ad : --ad) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    for (i = ae = 0, ref4 = p1.tensor.nelem; 0 <= ref4 ? ae < ref4 : ae > ref4; i = 0 <= ref4 ? ++ae : --ae) {
-      p3.tensor.elem[i] = p1.tensor.elem[i];
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p3.tensor.nelem !== p3.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    p1 = p3;
-    if (ndim === m) {
-      if (istensor(p2)) {
-        stop("error in indexed assign");
-      }
-      p1.tensor.elem[k] = p2;
-      if (p1.tensor.nelem !== p1.tensor.elem.length) {
-        console.log("something wrong in tensor dimensions");
-        debugger;
-      }
-      tos -= n;
-      push(p1);
-      restore();
-      return;
-    }
-    if (!istensor(p2)) {
-      stop("error in indexed assign");
-    }
-    if (ndim - m !== p2.tensor.ndim) {
-      stop("error in indexed assign");
-    }
-    for (i = af = 0, ref5 = p2.tensor.ndim; 0 <= ref5 ? af < ref5 : af > ref5; i = 0 <= ref5 ? ++af : --af) {
-      if (p1.tensor.dim[m + i] !== p2.tensor.dim[i]) {
-        stop("error in indexed assign");
-      }
-    }
-    for (i = ag = 0, ref6 = p2.tensor.nelem; 0 <= ref6 ? ag < ref6 : ag > ref6; i = 0 <= ref6 ? ++ag : --ag) {
-      p1.tensor.elem[k + i] = p2.tensor.elem[i];
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    tos -= n;
-    push(p1);
-    return restore();
-  };
-
-  Eval_inner = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      inner();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  inner = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (istensor(p1) && istensor(p2)) {
-      inner_f();
-    } else {
-      push(p1);
-      push(p2);
-      if (istensor(p1)) {
-        tensor_times_scalar();
-      } else if (istensor(p2)) {
-        scalar_times_tensor();
-      } else {
-        multiply();
-      }
-    }
-    return restore();
-  };
-
-  inner_f = function() {
-    var a, ac, ad, ae, af, ag, ah, ak, b, bk, c, i, j, k, n, ndim, o, ref, ref1, ref2, ref3, ref4, ref5, ref6;
-    i = 0;
-    n = p1.tensor.dim[p1.tensor.ndim - 1];
-    if (n !== p2.tensor.dim[0]) {
-      debugger;
-      stop("inner: tensor dimension check");
-    }
-    ndim = p1.tensor.ndim + p2.tensor.ndim - 2;
-    if (ndim > MAXDIM) {
-      stop("inner: rank of result exceeds maximum");
-    }
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    ak = 1;
-    for (i = o = 0, ref = p1.tensor.ndim - 1; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      ak *= p1.tensor.dim[i];
-    }
-    bk = 1;
-    for (i = ac = 1, ref1 = p2.tensor.ndim; 1 <= ref1 ? ac < ref1 : ac > ref1; i = 1 <= ref1 ? ++ac : --ac) {
-      bk *= p2.tensor.dim[i];
-    }
-    p3 = alloc_tensor(ak * bk);
-    c = p3.tensor.elem;
-    for (i = ad = 0, ref2 = ak; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      for (j = ae = 0, ref3 = n; 0 <= ref3 ? ae < ref3 : ae > ref3; j = 0 <= ref3 ? ++ae : --ae) {
-        if (iszero(a[i * n + j])) {
-          continue;
-        }
-        for (k = af = 0, ref4 = bk; 0 <= ref4 ? af < ref4 : af > ref4; k = 0 <= ref4 ? ++af : --af) {
-          push(a[i * n + j]);
-          push(b[j * bk + k]);
-          multiply();
-          push(c[i * bk + k]);
-          add();
-          c[i * bk + k] = pop();
-        }
-      }
-    }
-    if (ndim === 0) {
-      return push(p3.tensor.elem[0]);
-    } else {
-      p3.tensor.ndim = ndim;
-      j = 0;
-      for (i = ag = 0, ref5 = p1.tensor.ndim - 1; 0 <= ref5 ? ag < ref5 : ag > ref5; i = 0 <= ref5 ? ++ag : --ag) {
-        p3.tensor.dim[i] = p1.tensor.dim[i];
-      }
-      j = p1.tensor.ndim - 1;
-      for (i = ah = 0, ref6 = p2.tensor.ndim - 1; 0 <= ref6 ? ah < ref6 : ah > ref6; i = 0 <= ref6 ? ++ah : --ah) {
-        p3.tensor.dim[j + i] = p2.tensor.dim[i + 1];
-      }
-      return push(p3);
-    }
-  };
-
-
-  /*
-   Table of integrals
-  
-  The symbol f is just a dummy symbol for creating a list f(A,B,C,C,...) where
-  
-  	A	is the template expression
-  
-  	B	is the result expression
-  
-  	C	is an optional list of conditional expressions
-   */
-
-  itab = ["f(a,a*x)", "f(1/x,log(x))", "f(x^a,x^(a+1)/(a+1))", "f(exp(a*x),1/a*exp(a*x))", "f(exp(a*x+b),1/a*exp(a*x+b))", "f(x*exp(a*x^2),exp(a*x^2)/(2*a))", "f(x*exp(a*x^2+b),exp(a*x^2+b)/(2*a))", "f(log(a*x),x*log(a*x)-x)", "f(a^x,a^x/log(a),or(not(number(a)),a>0))", "f(1/(a+x^2),1/sqrt(a)*arctan(x/sqrt(a)),or(not(number(a)),a>0))", "f(1/(a-x^2),1/sqrt(a)*arctanh(x/sqrt(a)))", "f(1/sqrt(a-x^2),arcsin(x/(sqrt(a))))", "f(1/sqrt(a+x^2),log(x+sqrt(a+x^2)))", "f(1/(a+b*x),1/b*log(a+b*x))", "f(1/(a+b*x)^2,-1/(b*(a+b*x)))", "f(1/(a+b*x)^3,-1/(2*b)*1/(a+b*x)^2)", "f(x/(a+b*x),x/b-a*log(a+b*x)/b/b)", "f(x/(a+b*x)^2,1/b^2*(log(a+b*x)+a/(a+b*x)))", "f(x^2/(a+b*x),1/b^2*(1/2*(a+b*x)^2-2*a*(a+b*x)+a^2*log(a+b*x)))", "f(x^2/(a+b*x)^2,1/b^3*(a+b*x-2*a*log(a+b*x)-a^2/(a+b*x)))", "f(x^2/(a+b*x)^3,1/b^3*(log(a+b*x)+2*a/(a+b*x)-1/2*a^2/(a+b*x)^2))", "f(1/x*1/(a+b*x),-1/a*log((a+b*x)/x))", "f(1/x*1/(a+b*x)^2,1/a*1/(a+b*x)-1/a^2*log((a+b*x)/x))", "f(1/x*1/(a+b*x)^3,1/a^3*(1/2*((2*a+b*x)/(a+b*x))^2+log(x/(a+b*x))))", "f(1/x^2*1/(a+b*x),-1/(a*x)+b/a^2*log((a+b*x)/x))", "f(1/x^3*1/(a+b*x),(2*b*x-a)/(2*a^2*x^2)+b^2/a^3*log(x/(a+b*x)))", "f(1/x^2*1/(a+b*x)^2,-(a+2*b*x)/(a^2*x*(a+b*x))+2*b/a^3*log((a+b*x)/x))", "f(1/(a+b*x^2),1/sqrt(a*b)*arctan(x*sqrt(a*b)/a),or(not(number(a*b)),a*b>0))", "f(1/(a+b*x^2),1/(2*sqrt(-a*b))*log((a+x*sqrt(-a*b))/(a-x*sqrt(-a*b))),or(not(number(a*b)),a*b<0))", "f(x/(a+b*x^2),1/2*1/b*log(a+b*x^2))", "f(x^2/(a+b*x^2),x/b-a/b*integral(1/(a+b*x^2),x))", "f(1/(a+b*x^2)^2,x/(2*a*(a+b*x^2))+1/2*1/a*integral(1/(a+b*x^2),x))", "f(1/x*1/(a+b*x^2),1/2*1/a*log(x^2/(a+b*x^2)))", "f(1/x^2*1/(a+b*x^2),-1/(a*x)-b/a*integral(1/(a+b*x^2),x))", "f(1/(a+b*x^3),1/3*1/a*(a/b)^(1/3)*(1/2*log(((a/b)^(1/3)+x)^3/(a+b*x^3))+sqrt(3)*arctan((2*x-(a/b)^(1/3))*(a/b)^(-1/3)/sqrt(3))))", "f(x^2/(a+b*x^3),1/3*1/b*log(a+b*x^3))", "f(1/(a+b*x^4),1/2*1/a*(a/b/4)^(1/4)*(1/2*log((x^2+2*(a/b/4)^(1/4)*x+2*(a/b/4)^(1/2))/(x^2-2*(a/b/4)^(1/4)*x+2*(a/b/4)^(1/2)))+arctan(2*(a/b/4)^(1/4)*x/(2*(a/b/4)^(1/2)-x^2))),or(not(number(a*b)),a*b>0))", "f(1/(a+b*x^4),1/2*(-a/b)^(1/4)/a*(1/2*log((x+(-a/b)^(1/4))/(x-(-a/b)^(1/4)))+arctan(x*(-a/b)^(-1/4))),or(not(number(a*b)),a*b<0))", "f(x/(a+b*x^4),1/2*sqrt(b/a)/b*arctan(x^2*sqrt(b/a)),or(not(number(a*b)),a*b>0))", "f(x/(a+b*x^4),1/4*sqrt(-b/a)/b*log((x^2-sqrt(-a/b))/(x^2+sqrt(-a/b))),or(not(number(a*b)),a*b<0))", "f(x^2/(a+b*x^4),1/4*1/b*(a/b/4)^(-1/4)*(1/2*log((x^2-2*(a/b/4)^(1/4)*x+2*sqrt(a/b/4))/(x^2+2*(a/b/4)^(1/4)*x+2*sqrt(a/b/4)))+arctan(2*(a/b/4)^(1/4)*x/(2*sqrt(a/b/4)-x^2))),or(not(number(a*b)),a*b>0))", "f(x^2/(a+b*x^4),1/4*1/b*(-a/b)^(-1/4)*(log((x-(-a/b)^(1/4))/(x+(-a/b)^(1/4)))+2*arctan(x*(-a/b)^(-1/4))),or(not(number(a*b)),a*b<0))", "f(x^3/(a+b*x^4),1/4*1/b*log(a+b*x^4))", "f(sqrt(a+b*x),2/3*1/b*sqrt((a+b*x)^3))", "f(x*sqrt(a+b*x),-2*(2*a-3*b*x)*sqrt((a+b*x)^3)/15/b^2)", "f(x^2*sqrt(a+b*x),2*(8*a^2-12*a*b*x+15*b^2*x^2)*sqrt((a+b*x)^3)/105/b^3)", "f(sqrt(a+b*x)/x,2*sqrt(a+b*x)+a*integral(1/x*1/sqrt(a+b*x),x))", "f(sqrt(a+b*x)/x^2,-sqrt(a+b*x)/x+b/2*integral(1/x*1/sqrt(a+b*x),x))", "f(1/sqrt(a+b*x),2*sqrt(a+b*x)/b)", "f(x/sqrt(a+b*x),-2/3*(2*a-b*x)*sqrt(a+b*x)/b^2)", "f(x^2/sqrt(a+b*x),2/15*(8*a^2-4*a*b*x+3*b^2*x^2)*sqrt(a+b*x)/b^3)", "f(1/x*1/sqrt(a+b*x),1/sqrt(a)*log((sqrt(a+b*x)-sqrt(a))/(sqrt(a+b*x)+sqrt(a))),or(not(number(a)),a>0))", "f(1/x*1/sqrt(a+b*x),2/sqrt(-a)*arctan(sqrt(-(a+b*x)/a)),or(not(number(a)),a<0))", "f(1/x^2*1/sqrt(a+b*x),-sqrt(a+b*x)/a/x-1/2*b/a*integral(1/x*1/sqrt(a+b*x),x))", "f(sqrt(x^2+a),1/2*(x*sqrt(x^2+a)+a*log(x+sqrt(x^2+a))))", "f(1/sqrt(x^2+a),log(x+sqrt(x^2+a)))", "f(1/x*1/sqrt(x^2+a),arcsec(x/sqrt(-a))/sqrt(-a),or(not(number(a)),a<0))", "f(1/x*1/sqrt(x^2+a),-1/sqrt(a)*log((sqrt(a)+sqrt(x^2+a))/x),or(not(number(a)),a>0))", "f(sqrt(x^2+a)/x,sqrt(x^2+a)-sqrt(a)*log((sqrt(a)+sqrt(x^2+a))/x),or(not(number(a)),a>0))", "f(sqrt(x^2+a)/x,sqrt(x^2+a)-sqrt(-a)*arcsec(x/sqrt(-a)),or(not(number(a)),a<0))", "f(x/sqrt(x^2+a),sqrt(x^2+a))", "f(x*sqrt(x^2+a),1/3*sqrt((x^2+a)^3))", "f(sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),1/4*(x*sqrt((x^2+a^(1/3))^3)+3/2*a^(1/3)*x*sqrt(x^2+a^(1/3))+3/2*a^(2/3)*log(x+sqrt(x^2+a^(1/3)))))", "f(sqrt(-a+x^6-3*a^(1/3)*x^4+3*a^(2/3)*x^2),1/4*(x*sqrt((x^2-a^(1/3))^3)-3/2*a^(1/3)*x*sqrt(x^2-a^(1/3))+3/2*a^(2/3)*log(x+sqrt(x^2-a^(1/3)))))", "f(1/sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),x/a^(1/3)/sqrt(x^2+a^(1/3)))", "f(x/sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),-1/sqrt(x^2+a^(1/3)))", "f(x*sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),1/5*sqrt((x^2+a^(1/3))^5))", "f(x^2*sqrt(x^2+a),1/4*x*sqrt((x^2+a)^3)-1/8*a*x*sqrt(x^2+a)-1/8*a^2*log(x+sqrt(x^2+a)))", "f(x^3*sqrt(x^2+a),(1/5*x^2-2/15*a)*sqrt((x^2+a)^3),and(number(a),a>0))", "f(x^3*sqrt(x^2+a),sqrt((x^2+a)^5)/5-a*sqrt((x^2+a)^3)/3,and(number(a),a<0))", "f(x^2/sqrt(x^2+a),1/2*x*sqrt(x^2+a)-1/2*a*log(x+sqrt(x^2+a)))", "f(x^3/sqrt(x^2+a),1/3*sqrt((x^2+a)^3)-a*sqrt(x^2+a))", "f(1/x^2*1/sqrt(x^2+a),-sqrt(x^2+a)/a/x)", "f(1/x^3*1/sqrt(x^2+a),-1/2*sqrt(x^2+a)/a/x^2+1/2*log((sqrt(a)+sqrt(x^2+a))/x)/a^(3/2),or(not(number(a)),a>0))", "f(1/x^3*1/sqrt(x^2-a),1/2*sqrt(x^2-a)/a/x^2+1/2*1/(a^(3/2))*arcsec(x/(a^(1/2))),or(not(number(a)),a>0))", "f(x^2*sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),1/6*x*sqrt((x^2+a^(1/3))^5)-1/24*a^(1/3)*x*sqrt((x^2+a^(1/3))^3)-1/16*a^(2/3)*x*sqrt(x^2+a^(1/3))-1/16*a*log(x+sqrt(x^2+a^(1/3))),or(not(number(a)),a>0))", "f(x^2*sqrt(-a-3*a^(1/3)*x^4+3*a^(2/3)*x^2+x^6),1/6*x*sqrt((x^2-a^(1/3))^5)+1/24*a^(1/3)*x*sqrt((x^2-a^(1/3))^3)-1/16*a^(2/3)*x*sqrt(x^2-a^(1/3))+1/16*a*log(x+sqrt(x^2-a^(1/3))),or(not(number(a)),a>0))", "f(x^3*sqrt(a+x^6+3*a^(1/3)*x^4+3*a^(2/3)*x^2),1/7*sqrt((x^2+a^(1/3))^7)-1/5*a^(1/3)*sqrt((x^2+a^(1/3))^5),or(not(number(a)),a>0))", "f(x^3*sqrt(-a-3*a^(1/3)*x^4+3*a^(2/3)*x^2+x^6),1/7*sqrt((x^2-a^(1/3))^7)+1/5*a^(1/3)*sqrt((x^2-a^(1/3))^5),or(not(number(a)),a>0))", "f(1/(x-a)/sqrt(x^2-a^2),-sqrt(x^2-a^2)/a/(x-a))", "f(1/(x+a)/sqrt(x^2-a^2),sqrt(x^2-a^2)/a/(x+a))", "f(sqrt(a-x^2),1/2*(x*sqrt(a-x^2)+a*arcsin(x/sqrt(abs(a)))))", "f(1/x*1/sqrt(a-x^2),-1/sqrt(a)*log((sqrt(a)+sqrt(a-x^2))/x),or(not(number(a)),a>0))", "f(sqrt(a-x^2)/x,sqrt(a-x^2)-sqrt(a)*log((sqrt(a)+sqrt(a-x^2))/x),or(not(number(a)),a>0))", "f(x/sqrt(a-x^2),-sqrt(a-x^2))", "f(x*sqrt(a-x^2),-1/3*sqrt((a-x^2)^3))", "f(x^2*sqrt(a-x^2),-x/4*sqrt((a-x^2)^3)+1/8*a*(x*sqrt(a-x^2)+a*arcsin(x/sqrt(a))),or(not(number(a)),a>0))", "f(x^3*sqrt(a-x^2),(-1/5*x^2-2/15*a)*sqrt((a-x^2)^3),or(not(number(a)),a>0))", "f(x^2/sqrt(a-x^2),-x/2*sqrt(a-x^2)+a/2*arcsin(x/sqrt(a)),or(not(number(a)),a>0))", "f(1/x^2*1/sqrt(a-x^2),-sqrt(a-x^2)/a/x,or(not(number(a)),a>0))", "f(sqrt(a-x^2)/x^2,-sqrt(a-x^2)/x-arcsin(x/sqrt(a)),or(not(number(a)),a>0))", "f(sqrt(a-x^2)/x^3,-1/2*sqrt(a-x^2)/x^2+1/2*log((sqrt(a)+sqrt(a-x^2))/x)/sqrt(a),or(not(number(a)),a>0))", "f(sqrt(a-x^2)/x^4,-1/3*sqrt((a-x^2)^3)/a/x^3,or(not(number(a)),a>0))", "f(sqrt(a*x^2+b),x*sqrt(a*x^2+b)/2+b*log(x*sqrt(a)+sqrt(a*x^2+b))/2/sqrt(a),and(number(a),a>0))", "f(sqrt(a*x^2+b),x*sqrt(a*x^2+b)/2+b*arcsin(x*sqrt(-a/b))/2/sqrt(-a),and(number(a),a<0))", "f(sin(a*x),-cos(a*x)/a)", "f(cos(a*x),sin(a*x)/a)", "f(tan(a*x),-log(cos(a*x))/a)", "f(1/tan(a*x),log(sin(a*x))/a)", "f(1/cos(a*x),log(tan(pi/4+a*x/2))/a)", "f(1/sin(a*x),log(tan(a*x/2))/a)", "f(sin(a*x)^2,x/2-sin(2*a*x)/(4*a))", "f(sin(a*x)^3,-cos(a*x)*(sin(a*x)^2+2)/(3*a))", "f(sin(a*x)^4,3/8*x-sin(2*a*x)/(4*a)+sin(4*a*x)/(32*a))", "f(cos(a*x)^2,x/2+sin(2*a*x)/(4*a))", "f(cos(a*x)^3,sin(a*x)*(cos(a*x)^2+2)/(3*a))", "f(cos(a*x)^4,3/8*x+sin(2*a*x)/(4*a)+sin(4*a*x)/(32*a))", "f(1/sin(a*x)^2,-1/(a*tan(a*x)))", "f(1/cos(a*x)^2,tan(a*x)/a)", "f(sin(a*x)*cos(a*x),sin(a*x)^2/(2*a))", "f(sin(a*x)^2*cos(a*x)^2,-sin(4*a*x)/(32*a)+x/8)", "f(sin(a*x)/cos(a*x)^2,1/(a*cos(a*x)))", "f(sin(a*x)^2/cos(a*x),(log(tan(pi/4+a*x/2))-sin(a*x))/a)", "f(cos(a*x)/sin(a*x)^2,-1/(a*sin(a*x)))", "f(1/(sin(a*x)*cos(a*x)),log(tan(a*x))/a)", "f(1/(sin(a*x)*cos(a*x)^2),(1/cos(a*x)+log(tan(a*x/2)))/a)", "f(1/(sin(a*x)^2*cos(a*x)),(log(tan(pi/4+a*x/2))-1/sin(a*x))/a)", "f(1/(sin(a*x)^2*cos(a*x)^2),-2/(a*tan(2*a*x)))", "f(sin(a+b*x),-cos(a+b*x)/b)", "f(cos(a+b*x),sin(a+b*x)/b)", "f(1/(b+b*sin(a*x)),-tan(pi/4-a*x/2)/a/b)", "f(1/(b-b*sin(a*x)),tan(pi/4+a*x/2)/a/b)", "f(1/(b+b*cos(a*x)),tan(a*x/2)/a/b)", "f(1/(b-b*cos(a*x)),-1/tan(a*x/2)/a/b)", "f(1/(a+b*sin(x)),1/sqrt(b^2-a^2)*log((a*tan(x/2)+b-sqrt(b^2-a^2))/(a*tan(x/2)+b+sqrt(b^2-a^2))),b^2-a^2)", "f(1/(a+b*cos(x)),1/sqrt(b^2-a^2)*log((sqrt(b^2-a^2)*tan(x/2)+a+b)/(sqrt(b^2-a^2)*tan(x/2)-a-b)),b^2-a^2)", "f(x*sin(a*x),sin(a*x)/a^2-x*cos(a*x)/a)", "f(x^2*sin(a*x),2*x*sin(a*x)/a^2-(a^2*x^2-2)*cos(a*x)/a^3)", "f(x*cos(a*x),cos(a*x)/a^2+x*sin(a*x)/a)", "f(x^2*cos(a*x),2*x*cos(a*x)/a^2+(a^2*x^2-2)*sin(a*x)/a^3)", "f(arcsin(a*x),x*arcsin(a*x)+sqrt(1-a^2*x^2)/a)", "f(arccos(a*x),x*arccos(a*x)-sqrt(1-a^2*x^2)/a)", "f(arctan(a*x),x*arctan(a*x)-1/2*log(1+a^2*x^2)/a)", "f(log(a*x),x*log(a*x)-x)", "f(x*log(a*x),x^2*log(a*x)/2-x^2/4)", "f(x^2*log(a*x),x^3*log(a*x)/3-1/9*x^3)", "f(log(x)^2,x*log(x)^2-2*x*log(x)+2*x)", "f(1/x*1/(a+log(x)),log(a+log(x)))", "f(log(a*x+b),(a*x+b)*log(a*x+b)/a-x)", "f(log(a*x+b)/x^2,a/b*log(x)-(a*x+b)*log(a*x+b)/b/x)", "f(sinh(x),cosh(x))", "f(cosh(x),sinh(x))", "f(tanh(x),log(cosh(x)))", "f(x*sinh(x),x*cosh(x)-sinh(x))", "f(x*cosh(x),x*sinh(x)-cosh(x))", "f(sinh(x)^2,sinh(2*x)/4-x/2)", "f(tanh(x)^2,x-tanh(x))", "f(cosh(x)^2,sinh(2*x)/4+x/2)", "f(x^3*exp(a*x^2),exp(a*x^2)*(x^2/a-1/(a^2))/2)", "f(x^3*exp(a*x^2+b),exp(a*x^2)*exp(b)*(x^2/a-1/(a^2))/2)", "f(exp(a*x^2),-i*sqrt(pi)*erf(i*sqrt(a)*x)/sqrt(a)/2)", "f(erf(a*x),x*erf(a*x)+exp(-a^2*x^2)/a/sqrt(pi))", "f(x^2*(1-x^2)^(3/2),(x*sqrt(1-x^2)*(-8*x^4+14*x^2-3)+3*arcsin(x))/48)", "f(x^2*(1-x^2)^(5/2),(x*sqrt(1-x^2)*(48*x^6-136*x^4+118*x^2-15)+15*arcsin(x))/384)", "f(x^4*(1-x^2)^(3/2),(-x*sqrt(1-x^2)*(16*x^6-24*x^4+2*x^2+3)+3*arcsin(x))/128)", "f(x*exp(a*x),exp(a*x)*(a*x-1)/(a^2))", "f(x*exp(a*x+b),exp(a*x+b)*(a*x-1)/(a^2))", "f(x^2*exp(a*x),exp(a*x)*(a^2*x^2-2*a*x+2)/(a^3))", "f(x^2*exp(a*x+b),exp(a*x+b)*(a^2*x^2-2*a*x+2)/(a^3))", "f(x^3*exp(a*x),exp(a*x)*x^3/a-3/a*integral(x^2*exp(a*x),x))", "f(x^3*exp(a*x+b),exp(a*x+b)*x^3/a-3/a*integral(x^2*exp(a*x+b),x))", 0];
-
-  Eval_integral = function() {
-    var ac, doNothing, i, n, o, ref, ref1;
-    i = 0;
-    n = 0;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-      push(symbol(NIL));
-    } else if (isnum(p2)) {
-      guess();
-      push(p2);
-    } else {
-      push(p2);
-      p1 = cdr(p1);
-      push(car(p1));
-      Eval();
-    }
-    p5 = pop();
-    p4 = pop();
-    p3 = pop();
-    while (1.) {
-      if (isnum(p5)) {
-        push(p5);
-        n = pop_integer();
-        if (n === 0x80000000) {
-          stop("nth integral: check n");
-        }
-      } else {
-        n = 1;
-      }
-      push(p3);
-      if (n >= 0) {
-        for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-          push(p4);
-          integral();
-        }
-      } else {
-        n = -n;
-        for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-          push(p4);
-          derivative();
-        }
-      }
-      p3 = pop();
-      if (p5 === symbol(NIL)) {
-        break;
-      }
-      if (isnum(p5)) {
-        p1 = cdr(p1);
-        push(car(p1));
-        Eval();
-        p5 = pop();
-        if (p5 === symbol(NIL)) {
-          break;
-        }
-        if (isnum(p5)) {
-          doNothing = 1;
-        } else {
-          p4 = p5;
-          p1 = cdr(p1);
-          push(car(p1));
-          Eval();
-          p5 = pop();
-        }
-      } else {
-        p4 = p5;
-        p1 = cdr(p1);
-        push(car(p1));
-        Eval();
-        p5 = pop();
-      }
-    }
-    return push(p3);
-  };
-
-  integral = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      integral_of_sum();
-    } else if (car(p1) === symbol(MULTIPLY)) {
-      integral_of_product();
-    } else {
-      integral_of_form();
-    }
-    p1 = pop();
-    if (Find(p1, symbol(INTEGRAL))) {
-      stop("integral: sorry, could not find a solution");
-    }
-    push(p1);
-    simplify();
-    Eval();
-    return restore();
-  };
-
-  integral_of_sum = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    push(p2);
-    integral();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      push(p2);
-      integral();
-      add();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  integral_of_product = function() {
-    push(p1);
-    push(p2);
-    partition();
-    p1 = pop();
-    integral_of_form();
-    return multiply();
-  };
-
-  integral_of_form = function() {
-    push(p1);
-    push(p2);
-    transform(itab);
-    p3 = pop();
-    if (p3 === symbol(NIL)) {
-      push_symbol(INTEGRAL);
-      push(p1);
-      push(p2);
-      return list(3);
-    } else {
-      return push(p3);
-    }
-  };
-
-  INV_check_arg = function() {
-    if (!istensor(p1)) {
-      return 0;
-    } else if (p1.tensor.ndim !== 2) {
-      return 0;
-    } else if (p1.tensor.dim[0] !== p1.tensor.dim[1]) {
-      return 0;
-    } else {
-      return 1;
-    }
-  };
-
-  inv = function() {
-    var a, i, n, o, ref;
-    i = 0;
-    n = 0;
-    save();
-    p1 = pop();
-    if (INV_check_arg() === 0) {
-      push_symbol(INV);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    n = p1.tensor.nelem;
-    a = p1.tensor.elem;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      if (!isnum(a[i])) {
-        break;
-      }
-    }
-    if (i === n) {
-      yyinvg();
-    } else {
-      push(p1);
-      adj();
-      push(p1);
-      det();
-      p2 = pop();
-      if (iszero(p2)) {
-        stop("inverse of singular matrix");
-      }
-      push(p2);
-      divide();
-    }
-    return restore();
-  };
-
-  invg = function() {
-    save();
-    p1 = pop();
-    if (INV_check_arg() === 0) {
-      push_symbol(INVG);
-      push(p1);
-      list(2);
-      restore();
-      return;
-    }
-    yyinvg();
-    return restore();
-  };
-
-  yyinvg = function() {
-    var ac, ad, ae, h, i, j, n, o, ref, ref1, ref2, ref3;
-    h = 0;
-    i = 0;
-    j = 0;
-    n = 0;
-    n = p1.tensor.dim[0];
-    h = tos;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      for (j = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        if (i === j) {
-          push(one);
-        } else {
-          push(zero);
-        }
-      }
-    }
-    for (i = ad = 0, ref2 = n * n; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(p1.tensor.elem[i]);
-    }
-    INV_decomp(n);
-    p1 = alloc_tensor(n * n);
-    p1.tensor.ndim = 2;
-    p1.tensor.dim[0] = n;
-    p1.tensor.dim[1] = n;
-    for (i = ae = 0, ref3 = n * n; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      p1.tensor.elem[i] = stack[h + i];
-    }
-    tos -= 2 * n * n;
-    return push(p1);
-  };
-
-  INV_decomp = function(n) {
-    var a, ac, ad, ae, d, i, j, o, ref, ref1, ref2, ref3, ref4, results, u;
-    a = 0;
-    d = 0;
-    i = 0;
-    j = 0;
-    u = 0;
-    a = tos - n * n;
-    u = a - n * n;
-    results = [];
-    for (d = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; d = 0 <= ref ? ++o : --o) {
-      if (equal(stack[a + n * d + d], zero)) {
-        for (i = ac = ref1 = d + 1, ref2 = n; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-          if (!equal(stack[a + n * i + d], zero)) {
-            break;
-          }
-        }
-        if (i === n) {
-          stop("inverse of singular matrix");
-        }
-        for (j = ad = 0, ref3 = n; 0 <= ref3 ? ad < ref3 : ad > ref3; j = 0 <= ref3 ? ++ad : --ad) {
-          p2 = stack[a + n * d + j];
-          stack[a + n * d + j] = stack[a + n * i + j];
-          stack[a + n * i + j] = p2;
-          p2 = stack[u + n * d + j];
-          stack[u + n * d + j] = stack[u + n * i + j];
-          stack[u + n * i + j] = p2;
-        }
-      }
-      p2 = stack[a + n * d + d];
-      for (j = ae = 0, ref4 = n; 0 <= ref4 ? ae < ref4 : ae > ref4; j = 0 <= ref4 ? ++ae : --ae) {
-        if (j > d) {
-          push(stack[a + n * d + j]);
-          push(p2);
-          divide();
-          stack[a + n * d + j] = pop();
-        }
-        push(stack[u + n * d + j]);
-        push(p2);
-        divide();
-        stack[u + n * d + j] = pop();
-      }
-      results.push((function() {
-        var af, ref5, results1;
-        results1 = [];
-        for (i = af = 0, ref5 = n; 0 <= ref5 ? af < ref5 : af > ref5; i = 0 <= ref5 ? ++af : --af) {
-          if (i === d) {
-            continue;
-          }
-          p2 = stack[a + n * i + d];
-          results1.push((function() {
-            var ag, ref6, results2;
-            results2 = [];
-            for (j = ag = 0, ref6 = n; 0 <= ref6 ? ag < ref6 : ag > ref6; j = 0 <= ref6 ? ++ag : --ag) {
-              if (j > d) {
-                push(stack[a + n * i + j]);
-                push(stack[a + n * d + j]);
-                push(p2);
-                multiply();
-                subtract();
-                stack[a + n * i + j] = pop();
-              }
-              push(stack[u + n * i + j]);
-              push(stack[u + n * d + j]);
-              push(p2);
-              multiply();
-              subtract();
-              results2.push(stack[u + n * i + j] = pop());
-            }
-            return results2;
-          })());
-        }
-        return results1;
-      })());
-    }
-    return results;
-  };
-
-  iszero = function(p) {
-    var i, o, ref;
-    i = 0;
-    switch (p.k) {
-      case NUM:
-        if (MZERO(p.q.a)) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d === 0.0) {
-          return 1;
-        }
-        break;
-      case TENSOR:
-        for (i = o = 0, ref = p.tensor.nelem; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-          if (!iszero(p.tensor.elem[i])) {
-            return 0;
-          }
-        }
-        return 1;
-    }
-    return 0;
-  };
-
-  isnegativenumber = function(p) {
-    switch (p.k) {
-      case NUM:
-        if (MSIGN(p.q.a) === -1) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d < 0.0) {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  isplusone = function(p) {
-    switch (p.k) {
-      case NUM:
-        if (MEQUAL(p.q.a, 1) && MEQUAL(p.q.b, 1)) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d === 1.0) {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  isminusone = function(p) {
-    switch (p.k) {
-      case NUM:
-        if (MEQUAL(p.q.a, -1) && MEQUAL(p.q.b, 1)) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d === -1.0) {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  isinteger = function(p) {
-    if (p.k === NUM && MEQUAL(p.q.b, 1)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isnonnegativeinteger = function(p) {
-    if (isrational(p) && MEQUAL(p.q.b, 1) && MSIGN(p.q.a) === 1) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isposint = function(p) {
-    if (isinteger(p) && MSIGN(p.q.a) === 1) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  ispoly = function(p, x) {
-    if (Find(p, x)) {
-      return ispoly_expr(p, x);
-    } else {
-      return 0;
-    }
-  };
-
-  ispoly_expr = function(p, x) {
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      while (iscons(p)) {
-        if (!ispoly_term(car(p), x)) {
-          return 0;
-        }
-        p = cdr(p);
-      }
-      return 1;
-    } else {
-      return ispoly_term(p, x);
-    }
-  };
-
-  ispoly_term = function(p, x) {
-    if (car(p) === symbol(MULTIPLY)) {
-      p = cdr(p);
-      while (iscons(p)) {
-        if (!ispoly_factor(car(p), x)) {
-          return 0;
-        }
-        p = cdr(p);
-      }
-      return 1;
-    } else {
-      return ispoly_factor(p, x);
-    }
-  };
-
-  ispoly_factor = function(p, x) {
-    if (equal(p, x)) {
-      return 1;
-    }
-    if (car(p) === symbol(POWER) && equal(cadr(p), x)) {
-      if (isposint(caddr(p))) {
-        return 1;
-      } else {
-        return 0;
-      }
-    }
-    if (Find(p, x)) {
-      return 0;
-    } else {
-      return 1;
-    }
-  };
-
-  isnegativeterm = function(p) {
-    if (isnegativenumber(p)) {
-      return 1;
-    } else if (car(p) === symbol(MULTIPLY) && isnegativenumber(cadr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isimaginarynumber = function(p) {
-    if ((car(p) === symbol(MULTIPLY) && length(p) === 3 && isnum(cadr(p)) && equal(caddr(p), imaginaryunit)) || equal(p, imaginaryunit)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  iscomplexnumber = function(p) {
-    if ((car(p) === symbol(ADD) && length(p) === 3 && isnum(cadr(p)) && isimaginarynumber(caddr(p))) || isimaginarynumber(p)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  iseveninteger = function(p) {
-    if (isinteger(p) && p.q.a.isEven()) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isnegative = function(p) {
-    if (car(p) === symbol(ADD) && isnegativeterm(cadr(p))) {
-      return 1;
-    } else if (isnegativeterm(p)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  issymbolic = function(p) {
-    if (issymbol(p)) {
-      return 1;
-    } else {
-      while (iscons(p)) {
-        if (issymbolic(car(p))) {
-          return 1;
-        }
-        p = cdr(p);
-      }
-      return 0;
-    }
-  };
-
-  isintegerfactor = function(p) {
-    if (isinteger(p) || car(p) === symbol(POWER) && isinteger(cadr(p)) && isinteger(caddr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isoneover = function(p) {
-    if (car(p) === symbol(POWER) && isminusone(caddr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isfraction = function(p) {
-    if (p.k === NUM && !MEQUAL(p.q.b, 1)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  equaln = function(p, n) {
-    switch (p.k) {
-      case NUM:
-        if (MEQUAL(p.q.a, n) && MEQUAL(p.q.b, 1)) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d === n) {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  equalq = function(p, a, b) {
-    switch (p.k) {
-      case NUM:
-        if (MEQUAL(p.q.a, a) && MEQUAL(p.q.b, b)) {
-          return 1;
-        }
-        break;
-      case DOUBLE:
-        if (p.d === a / b) {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  isoneoversqrttwo = function(p) {
-    if (car(p) === symbol(POWER) && equaln(cadr(p), 2) && equalq(caddr(p), -1, 2)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isminusoneoversqrttwo = function(p) {
-    if (car(p) === symbol(MULTIPLY) && equaln(cadr(p), -1) && isoneoversqrttwo(caddr(p)) && length(p) === 3) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isfloating = function(p) {
-    if (p.k === DOUBLE) {
-      return 1;
-    }
-    while (iscons(p)) {
-      if (isfloating(car(p))) {
-        return 1;
-      }
-      p = cdr(p);
-    }
-    return 0;
-  };
-
-  isimaginaryunit = function(p) {
-    if (equal(p, imaginaryunit)) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  isquarterturn = function(p) {
-    var minussign, n;
-    n = 0;
-    minussign = 0;
-    if (car(p) !== symbol(MULTIPLY)) {
-      return 0;
-    }
-    if (equal(cadr(p), imaginaryunit)) {
-      if (caddr(p) !== symbol(PI)) {
-        return 0;
-      }
-      if (length(p) !== 3) {
-        return 0;
-      }
-      return 2;
-    }
-    if (!isnum(cadr(p))) {
-      return 0;
-    }
-    if (!equal(caddr(p), imaginaryunit)) {
-      return 0;
-    }
-    if (cadddr(p) !== symbol(PI)) {
-      return 0;
-    }
-    if (length(p) !== 4) {
-      return 0;
-    }
-    push(cadr(p));
-    push_integer(2);
-    multiply();
-    n = pop_integer();
-    if (n === 0x80000000) {
-      return 0;
-    }
-    if (n < 1) {
-      minussign = 1;
-      n = -n;
-    }
-    switch (n % 4) {
-      case 0:
-        n = 1;
-        break;
-      case 1:
-        if (minussign) {
-          n = 4;
-        } else {
-          n = 3;
-        }
-        break;
-      case 2:
-        n = 2;
-        break;
-      case 3:
-        if (minussign) {
-          n = 3;
-        } else {
-          n = 4;
-        }
-    }
-    return n;
-  };
-
-  isnpi = function(p) {
-    var doNothing, n;
-    n = 0;
-    if (p === symbol(PI)) {
-      return 2;
-    }
-    if (car(p) === symbol(MULTIPLY) && isnum(cadr(p)) && caddr(p) === symbol(PI) && length(p) === 3) {
-      doNothing = 0;
-    } else {
-      return 0;
-    }
-    push(cadr(p));
-    push_integer(2);
-    multiply();
-    n = pop_integer();
-    if (n === 0x80000000) {
-      return 0;
-    }
-    if (n < 0) {
-      n = 4 - (-n) % 4;
-    } else {
-      n = 1 + (n - 1) % 4;
-    }
-    return n;
-  };
-
-  $.iszero = iszero;
-
-  $.isnegativenumber = isnegativenumber;
-
-  $.isplusone = isplusone;
-
-  $.isminusone = isminusone;
-
-  $.isinteger = isinteger;
-
-  $.isnonnegativeinteger = isnonnegativeinteger;
-
-  $.isposint = isposint;
-
-  $.isnegativeterm = isnegativeterm;
-
-  $.isimaginarynumber = isimaginarynumber;
-
-  $.iscomplexnumber = iscomplexnumber;
-
-  $.iseveninteger = iseveninteger;
-
-  $.isnegative = isnegative;
-
-  $.issymbolic = issymbolic;
-
-  $.isintegerfactor = isintegerfactor;
-
-  $.isoneover = isoneover;
-
-  $.isfraction = isfraction;
-
-  $.isoneoversqrttwo = isoneoversqrttwo;
-
-  $.isminusoneoversqrttwo = isminusoneoversqrttwo;
-
-  $.isfloating = isfloating;
-
-  $.isimaginaryunit = isimaginaryunit;
-
-  $.isquarterturn = isquarterturn;
-
-  $.isnpi = isnpi;
-
-  Eval_isprime = function() {
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    if (isnonnegativeinteger(p1) && mprime(p1.q.a)) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-
-  /*
-   Laguerre function
-  
-  Example
-  
-  	laguerre(x,3)
-  
-  Result
-  
-  	   1   3    3   2
-  	- --- x  + --- x  - 3 x + 1
-  	   6        2
-  
-  The computation uses the following recurrence relation.
-  
-  	L(x,0,k) = 1
-  
-  	L(x,1,k) = -x + k + 1
-  
-  	n*L(x,n,k) = (2*(n-1)+1-x+k)*L(x,n-1,k) - (n-1+k)*L(x,n-2,k)
-  
-  In the "for" loop i = n-1 so the recurrence relation becomes
-  
-  	(i+1)*L(x,n,k) = (2*i+1-x+k)*L(x,n-1,k) - (i+k)*L(x,n-2,k)
-   */
-
-  Eval_laguerre = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push_integer(0);
-    } else {
-      push(p2);
-    }
-    return laguerre();
-  };
-
-  laguerre = function() {
-    var n;
-    n = 0;
-    save();
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push_symbol(LAGUERRE);
-      push(p1);
-      push(p2);
-      push(p3);
-      list(4);
-      restore();
-      return;
-    }
-    if (issymbol(p1)) {
-      laguerre2(n);
-    } else {
-      p4 = p1;
-      p1 = symbol(SECRETX);
-      laguerre2(n);
-      p1 = p4;
-      push(symbol(SECRETX));
-      push(p1);
-      subst();
-      Eval();
-    }
-    return restore();
-  };
-
-  laguerre2 = function(n) {
-    var i, o, ref, results;
-    i = 0;
-    push_integer(1);
-    push_integer(0);
-    p6 = pop();
-    results = [];
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p5 = p6;
-      p6 = pop();
-      push_integer(2 * i + 1);
-      push(p1);
-      subtract();
-      push(p3);
-      add();
-      push(p6);
-      multiply();
-      push_integer(i);
-      push(p3);
-      add();
-      push(p5);
-      multiply();
-      subtract();
-      push_integer(i + 1);
-      results.push(divide());
-    }
-    return results;
-  };
-
-  Eval_lcm = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      lcm();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  lcm = function() {
-    var x;
-    x = 0;
-    x = expanding;
-    save();
-    yylcm();
-    restore();
-    return expanding = x;
-  };
-
-  yylcm = function() {
-    expanding = 1;
-    p2 = pop();
-    p1 = pop();
-    push(p1);
-    push(p2);
-    gcd();
-    push(p1);
-    divide();
-    push(p2);
-    divide();
-    return inverse();
-  };
-
-
-  /*
-   Return the leading coefficient of a polynomial.
-  
-  Example
-  
-  	leading(5x^2+x+1,x)
-  
-  Result
-  
-  	5
-  
-  The result is undefined if P is not a polynomial.
-   */
-
-  Eval_leading = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p1 = pop();
-    if (p1 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p1);
-    }
-    return leading();
-  };
-
-  leading = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    push(p1);
-    push(p2);
-    degree();
-    p3 = pop();
-    push(p1);
-    push(p2);
-    push(p3);
-    power();
-    divide();
-    push(p2);
-    filter();
-    return restore();
-  };
-
-
-  /*
-   Legendre function
-  
-  Example
-  
-  	legendre(x,3,0)
-  
-  Result
-  
-  	 5   3    3
-  	--- x  - --- x
-  	 2        2
-  
-  The computation uses the following recurrence relation.
-  
-  	P(x,0) = 1
-  
-  	P(x,1) = x
-  
-  	n*P(x,n) = (2*(n-1)+1)*x*P(x,n-1) - (n-1)*P(x,n-2)
-  
-  In the "for" loop we have i = n-1 so the recurrence relation becomes
-  
-  	(i+1)*P(x,n) = (2*i+1)*x*P(x,n-1) - i*P(x,n-2)
-  
-  For m > 0
-  
-  	P(x,n,m) = (-1)^m * (1-x^2)^(m/2) * d^m/dx^m P(x,n)
-   */
-
-  Eval_legendre = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push_integer(0);
-    } else {
-      push(p2);
-    }
-    return legendre();
-  };
-
-  legendre = function() {
-    save();
-    __legendre();
-    return restore();
-  };
-
-  __legendre = function() {
-    var m, n;
-    m = 0;
-    n = 0;
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    n = pop_integer();
-    push(p3);
-    m = pop_integer();
-    if (n < 0 || n === 0x80000000 || m < 0 || m === 0x80000000) {
-      push_symbol(LEGENDRE);
-      push(p1);
-      push(p2);
-      push(p3);
-      list(4);
-      return;
-    }
-    if (issymbol(p1)) {
-      __legendre2(n, m);
-    } else {
-      p4 = p1;
-      p1 = symbol(SECRETX);
-      __legendre2(n, m);
-      p1 = p4;
-      push(symbol(SECRETX));
-      push(p1);
-      subst();
-      Eval();
-    }
-    return __legendre3(m);
-  };
-
-  __legendre2 = function(n, m) {
-    var ac, i, o, ref, ref1, results;
-    i = 0;
-    push_integer(1);
-    push_integer(0);
-    p6 = pop();
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      p5 = p6;
-      p6 = pop();
-      push_integer(2 * i + 1);
-      push(p1);
-      multiply();
-      push(p6);
-      multiply();
-      push_integer(i);
-      push(p5);
-      multiply();
-      subtract();
-      push_integer(i + 1);
-      divide();
-    }
-    results = [];
-    for (i = ac = 0, ref1 = m; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(p1);
-      results.push(derivative());
-    }
-    return results;
-  };
-
-  __legendre3 = function(m) {
-    if (m === 0) {
-      return;
-    }
-    if (car(p1) === symbol(COS)) {
-      push(cadr(p1));
-      sine();
-      square();
-    } else if (car(p1) === symbol(SIN)) {
-      push(cadr(p1));
-      cosine();
-      square();
-    } else {
-      push_integer(1);
-      push(p1);
-      square();
-      subtract();
-    }
-    push_integer(m);
-    push_rational(1, 2);
-    multiply();
-    power();
-    multiply();
-    if (m % 2) {
-      return negate();
-    }
-  };
-
-  list = function(n) {
-    var listIterator, o, ref, results;
-    listIterator = 0;
-    push(symbol(NIL));
-    results = [];
-    for (listIterator = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; listIterator = 0 <= ref ? ++o : --o) {
-      results.push(cons());
-    }
-    return results;
-  };
-
-  Eval_log = function() {
-    push(cadr(p1));
-    Eval();
-    return logarithm();
-  };
-
-  logarithm = function() {
-    save();
-    yylog();
-    return restore();
-  };
-
-  yylog = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (p1 === symbol(E)) {
-      push_integer(1);
-      return;
-    }
-    if (equaln(p1, 1)) {
-      push_integer(0);
-      return;
-    }
-    if (isnegativenumber(p1)) {
-      push(p1);
-      negate();
-      logarithm();
-      push(imaginaryunit);
-      push_symbol(PI);
-      multiply();
-      add();
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.log(p1.d);
-      push_double(d);
-      return;
-    }
-    if (isfraction(p1)) {
-      push(p1);
-      numerator();
-      logarithm();
-      push(p1);
-      denominator();
-      logarithm();
-      subtract();
-      return;
-    }
-    if (car(p1) === symbol(POWER)) {
-      push(caddr(p1));
-      push(cadr(p1));
-      logarithm();
-      multiply();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      push_integer(0);
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        logarithm();
-        add();
-        p1 = cdr(p1);
-      }
-      return;
-    }
-    push_symbol(LOG);
-    push(p1);
-    return list(2);
-  };
-
-  madd = function(a, b) {
-    return a.add(b);
-  };
-
-  msub = function(a, b) {
-    return a.subtract(b);
-  };
-
-  addf = function(a, b) {
-    return a.add(b);
-  };
-
-  subf = function(a, b) {
-    return a.subtract(b);
-  };
-
-  ucmp = function(a, b) {
-    return a.compareAbs(b);
-  };
-
-
-  /*
-   Magnitude of complex z
-  
-  	z		mag(z)
-  	-		------
-  
-  	a		a
-  
-  	-a		a
-  
-  	(-1)^a		1
-  
-  	exp(a + i b)	exp(a)
-  
-  	a b		mag(a) mag(b)
-  
-  	a + i b		sqrt(a^2 + b^2)
-  
-  Notes
-  
-  	1. Handles mixed polar and rectangular forms, e.g. 1 + exp(i pi/3)
-  
-  	2. jean-francois.debroux reports that when z=(a+i*b)/(c+i*d) then
-  
-  		mag(numerator(z)) / mag(denominator(z))
-  
-  	   must be used to get the correct answer. Now the operation is
-  	   automatic.
-   */
-
-  Eval_mag = function() {
-    push(cadr(p1));
-    Eval();
-    return mag();
-  };
-
-  mag = function() {
-    save();
-    p1 = pop();
-    push(p1);
-    numerator();
-    yymag();
-    push(p1);
-    denominator();
-    yymag();
-    divide();
-    return restore();
-  };
-
-  yymag = function() {
-    save();
-    p1 = pop();
-    if (isnegativenumber(p1)) {
-      push(p1);
-      negate();
-    } else if (car(p1) === symbol(POWER) && equaln(cadr(p1), -1)) {
-      push_integer(1);
-    } else if (car(p1) === symbol(POWER) && cadr(p1) === symbol(E)) {
-      push(caddr(p1));
-      real();
-      exponential();
-    } else if (car(p1) === symbol(MULTIPLY)) {
-      push_integer(1);
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        mag();
-        multiply();
-        p1 = cdr(p1);
-      }
-    } else if (car(p1) === symbol(ADD)) {
-      push(p1);
-      rect();
-      p1 = pop();
-      push(p1);
-      real();
-      push_integer(2);
-      power();
-      push(p1);
-      imag();
-      push_integer(2);
-      power();
-      add();
-      push_rational(1, 2);
-      power();
-      simplify_trig();
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  mgcd = function(u, v) {
-    return bigInt.gcd(u, v);
-  };
-
-  new_string = function(s) {
-    save();
-    p1 = new U();
-    p1.k = STR;
-    p1.str = s;
-    push(p1);
-    return restore();
-  };
-
-  out_of_memory = function() {
-    return stop("out of memory");
-  };
-
-  push_zero_matrix = function(i, j) {
-    push(alloc_tensor(i * j));
-    stack[tos - 1].tensor.ndim = 2;
-    stack[tos - 1].tensor.dim[0] = i;
-    return stack[tos - 1].tensor.dim[1] = j;
-  };
-
-  push_identity_matrix = function(n) {
-    var i, o, ref;
-    push_zero_matrix(n, n);
-    i = 0;
-    for (i = o = 0, ref = n; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      stack[tos - 1].tensor.elem[i * n + i] = one;
-    }
-    if (stack[tos - 1].tensor.nelem !== stack[tos - 1].tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-  };
-
-  push_cars = function(p) {
-    var results;
-    results = [];
-    while (iscons(p)) {
-      push(car(p));
-      results.push(p = cdr(p));
-    }
-    return results;
-  };
-
-  peek = function() {
-    save();
-    p1 = pop();
-    push(p1);
-    printline(p1);
-    return restore();
-  };
-
-  peek2 = function() {
-    print_lisp(stack[tos - 2]);
-    return print_lisp(stack[tos - 1]);
-  };
-
-  equal = function(p1, p2) {
-    if (cmp_expr(p1, p2) === 0) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  lessp = function(p1, p2) {
-    if (cmp_expr(p1, p2) < 0) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  sign = function(n) {
-    if (n < 0) {
-      return -1;
-    } else if (n > 0) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  cmp_expr = function(p1, p2) {
-    var n;
-    n = 0;
-    if (p1 === p2) {
-      return 0;
-    }
-    if (p1 === symbol(NIL)) {
-      return -1;
-    }
-    if (p2 === symbol(NIL)) {
-      return 1;
-    }
-    if (isnum(p1) && isnum(p2)) {
-      return sign(compare_numbers(p1, p2));
-    }
-    if (isnum(p1)) {
-      return -1;
-    }
-    if (isnum(p2)) {
-      return 1;
-    }
-    if (isstr(p1) && isstr(p2)) {
-      return sign(strcmp(p1.str, p2.str));
-    }
-    if (isstr(p1)) {
-      return -1;
-    }
-    if (isstr(p2)) {
-      return 1;
-    }
-    if (issymbol(p1) && issymbol(p2)) {
-      return sign(strcmp(get_printname(p1), get_printname(p2)));
-    }
-    if (issymbol(p1)) {
-      return -1;
-    }
-    if (issymbol(p2)) {
-      return 1;
-    }
-    if (istensor(p1) && istensor(p2)) {
-      return compare_tensors(p1, p2);
-    }
-    if (istensor(p1)) {
-      return -1;
-    }
-    if (istensor(p2)) {
-      return 1;
-    }
-    while (iscons(p1) && iscons(p2)) {
-      n = cmp_expr(car(p1), car(p2));
-      if (n !== 0) {
-        return n;
-      }
-      p1 = cdr(p1);
-      p2 = cdr(p2);
-    }
-    if (iscons(p2)) {
-      return -1;
-    }
-    if (iscons(p1)) {
-      return 1;
-    }
-    return 0;
-  };
-
-  length = function(p) {
-    var n;
-    n = 0;
-    while (iscons(p)) {
-      p = cdr(p);
-      n++;
-    }
-    return n;
-  };
-
-  unique = function(p) {
-    save();
-    p1 = symbol(NIL);
-    p2 = symbol(NIL);
-    unique_f(p);
-    if (p2 !== symbol(NIL)) {
-      p1 = symbol(NIL);
-    }
-    p = p1;
-    restore();
-    return p;
-  };
-
-  unique_f = function(p) {
-    if (isstr(p)) {
-      if (p1 === symbol(NIL)) {
-        p1 = p;
-      } else if (p !== p1) {
-        p2 = p;
-      }
-      return;
-    }
-    while (iscons(p)) {
-      unique_f(car(p));
-      if (p2 !== symbol(NIL)) {
-        return;
-      }
-      p = cdr(p);
-    }
-  };
-
-  ssqrt = function() {
-    push_rational(1, 2);
-    return power();
-  };
-
-  yyexpand = function() {
-    var x;
-    x = expanding;
-    expanding = 1;
-    Eval();
-    return expanding = x;
-  };
-
-  exponential = function() {
-    push_symbol(E);
-    swap();
-    return power();
-  };
-
-  square = function() {
-    push_integer(2);
-    return power();
-  };
-
-  sort_stack = function(n) {
-    var h, subsetOfStack;
-    h = tos - n;
-    subsetOfStack = stack.slice(h, h + n);
-    subsetOfStack.sort(cmp_expr);
-    return stack = stack.slice(0, h).concat(subsetOfStack).concat(stack.slice(h + n));
-  };
-
-  $.equal = equal;
-
-  $.length = length;
-
-  mmul = function(a, b) {
-    return a.multiply(b);
-  };
-
-  mdiv = function(a, b) {
-    return a.divide(b);
-  };
-
-
-  /*
-  static void
-  addf(unsigned int *a, unsigned int *b, int len)
-  {
-  	int i
-  	long long t = 0; # can be signed or unsigned 
-  	for (i = 0; i < len; i++) {
-  		t += (long long) a[i] + b[i]
-  		a[i] = (unsigned int) t
-  		t >>= 32
-  	}
-  }
-  
-  // a = a - b
-  
-  static void
-  subf(unsigned int *a, unsigned int *b, int len)
-  {
-  	int i
-  	long long t = 0; # must be signed
-  	for (i = 0; i < len; i++) {
-  		t += (long long) a[i] - b[i]
-  		a[i] = (unsigned int) t
-  		t >>= 32
-  	}
-  }
-  
-  // a = b * c
-  
-  // 0xffffffff + 0xffffffff * 0xffffffff == 0xffffffff00000000
-  
-  static void
-  mulf(unsigned int *a, unsigned int *b, int len, unsigned int c)
-  {
-  	int i
-  	unsigned long long t = 0; # must be unsigned
-  	for (i = 0; i < len; i++) {
-  		t += (unsigned long long) b[i] * c
-  		a[i] = (unsigned int) t
-  		t >>= 32
-  	}
-  	a[i] = (unsigned int) t
-  }
-   */
-
-  mmod = function(a, b) {
-    return a.mod(b);
-  };
-
-  mdivrem = function(a, b) {
-    var toReturn;
-    toReturn = a.divmod(b);
-    return [toReturn.quotient, toReturn.remainder];
-  };
-
-  Eval_mod = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return mod();
-  };
-
-  mod = function() {
-    var n;
-    n = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (iszero(p2)) {
-      stop("mod function: divide by zero");
-    }
-    if (!isnum(p1) || !isnum(p2)) {
-      push_symbol(MOD);
-      push(p1);
-      push(p2);
-      list(3);
-      restore();
-      return;
-    }
-    if (isdouble(p1)) {
-      push(p1);
-      n = pop_integer();
-      if (n === 0x80000000) {
-        stop("mod function: cannot convert float value to integer");
-      }
-      push_integer(n);
-      p1 = pop();
-    }
-    if (isdouble(p2)) {
-      push(p2);
-      n = pop_integer();
-      if (n === 0x80000000) {
-        stop("mod function: cannot convert float value to integer");
-      }
-      push_integer(n);
-      p2 = pop();
-    }
-    if (!isinteger(p1) || !isinteger(p2)) {
-      stop("mod function: integer arguments expected");
-    }
-    p3 = new U();
-    p3.k = NUM;
-    p3.q.a = mmod(p1.q.a, p2.q.a);
-    p3.q.b = mint(1);
-    push(p3);
-    return restore();
-  };
-
-  mpow = function(a, n) {
-    return a.pow(n);
-  };
-
-  mprime = function(n) {
-    return n.isProbablePrime();
-  };
-
-  mroot = function(n, index) {
-    var i, j, k, o, ref, x, y;
-    n = n.abs();
-    i = 0;
-    j = 0;
-    k = 0;
-    if (index === 0) {
-      stop("root index is zero");
-    }
-    k = 0;
-    while (n.shiftRight(k) > 0) {
-      k++;
-    }
-    if (k === 0) {
-      return mint(0);
-    }
-    k = Math.floor((k - 1) / index);
-    j = Math.floor(k / 32 + 1);
-    x = bigInt(j);
-    for (i = o = 0, ref = j; 0 <= ref ? o < ref : o > ref; i = 0 <= ref ? ++o : --o) {
-      x = x.and(bigInt(1).shiftLeft(i).not());
-    }
-    while (k >= 0) {
-      x = x.or(bigInt(1).shiftLeft(k));
-      y = mpow(x, index);
-      switch (mcmp(y, n)) {
-        case 0:
-          return x;
-        case 1:
-          x = x.and(bigInt(1).shiftLeft(k).not());
-      }
-      k--;
-    }
-    return 0;
-  };
-
-  multiply = function() {
-    if (esc_flag) {
-      stop("escape key stop");
-    }
-    if (isnum(stack[tos - 2]) && isnum(stack[tos - 1])) {
-      return multiply_numbers();
-    } else {
-      save();
-      yymultiply();
-      return restore();
-    }
-  };
-
-  yymultiply = function() {
-    var h, i, n, o, ref, ref1;
-    h = 0;
-    i = 0;
-    n = 0;
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    if (iszero(p1) || iszero(p2)) {
-      push(zero);
-      return;
-    }
-    if (expanding && isadd(p1)) {
-      p1 = cdr(p1);
-      push(zero);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        multiply();
-        add();
-        p1 = cdr(p1);
-      }
-      return;
-    }
-    if (expanding && isadd(p2)) {
-      p2 = cdr(p2);
-      push(zero);
-      while (iscons(p2)) {
-        push(p1);
-        push(car(p2));
-        multiply();
-        add();
-        p2 = cdr(p2);
-      }
-      return;
-    }
-    if (!istensor(p1) && istensor(p2)) {
-      push(p1);
-      push(p2);
-      scalar_times_tensor();
-      return;
-    }
-    if (istensor(p1) && !istensor(p2)) {
-      push(p1);
-      push(p2);
-      tensor_times_scalar();
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-    } else {
-      push(p1);
-      list(1);
-      p1 = pop();
-    }
-    if (car(p2) === symbol(MULTIPLY)) {
-      p2 = cdr(p2);
-    } else {
-      push(p2);
-      list(1);
-      p2 = pop();
-    }
-    if (isnum(car(p1)) && isnum(car(p2))) {
-      push(car(p1));
-      push(car(p2));
-      multiply_numbers();
-      p1 = cdr(p1);
-      p2 = cdr(p2);
-    } else if (isnum(car(p1))) {
-      push(car(p1));
-      p1 = cdr(p1);
-    } else if (isnum(car(p2))) {
-      push(car(p2));
-      p2 = cdr(p2);
-    } else {
-      push(one);
-    }
-    parse_p1();
-    parse_p2();
-    while (iscons(p1) && iscons(p2)) {
-      if (caar(p1) === symbol(OPERATOR) && caar(p2) === symbol(OPERATOR)) {
-        push_symbol(OPERATOR);
-        push(cdar(p1));
-        push(cdar(p2));
-        append();
-        cons();
-        p1 = cdr(p1);
-        p2 = cdr(p2);
-        parse_p1();
-        parse_p2();
-        continue;
-      }
-      switch (cmp_expr(p3, p4)) {
-        case -1:
-          push(car(p1));
-          p1 = cdr(p1);
-          parse_p1();
-          break;
-        case 1:
-          push(car(p2));
-          p2 = cdr(p2);
-          parse_p2();
-          break;
-        case 0:
-          combine_factors(h);
-          p1 = cdr(p1);
-          p2 = cdr(p2);
-          parse_p1();
-          parse_p2();
-          break;
-        default:
-          stop("internal error 2");
-      }
-    }
-    while (iscons(p1)) {
-      push(car(p1));
-      p1 = cdr(p1);
-    }
-    while (iscons(p2)) {
-      push(car(p2));
-      p2 = cdr(p2);
-    }
-    __normalize_radical_factors(h);
-    if (expanding) {
-      for (i = o = ref = h, ref1 = tos; ref <= ref1 ? o < ref1 : o > ref1; i = ref <= ref1 ? ++o : --o) {
-        if (isadd(stack[i])) {
-          multiply_all(tos - h);
-          return;
-        }
-      }
-    }
-    n = tos - h;
-    if (n === 1) {
-      return;
-    }
-    if (isrational(stack[h]) && equaln(stack[h], 1)) {
-      if (n === 2) {
-        p7 = pop();
-        pop();
-        push(p7);
-      } else {
-        stack[h] = symbol(MULTIPLY);
-        list(n);
-      }
-      return;
-    }
-    list(n);
-    p7 = pop();
-    push_symbol(MULTIPLY);
-    push(p7);
-    return cons();
-  };
-
-  parse_p1 = function() {
-    p3 = car(p1);
-    p5 = one;
-    if (car(p3) === symbol(POWER)) {
-      p5 = caddr(p3);
-      return p3 = cadr(p3);
-    }
-  };
-
-  parse_p2 = function() {
-    p4 = car(p2);
-    p6 = one;
-    if (car(p4) === symbol(POWER)) {
-      p6 = caddr(p4);
-      return p4 = cadr(p4);
-    }
-  };
-
-  combine_factors = function(h) {
-    push(p4);
-    push(p5);
-    push(p6);
-    add();
-    power();
-    p7 = pop();
-    if (isnum(p7)) {
-      push(stack[h]);
-      push(p7);
-      multiply_numbers();
-      return stack[h] = pop();
-    } else if (car(p7) === symbol(MULTIPLY)) {
-      if (isnum(cadr(p7)) && cdddr(p7) === symbol(NIL)) {
-        push(stack[h]);
-        push(cadr(p7));
-        multiply_numbers();
-        stack[h] = pop();
-        return push(caddr(p7));
-      } else {
-        return push(p7);
-      }
-    } else {
-      return push(p7);
-    }
-  };
-
-  gp = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, -6, -7, -8, -3, -4, -5, 13, 14, 15, -16, 9, 10, 11, -12], [0, 0, 6, -1, -11, 10, -2, -15, 14, 12, -5, 4, -9, 16, -8, 7, -13], [0, 0, 7, 11, -1, -9, 15, -2, -13, 5, 12, -3, -10, 8, 16, -6, -14], [0, 0, 8, -10, 9, -1, -14, 13, -2, -4, 3, 12, -11, -7, 6, 16, -15], [0, 0, 3, 2, 15, -14, 1, 11, -10, 16, -8, 7, 13, 12, -5, 4, 9], [0, 0, 4, -15, 2, 13, -11, 1, 9, 8, 16, -6, 14, 5, 12, -3, 10], [0, 0, 5, 14, -13, 2, 10, -9, 1, -7, 6, 16, 15, -4, 3, 12, 11], [0, 0, 13, 12, -5, 4, 16, -8, 7, -1, -11, 10, -3, -2, -15, 14, -6], [0, 0, 14, 5, 12, -3, 8, 16, -6, 11, -1, -9, -4, 15, -2, -13, -7], [0, 0, 15, -4, 3, 12, -7, 6, 16, -10, 9, -1, -5, -14, 13, -2, -8], [0, 0, 16, -9, -10, -11, -13, -14, -15, -3, -4, -5, 1, -6, -7, -8, 2], [0, 0, 9, -16, 8, -7, -12, 5, -4, -2, -15, 14, 6, -1, -11, 10, 3], [0, 0, 10, -8, -16, 6, -5, -12, 3, 15, -2, -13, 7, 11, -1, -9, 4], [0, 0, 11, 7, -6, -16, 4, -3, -12, -14, 13, -2, 8, -10, 9, -1, 5], [0, 0, 12, 13, 14, 15, 9, 10, 11, -6, -7, -8, -2, -3, -4, -5, -1]];
-
-  combine_gammas = function(h) {
-    var n;
-    n = gp[Math.floor(p1.gamma)][Math.floor(p2.gamma)];
-    if (n < 0) {
-      n = -n;
-      push(stack[h]);
-      negate();
-      stack[h] = pop();
-    }
-    if (n > 1) {
-      return push(_gamma[n]);
-    }
-  };
-
-  multiply_noexpand = function() {
-    var x;
-    x = expanding;
-    expanding = 0;
-    multiply();
-    return expanding = x;
-  };
-
-  multiply_all = function(n) {
-    var h, i, o, ref;
-    i = 0;
-    if (n === 1) {
-      return;
-    }
-    if (n === 0) {
-      push(one);
-      return;
-    }
-    h = tos - n;
-    push(stack[h]);
-    for (i = o = 1, ref = n; 1 <= ref ? o < ref : o > ref; i = 1 <= ref ? ++o : --o) {
-      push(stack[h + i]);
-      multiply();
-    }
-    stack[h] = pop();
-    return tos = h + 1;
-  };
-
-  multiply_all_noexpand = function(n) {
-    var x;
-    x = expanding;
-    expanding = 0;
-    multiply_all(n);
-    return expanding = x;
-  };
-
-  divide = function() {
-    if (isnum(stack[tos - 2]) && isnum(stack[tos - 1])) {
-      return divide_numbers();
-    } else {
-      inverse();
-      return multiply();
-    }
-  };
-
-  inverse = function() {
-    if (isnum(stack[tos - 1])) {
-      return invert_number();
-    } else {
-      push_integer(-1);
-      return power();
-    }
-  };
-
-  reciprocate = function() {
-    if (isnum(stack[tos - 1])) {
-      return invert_number();
-    } else {
-      push_integer(-1);
-      return power();
-    }
-  };
-
-  negate = function() {
-    if (isnum(stack[tos - 1])) {
-      return negate_number();
-    } else {
-      push_integer(-1);
-      return multiply();
-    }
-  };
-
-  negate_expand = function() {
-    var x;
-    x = expanding;
-    expanding = 1;
-    negate();
-    return expanding = x;
-  };
-
-  negate_noexpand = function() {
-    var x;
-    x = expanding;
-    expanding = 0;
-    negate();
-    return expanding = x;
-  };
-
-  __normalize_radical_factors = function(h) {
-    var ac, ad, i, o, ref, ref1, ref2, ref3, ref4, ref5;
-    i = 0;
-    if (isplusone(stack[h]) || isminusone(stack[h]) || isdouble(stack[h])) {
-      return;
-    }
-    for (i = o = ref = h + 1, ref1 = tos; ref <= ref1 ? o < ref1 : o > ref1; i = ref <= ref1 ? ++o : --o) {
-      if (__is_radical_number(stack[i])) {
-        break;
-      }
-    }
-    if (i === tos) {
-      return;
-    }
-    save();
-    push(stack[h]);
-    mp_numerator();
-    p1 = pop();
-    for (i = ac = ref2 = h + 1, ref3 = tos; ref2 <= ref3 ? ac < ref3 : ac > ref3; i = ref2 <= ref3 ? ++ac : --ac) {
-      if (isplusone(p1) || isminusone(p1)) {
-        break;
-      }
-      if (!__is_radical_number(stack[i])) {
-        continue;
-      }
-      p3 = cadr(stack[i]);
-      p4 = caddr(stack[i]);
-      if (!isnegativenumber(p4)) {
-        continue;
-      }
-      push(p1);
-      push(p3);
-      divide();
-      p5 = pop();
-      if (!isinteger(p5)) {
-        continue;
-      }
-      p1 = p5;
-      push_symbol(POWER);
-      push(p3);
-      push(one);
-      push(p4);
-      add();
-      list(3);
-      stack[i] = pop();
-    }
-    push(stack[h]);
-    mp_denominator();
-    p2 = pop();
-    for (i = ad = ref4 = h + 1, ref5 = tos; ref4 <= ref5 ? ad < ref5 : ad > ref5; i = ref4 <= ref5 ? ++ad : --ad) {
-      if (isplusone(p2)) {
-        break;
-      }
-      if (!__is_radical_number(stack[i])) {
-        continue;
-      }
-      p3 = cadr(stack[i]);
-      p4 = caddr(stack[i]);
-      if (isnegativenumber(p4)) {
-        continue;
-      }
-      push(p2);
-      push(p3);
-      divide();
-      p5 = pop();
-      if (!isinteger(p5)) {
-        continue;
-      }
-      p2 = p5;
-      push_symbol(POWER);
-      push(p3);
-      push(p4);
-      push(one);
-      subtract();
-      list(3);
-      stack[i] = pop();
-    }
-    push(p1);
-    push(p2);
-    divide();
-    stack[h] = pop();
-    return restore();
-  };
-
-  __is_radical_number = function(p) {
-    if (car(p) === symbol(POWER) && isnum(cadr(p)) && isnum(caddr(p)) && !isminusone(cadr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  NROOTS_YMAX = 101;
-
-  NROOTS_DELTA = 1.0e-6;
-
-  NROOTS_EPSILON = 1.0e-9;
-
-  NROOTS_ABS = function(z) {
-    return Math.sqrt(z.r * z.r + z.i * z.i);
-  };
-
-  theRandom = 0.0;
-
-  NROOTS_RANDOM = function() {
-    return 4.0 * Math.random() - 2.0;
-  };
-
-  numericRootOfPolynomial = (function() {
-    function numericRootOfPolynomial() {}
-
-    numericRootOfPolynomial.prototype.r = 0.0;
-
-    numericRootOfPolynomial.prototype.i = 0.0;
-
-    return numericRootOfPolynomial;
-
-  })();
-
-  nroots_a = new numericRootOfPolynomial();
-
-  nroots_b = new numericRootOfPolynomial();
-
-  nroots_x = new numericRootOfPolynomial();
-
-  nroots_y = new numericRootOfPolynomial();
-
-  nroots_fa = new numericRootOfPolynomial();
-
-  nroots_fb = new numericRootOfPolynomial();
-
-  nroots_dx = new numericRootOfPolynomial();
-
-  nroots_df = new numericRootOfPolynomial();
-
-  nroots_c = [];
-
-  for (initNRoots = o = 0, ref = NROOTS_YMAX; 0 <= ref ? o < ref : o > ref; initNRoots = 0 <= ref ? ++o : --o) {
-    nroots_c[initNRoots] = new numericRootOfPolynomial();
-  }
-
-  Eval_nroots = function() {
-    var ac, ad, ae, h, i, k, n, ref1, ref2, ref3;
-    h = 0;
-    i = 0;
-    k = 0;
-    n = 0;
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p2);
-    }
-    p2 = pop();
-    p1 = pop();
-    if (!ispoly(p1, p2)) {
-      stop("nroots: polynomial?");
-    }
-    h = tos;
-    push(p1);
-    push(p2);
-    n = coeff();
-    if (n > NROOTS_YMAX) {
-      stop("nroots: degree?");
-    }
-    for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(stack[h + i]);
-      real();
-      yyfloat();
-      Eval();
-      p1 = pop();
-      push(stack[h + i]);
-      imag();
-      yyfloat();
-      Eval();
-      p2 = pop();
-      if (!isdouble(p1) || !isdouble(p2)) {
-        stop("nroots: coefficients?");
-      }
-      nroots_c[i].r = p1.d;
-      nroots_c[i].i = p2.d;
-    }
-    tos = h;
-    monic(n);
-    for (k = ad = ref2 = n; ad > 1; k = ad += -1) {
-      findroot(k);
-      if (Math.abs(nroots_a.r) < NROOTS_DELTA) {
-        nroots_a.r = 0.0;
-      }
-      if (Math.abs(nroots_a.i) < NROOTS_DELTA) {
-        nroots_a.i = 0.0;
-      }
-      push_double(nroots_a.r);
-      push_double(nroots_a.i);
-      push(imaginaryunit);
-      multiply();
-      add();
-      NROOTS_divpoly(k);
-    }
-    n = tos - h;
-    if (n > 1) {
-      sort_stack(n);
-      p1 = alloc_tensor(n);
-      p1.tensor.ndim = 1;
-      p1.tensor.dim[0] = n;
-      for (i = ae = 0, ref3 = n; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-        p1.tensor.elem[i] = stack[h + i];
-      }
-      tos = h;
-      return push(p1);
-    }
-  };
-
-  monic = function(n) {
-    var ac, k, ref1, t;
-    k = 0;
-    t = 0.0;
-    nroots_y.r = nroots_c[n - 1].r;
-    nroots_y.i = nroots_c[n - 1].i;
-    t = nroots_y.r * nroots_y.r + nroots_y.i * nroots_y.i;
-    for (k = ac = 0, ref1 = n - 1; 0 <= ref1 ? ac < ref1 : ac > ref1; k = 0 <= ref1 ? ++ac : --ac) {
-      nroots_c[k].r = (nroots_c[k].r * nroots_y.r + nroots_c[k].i * nroots_y.i) / t;
-      nroots_c[k].i = (nroots_c[k].i * nroots_y.r - nroots_c[k].r * nroots_y.i) / t;
-    }
-    nroots_c[n - 1].r = 1.0;
-    return nroots_c[n - 1].i = 0.0;
-  };
-
-  findroot = function(n) {
-    var ac, ad, j, k, nrabs, t;
-    j = 0;
-    k = 0;
-    t = 0.0;
-    if (NROOTS_ABS(nroots_c[0]) < NROOTS_DELTA) {
-      nroots_a.r = 0.0;
-      nroots_a.i = 0.0;
-      return;
-    }
-    for (j = ac = 0; ac < 100; j = ++ac) {
-      nroots_a.r = NROOTS_RANDOM();
-      nroots_a.i = NROOTS_RANDOM();
-      compute_fa(n);
-      nroots_b.r = nroots_a.r;
-      nroots_b.i = nroots_a.i;
-      nroots_fb.r = nroots_fa.r;
-      nroots_fb.i = nroots_fa.i;
-      nroots_a.r = NROOTS_RANDOM();
-      nroots_a.i = NROOTS_RANDOM();
-      for (k = ad = 0; ad < 1000; k = ++ad) {
-        compute_fa(n);
-        nrabs = NROOTS_ABS(nroots_fa);
-        if (DEBUG) {
-          console.log("nrabs: " + nrabs);
-        }
-        if (nrabs < NROOTS_EPSILON) {
-          return;
-        }
-        if (NROOTS_ABS(nroots_fa) < NROOTS_ABS(nroots_fb)) {
-          nroots_x.r = nroots_a.r;
-          nroots_x.i = nroots_a.i;
-          nroots_a.r = nroots_b.r;
-          nroots_a.i = nroots_b.i;
-          nroots_b.r = nroots_x.r;
-          nroots_b.i = nroots_x.i;
-          nroots_x.r = nroots_fa.r;
-          nroots_x.i = nroots_fa.i;
-          nroots_fa.r = nroots_fb.r;
-          nroots_fa.i = nroots_fb.i;
-          nroots_fb.r = nroots_x.r;
-          nroots_fb.i = nroots_x.i;
-        }
-        nroots_dx.r = nroots_b.r - nroots_a.r;
-        nroots_dx.i = nroots_b.i - nroots_a.i;
-        nroots_df.r = nroots_fb.r - nroots_fa.r;
-        nroots_df.i = nroots_fb.i - nroots_fa.i;
-        t = nroots_df.r * nroots_df.r + nroots_df.i * nroots_df.i;
-        if (t === 0.0) {
-          break;
-        }
-        nroots_y.r = (nroots_dx.r * nroots_df.r + nroots_dx.i * nroots_df.i) / t;
-        nroots_y.i = (nroots_dx.i * nroots_df.r - nroots_dx.r * nroots_df.i) / t;
-        nroots_a.r = nroots_b.r - (nroots_y.r * nroots_fb.r - nroots_y.i * nroots_fb.i);
-        nroots_a.i = nroots_b.i - (nroots_y.r * nroots_fb.i + nroots_y.i * nroots_fb.r);
-      }
-    }
-    return stop("nroots: convergence error");
-  };
-
-  compute_fa = function(n) {
-    var ac, k, ref1, results, t;
-    k = 0;
-    t = 0.0;
-    nroots_x.r = nroots_a.r;
-    nroots_x.i = nroots_a.i;
-    nroots_fa.r = nroots_c[0].r + nroots_c[1].r * nroots_x.r - nroots_c[1].i * nroots_x.i;
-    nroots_fa.i = nroots_c[0].i + nroots_c[1].r * nroots_x.i + nroots_c[1].i * nroots_x.r;
-    results = [];
-    for (k = ac = 2, ref1 = n; 2 <= ref1 ? ac < ref1 : ac > ref1; k = 2 <= ref1 ? ++ac : --ac) {
-      t = nroots_a.r * nroots_x.r - nroots_a.i * nroots_x.i;
-      nroots_x.i = nroots_a.r * nroots_x.i + nroots_a.i * nroots_x.r;
-      nroots_x.r = t;
-      nroots_fa.r += nroots_c[k].r * nroots_x.r - nroots_c[k].i * nroots_x.i;
-      results.push(nroots_fa.i += nroots_c[k].r * nroots_x.i + nroots_c[k].i * nroots_x.r);
-    }
-    return results;
-  };
-
-  NROOTS_divpoly = function(n) {
-    var ac, ad, k, ref1, ref2, results;
-    k = 0;
-    for (k = ac = ref1 = n - 1; ref1 <= 0 ? ac < 0 : ac > 0; k = ref1 <= 0 ? ++ac : --ac) {
-      nroots_c[k - 1].r += nroots_c[k].r * nroots_a.r - nroots_c[k].i * nroots_a.i;
-      nroots_c[k - 1].i += nroots_c[k].i * nroots_a.r + nroots_c[k].r * nroots_a.i;
-    }
-    if (NROOTS_ABS(nroots_c[0]) > NROOTS_DELTA) {
-      stop("nroots: residual error");
-    }
-    results = [];
-    for (k = ad = 0, ref2 = n - 1; 0 <= ref2 ? ad < ref2 : ad > ref2; k = 0 <= ref2 ? ++ad : --ad) {
-      nroots_c[k].r = nroots_c[k + 1].r;
-      results.push(nroots_c[k].i = nroots_c[k + 1].i);
-    }
-    return results;
-  };
-
-  Eval_numerator = function() {
-    push(cadr(p1));
-    Eval();
-    return numerator();
-  };
-
-  numerator = function() {
-    var h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      push(p1);
-      rationalize();
-      p1 = pop();
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      h = tos;
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        numerator();
-        p1 = cdr(p1);
-      }
-      multiply_all(tos - h);
-    } else if (isrational(p1)) {
-      push(p1);
-      mp_numerator();
-    } else if (car(p1) === symbol(POWER) && isnegativeterm(caddr(p1))) {
-      push(one);
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  Eval_outer = function() {
-    var results;
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    results = [];
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval();
-      outer();
-      results.push(p1 = cdr(p1));
-    }
-    return results;
-  };
-
-  outer = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (istensor(p1) && istensor(p2)) {
-      yyouter();
-    } else {
-      push(p1);
-      push(p2);
-      if (istensor(p1)) {
-        tensor_times_scalar();
-      } else if (istensor(p2)) {
-        scalar_times_tensor();
-      } else {
-        multiply();
-      }
-    }
-    return restore();
-  };
-
-  yyouter = function() {
-    var ac, ad, ae, af, i, j, k, ndim, nelem, ref1, ref2, ref3, ref4;
-    i = 0;
-    j = 0;
-    k = 0;
-    ndim = 0;
-    nelem = 0;
-    ndim = p1.tensor.ndim + p2.tensor.ndim;
-    if (ndim > MAXDIM) {
-      stop("outer: rank of result exceeds maximum");
-    }
-    nelem = p1.tensor.nelem * p2.tensor.nelem;
-    p3 = alloc_tensor(nelem);
-    p3.tensor.ndim = ndim;
-    for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    j = i;
-    for (i = ad = 0, ref2 = p2.tensor.ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p3.tensor.dim[j + i] = p2.tensor.dim[i];
-    }
-    k = 0;
-    for (i = ae = 0, ref3 = p1.tensor.nelem; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      for (j = af = 0, ref4 = p2.tensor.nelem; 0 <= ref4 ? af < ref4 : af > ref4; j = 0 <= ref4 ? ++af : --af) {
-        push(p1.tensor.elem[i]);
-        push(p2.tensor.elem[j]);
-        multiply();
-        p3.tensor.elem[k++] = pop();
-      }
-    }
-    return push(p3);
-  };
-
-
-  /*
-   Partition a term
-  
-  	Input stack:
-  
-  		term (factor or product of factors)
-  
-  		free variable
-  
-  	Output stack:
-  
-  		constant expression
-  
-  		variable expression
-   */
-
-  partition = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    push_integer(1);
-    p3 = pop();
-    p4 = p3;
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      if (Find(car(p1), p2)) {
-        push(p4);
-        push(car(p1));
-        multiply();
-        p4 = pop();
-      } else {
-        push(p3);
-        push(car(p1));
-        multiply();
-        p3 = pop();
-      }
-      p1 = cdr(p1);
-    }
-    push(p3);
-    push(p4);
-    return restore();
-  };
-
-
-  /*
-  Convert complex z to polar form
-  
-  	Input:		push	z
-  
-  	Output:		Result on stack
-  
-  	polar(z) = mag(z) * exp(i * arg(z))
-   */
-
-  Eval_polar = function() {
-    push(cadr(p1));
-    Eval();
-    return polar();
-  };
-
-  polar = function() {
-    save();
-    p1 = pop();
-    push(p1);
-    mag();
-    push(imaginaryunit);
-    push(p1);
-    arg();
-    multiply();
-    exponential();
-    multiply();
-    return restore();
-  };
-
-  n_factor_number = 0;
-
-  factor_number = function() {
-    var h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (equaln(p1, 0) || equaln(p1, 1) || equaln(p1, -1)) {
-      push(p1);
-      restore();
-      return;
-    }
-    n_factor_number = p1.q.a;
-    h = tos;
-    factor_a();
-    if (tos - h > 1) {
-      list(tos - h);
-      push_symbol(MULTIPLY);
-      swap();
-      cons();
-    }
-    return restore();
-  };
-
-  factor_a = function() {
-    var ac, k;
-    k = 0;
-    if (n_factor_number.isNegative()) {
-      n_factor_number = setSignTo(n_factor_number, 1);
-      push_integer(-1);
-    }
-    for (k = ac = 0; ac < 10000; k = ++ac) {
-      try_kth_prime(k);
-      if (n_factor_number.compare(1) === 0) {
-        return;
-      }
-    }
-    return factor_b();
-  };
-
-  try_kth_prime = function(k) {
-    var count, d, q, r, ref1;
-    count = 0;
-    d = mint(primetab[k]);
-    count = 0;
-    while (1.) {
-      if (n_factor_number.compare(1) === 0) {
-        if (count) {
-          push_factor(d, count);
-        }
-        return;
-      }
-      ref1 = mdivrem(n_factor_number, d), q = ref1[0], r = ref1[1];
-      if (r.isZero()) {
-        count++;
-        n_factor_number = q;
-      } else {
-        break;
-      }
-    }
-    if (count) {
-      push_factor(d, count);
-    }
-    if (mcmp(q, d) === -1) {
-      push_factor(n_factor_number, 1);
-      return n_factor_number = mint(1);
-    }
-  };
-
-  factor_b = function() {
-    var bigint_one, g, k, l, t, x, xprime;
-    k = 0;
-    l = 0;
-    bigint_one = mint(1);
-    x = mint(5);
-    xprime = mint(2);
-    k = 1;
-    l = 1;
-    while (1.) {
-      if (mprime(n_factor_number)) {
-        push_factor(n_factor_number, 1);
-        return 0;
-      }
-      while (1.) {
-        if (esc_flag) {
-          stop("esc");
-        }
-        t = msub(xprime, x);
-        t = setSignTo(t, 1);
-        g = mgcd(t, n_factor_number);
-        if (MEQUAL(g, 1)) {
-          if (--k === 0) {
-            xprime = x;
-            l *= 2;
-            k = l;
-          }
-          t = mmul(x, x);
-          x = madd(t, bigint_one);
-          t = mmod(x, n_factor_number);
-          x = t;
-          continue;
-        }
-        push_factor(g, 1);
-        if (mcmp(g, n_factor_number) === 0) {
-          return -1;
-        }
-        t = mdiv(n_factor_number, g);
-        n_factor_number = t;
-        t = mmod(x, n_factor_number);
-        x = t;
-        t = mmod(xprime, n_factor_number);
-        xprime = t;
-        break;
-      }
-    }
-  };
-
-  push_factor = function(d, count) {
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = d;
-    p1.q.b = mint(1);
-    push(p1);
-    if (count > 1) {
-      push_symbol(POWER);
-      swap();
-      p1 = new U();
-      p1.k = NUM;
-      p1.q.a = mint(count);
-      p1.q.b = mint(1);
-      push(p1);
-      return list(3);
-    }
-  };
-
-
-  /* Power function
-  
-  	Input:		push	Base
-  
-  			push	Exponent
-  
-  	Output:		Result on stack
-   */
-
-  Eval_power = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    return power();
-  };
-
-  power = function() {
-    save();
-    yypower();
-    return restore();
-  };
-
-  yypower = function() {
-    var n;
-    n = 0;
-    p2 = pop();
-    p1 = pop();
-    if (isrational(p1) && isrational(p2)) {
-      push(p1);
-      push(p2);
-      qpow();
-      return;
-    }
-    if (isnum(p1) && isnum(p2)) {
-      push(p1);
-      push(p2);
-      dpow();
-      return;
-    }
-    if (istensor(p1)) {
-      power_tensor();
-      return;
-    }
-    if (p1 === symbol(E) && car(p2) === symbol(LOG)) {
-      push(cadr(p2));
-      return;
-    }
-    if (p1 === symbol(E) && isdouble(p2)) {
-      push_double(Math.exp(p2.d));
-      return;
-    }
-    if (equal(p1, one) || iszero(p2)) {
-      push(one);
-      return;
-    }
-    if (equal(p2, one)) {
-      push(p1);
-      return;
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      push(car(p1));
-      push(p2);
-      power();
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        power();
-        multiply();
-        p1 = cdr(p1);
-      }
-      return;
-    }
-    if (car(p1) === symbol(POWER)) {
-      push(cadr(p1));
-      push(caddr(p1));
-      push(p2);
-      multiply();
-      power();
-      return;
-    }
-    if (expanding && isadd(p1) && isnum(p2)) {
-      push(p2);
-      n = pop_integer();
-      if (n > 1 && n !== 0x80000000) {
-        power_sum(n);
-        return;
-      }
-    }
-    if (trigmode === 1 && car(p1) === symbol(SIN) && iseveninteger(p2)) {
-      push_integer(1);
-      push(cadr(p1));
-      cosine();
-      push_integer(2);
-      power();
-      subtract();
-      push(p2);
-      push_rational(1, 2);
-      multiply();
-      power();
-      return;
-    }
-    if (trigmode === 2 && car(p1) === symbol(COS) && iseveninteger(p2)) {
-      push_integer(1);
-      push(cadr(p1));
-      sine();
-      push_integer(2);
-      power();
-      subtract();
-      push(p2);
-      push_rational(1, 2);
-      multiply();
-      power();
-      return;
-    }
-    if (iscomplexnumber(p1)) {
-      if (isinteger(p2)) {
-        push(p1);
-        conjugate();
-        p3 = pop();
-        push(p3);
-        push(p3);
-        push(p1);
-        multiply();
-        divide();
-        push(p2);
-        negate();
-        power();
-        return;
-      }
-      if (isnum(p2)) {
-        push(p1);
-        mag();
-        push(p2);
-        power();
-        push_integer(-1);
-        push(p1);
-        arg();
-        push(p2);
-        multiply();
-        push(symbol(PI));
-        divide();
-        power();
-        multiply();
-        return;
-
-        /*
-        			push(p1)
-        			mag()
-        			push(p2)
-        			power()
-        			push(symbol(E))
-        			push(p1)
-        			arg()
-        			push(p2)
-        			multiply()
-        			push(imaginaryunit)
-        			multiply()
-        			power()
-        			multiply()
-         */
-      }
-    }
-    if (simplify_polar()) {
-      return;
-    }
-    push_symbol(POWER);
-    push(p1);
-    push(p2);
-    return list(3);
-  };
-
-  power_sum = function(n) {
-    var a, ac, ad, ae, i, j, k, ref1, ref2, ref3;
-    a = [];
-    i = 0;
-    j = 0;
-    k = 0;
-    k = length(p1) - 1;
-    push_frame(k * (n + 1));
-    p1 = cdr(p1);
-    for (i = ac = 0, ref1 = k; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      for (j = ad = 0, ref2 = n; 0 <= ref2 ? ad <= ref2 : ad >= ref2; j = 0 <= ref2 ? ++ad : --ad) {
-        push(car(p1));
-        push_integer(j);
-        power();
-        stack[frame + i * (n + 1) + j] = pop();
-      }
-      p1 = cdr(p1);
-    }
-    push_integer(n);
-    factorial();
-    p1 = pop();
-    for (i = ae = 0, ref3 = k; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      a[i] = 0;
-    }
-    push(zero);
-    multinomial_sum(k, n, a, 0, n);
-    return pop_frame(k * (n + 1));
-  };
-
-  multinomial_sum = function(k, n, a, i, m) {
-    var ac, ad, ae, j, ref1, ref2, ref3;
-    j = 0;
-    if (i < k - 1) {
-      for (j = ac = 0, ref1 = m; 0 <= ref1 ? ac <= ref1 : ac >= ref1; j = 0 <= ref1 ? ++ac : --ac) {
-        a[i] = j;
-        multinomial_sum(k, n, a, i + 1, m - j);
-      }
-      return;
-    }
-    a[i] = m;
-    push(p1);
-    for (j = ad = 0, ref2 = k; 0 <= ref2 ? ad < ref2 : ad > ref2; j = 0 <= ref2 ? ++ad : --ad) {
-      push_integer(a[j]);
-      factorial();
-      divide();
-    }
-    for (j = ae = 0, ref3 = k; 0 <= ref3 ? ae < ref3 : ae > ref3; j = 0 <= ref3 ? ++ae : --ae) {
-      push(stack[frame + j * (n + 1) + a[j]]);
-      multiply();
-    }
-    return add();
-  };
-
-  simplify_polar = function() {
-    var doNothing, n;
-    n = 0;
-    n = isquarterturn(p2);
-    switch (n) {
-      case 0:
-        doNothing = 1;
-        break;
-      case 1:
-        push_integer(1);
-        return 1;
-      case 2:
-        push_integer(-1);
-        return 1;
-      case 3:
-        push(imaginaryunit);
-        return 1;
-      case 4:
-        push(imaginaryunit);
-        negate();
-        return 1;
-    }
-    if (car(p2) === symbol(ADD)) {
-      p3 = cdr(p2);
-      while (iscons(p3)) {
-        n = isquarterturn(car(p3));
-        if (n) {
-          break;
-        }
-        p3 = cdr(p3);
-      }
-      switch (n) {
-        case 0:
-          return 0;
-        case 1:
-          push_integer(1);
-          break;
-        case 2:
-          push_integer(-1);
-          break;
-        case 3:
-          push(imaginaryunit);
-          break;
-        case 4:
-          push(imaginaryunit);
-          negate();
-      }
-      push(p2);
-      push(car(p3));
-      subtract();
-      exponential();
-      multiply();
-      return 1;
-    }
-    return 0;
-  };
-
-  Eval_prime = function() {
-    push(cadr(p1));
-    Eval();
-    return prime();
-  };
-
-  prime = function() {
-    var n;
-    n = 0;
-    n = pop_integer();
-    if (n < 1 || n > MAXPRIMETAB) {
-      stop("prime: Argument out of range.");
-    }
-    n = primetab[n - 1];
-    return push_integer(n);
-  };
-
-  power_str = "^";
-
-  stringToBePrinted = "";
-
-  print_str = function(s) {
-    return stringToBePrinted += s;
-  };
-
-  print_char = function(c) {
-    return stringToBePrinted += c;
-  };
-
-  collectResultLine = function(p) {
-    stringToBePrinted = "";
-    print_expr(p);
-    return stringToBePrinted;
-  };
-
-  printline = function(p) {
-    stringToBePrinted = "";
-    print_expr(p);
-    return console.log(stringToBePrinted);
-  };
-
-  print_denom = function(p, d) {
-    save();
-    p1 = cadr(p);
-    p2 = caddr(p);
-    if (d === 1 && !isminusone(p2)) {
-      print_char('(');
-    }
-    if (isfraction(p1) || car(p1) === symbol(ADD) || car(p1) === symbol(MULTIPLY) || car(p1) === symbol(POWER) || lessp(p1, zero)) {
-      print_char('(');
-      print_expr(p1);
-      print_char(')');
-    } else {
-      print_expr(p1);
-    }
-    if (isminusone(p2)) {
-      restore();
-      return;
-    }
-    if (test_flag === 0) {
-      print_str(power_str);
-    } else {
-      print_char('^');
-    }
-    push(p2);
-    negate();
-    p2 = pop();
-    if (isfraction(p2) || car(p2) === symbol(ADD) || car(p2) === symbol(MULTIPLY) || car(p2) === symbol(POWER)) {
-      print_char('(');
-      print_expr(p2);
-      print_char(')');
-    } else {
-      print_expr(p2);
-    }
-    if (d === 1) {
-      print_char(')');
-    }
-    return restore();
-  };
-
-  print_a_over_b = function(p) {
-    var d, doNothing, n;
-    flag = 0;
-    n = 0;
-    d = 0;
-    save();
-    n = 0;
-    d = 0;
-    p1 = cdr(p);
-    p2 = car(p1);
-    if (isrational(p2)) {
-      push(p2);
-      mp_numerator();
-      absval();
-      p3 = pop();
-      push(p2);
-      mp_denominator();
-      p4 = pop();
-      if (!isplusone(p3)) {
-        n++;
-      }
-      if (!isplusone(p4)) {
-        d++;
-      }
-      p1 = cdr(p1);
-    } else {
-      p3 = one;
-      p4 = one;
-    }
-    while (iscons(p1)) {
-      p2 = car(p1);
-      if (is_denominator(p2)) {
-        d++;
-      } else {
-        n++;
-      }
-      p1 = cdr(p1);
-    }
-    if (n === 0) {
-      print_char('1');
-    } else {
-      flag = 0;
-      p1 = cdr(p);
-      if (isrational(car(p1))) {
-        p1 = cdr(p1);
-      }
-      if (!isplusone(p3)) {
-        print_factor(p3);
-        flag = 1;
-      }
-      while (iscons(p1)) {
-        p2 = car(p1);
-        if (is_denominator(p2)) {
-          doNothing = 1;
-        } else {
-          if (flag) {
-            print_multiply_sign();
-          }
-          print_factor(p2);
-          flag = 1;
-        }
-        p1 = cdr(p1);
-      }
-    }
-    if (test_flag === 0) {
-      print_str(" / ");
-    } else {
-      print_str("/");
-    }
-    if (d > 1) {
-      print_char('(');
-    }
-    flag = 0;
-    p1 = cdr(p);
-    if (isrational(car(p1))) {
-      p1 = cdr(p1);
-    }
-    if (!isplusone(p4)) {
-      print_factor(p4);
-      flag = 1;
-    }
-    while (iscons(p1)) {
-      p2 = car(p1);
-      if (is_denominator(p2)) {
-        if (flag) {
-          print_multiply_sign();
-        }
-        print_denom(p2, d);
-        flag = 1;
-      }
-      p1 = cdr(p1);
-    }
-    if (d > 1) {
-      print_char(')');
-    }
-    return restore();
-  };
-
-  print_expr = function(p) {
-    var results;
-    if (isadd(p)) {
-      p = cdr(p);
-      if (sign_of_term(car(p)) === '-') {
-        print_str("-");
-      }
-      print_term(car(p));
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        if (sign_of_term(car(p)) === '+') {
-          if (test_flag === 0) {
-            print_str(" + ");
-          } else {
-            print_str("+");
-          }
-        } else {
-          if (test_flag === 0) {
-            print_str(" - ");
-          } else {
-            print_str("-");
-          }
-        }
-        print_term(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      if (sign_of_term(p) === '-') {
-        print_str("-");
-      }
-      return print_term(p);
-    }
-  };
-
-  sign_of_term = function(p) {
-    if (car(p) === symbol(MULTIPLY) && isnum(cadr(p)) && lessp(cadr(p), zero)) {
-      return '-';
-    } else if (isnum(p) && lessp(p, zero)) {
-      return '-';
-    } else {
-      return '+';
-    }
-  };
-
-  print_term = function(p) {
-    var results;
-    if (car(p) === symbol(MULTIPLY) && any_denominators(p)) {
-      print_a_over_b(p);
-      return;
-    }
-    if (car(p) === symbol(MULTIPLY)) {
-      p = cdr(p);
-      if (isminusone(car(p))) {
-        p = cdr(p);
-      }
-      print_factor(car(p));
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        print_multiply_sign();
-        print_factor(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      return print_factor(p);
-    }
-  };
-
-  print_subexpr = function(p) {
-    print_char('(');
-    print_expr(p);
-    return print_char(')');
-  };
-
-  print_factorial_function = function(p) {
-    p = cadr(p);
-    if (car(p) === symbol(ADD) || car(p) === symbol(MULTIPLY) || car(p) === symbol(POWER) || car(p) === symbol(FACTORIAL)) {
-      print_subexpr(p);
-    } else {
-      print_expr(p);
-    }
-    return print_char('!');
-  };
-
-  print_tensor = function(p) {
-    return print_tensor_inner(p, 0, 0);
-  };
-
-  print_tensor_inner = function(p, j, k) {
-    var ac, i, ref1;
-    i = 0;
-    print_str("(");
-    for (i = ac = 0, ref1 = p.tensor.dim[j]; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      if (j + 1 === p.tensor.ndim) {
-        print_expr(p.tensor.elem[k]);
-        k++;
-      } else {
-        k = print_tensor_inner(p, j + 1, k);
-      }
-      if (i + 1 < p.tensor.dim[j]) {
-        if (test_flag === 0) {
-          print_str(",");
-        } else {
-          print_str(",");
-        }
-      }
-    }
-    print_str(")");
-    return k;
-  };
-
-  print_factor = function(p) {
-    if (isnum(p)) {
-      print_number(p);
-      return;
-    }
-    if (isstr(p)) {
-      print_str("\"");
-      print_str(p.str);
-      print_str("\"");
-      return;
-    }
-    if (istensor(p)) {
-      print_tensor(p);
-      return;
-    }
-    if (isadd(p) || car(p) === symbol(MULTIPLY)) {
-      print_str("(");
-      print_expr(p);
-      print_str(")");
-      return;
-    }
-    if (car(p) === symbol(POWER)) {
-      if (cadr(p) === symbol(E)) {
-        print_str("exp(");
-        print_expr(caddr(p));
-        print_str(")");
-        return;
-      }
-      if (isminusone(caddr(p))) {
-        if (test_flag === 0) {
-          print_str("1 / ");
-        } else {
-          print_str("1/");
-        }
-        if (iscons(cadr(p))) {
-          print_str("(");
-          print_expr(cadr(p));
-          print_str(")");
-        } else {
-          print_expr(cadr(p));
-        }
-        return;
-      }
-      if (isadd(cadr(p)) || caadr(p) === symbol(MULTIPLY) || caadr(p) === symbol(POWER) || isnegativenumber(cadr(p))) {
-        print_str("(");
-        print_expr(cadr(p));
-        print_str(")");
-      } else if (isnum(cadr(p)) && (lessp(cadr(p), zero) || isfraction(cadr(p)))) {
-        print_str("(");
-        print_factor(cadr(p));
-        print_str(")");
-      } else {
-        print_factor(cadr(p));
-      }
-      if (test_flag === 0) {
-        print_str(power_str);
-      } else {
-        print_str("^");
-      }
-      if (iscons(caddr(p)) || isfraction(caddr(p)) || (isnum(caddr(p)) && lessp(caddr(p), zero))) {
-        print_str("(");
-        print_expr(caddr(p));
-        print_str(")");
-      } else {
-        print_factor(caddr(p));
-      }
-      return;
-    }
-    if (car(p) === symbol(INDEX) && issymbol(cadr(p))) {
-      print_index_function(p);
-      return;
-    }
-    if (car(p) === symbol(FACTORIAL)) {
-      print_factorial_function(p);
-      return;
-    }
-    if (iscons(p)) {
-      print_factor(car(p));
-      p = cdr(p);
-      print_str("(");
-      if (iscons(p)) {
-        print_expr(car(p));
-        p = cdr(p);
-        while (iscons(p)) {
-          if (test_flag === 0) {
-            print_str(",");
-          } else {
-            print_str(",");
-          }
-          print_expr(car(p));
-          p = cdr(p);
-        }
-      }
-      print_str(")");
-      return;
-    }
-    if (p === symbol(DERIVATIVE)) {
-      return print_char('d');
-    } else if (p === symbol(E)) {
-      return print_str("exp(1)");
-    } else if (p === symbol(PI)) {
-      return print_str("pi");
-    } else {
-      return print_str(get_printname(p));
-    }
-  };
-
-  print1 = function(p, accumulator) {
-    var topLevelCall;
-    topLevelCall = false;
-    if (accumulator == null) {
-      topLevelCall = true;
-      accumulator = "";
-    }
-    switch (p.k) {
-      case CONS:
-        accumulator += "(";
-        accumulator = print1(car(p), accumulator);
-        if (p === cdr(p)) {
-          console.log("oh no recursive!");
-          debugger;
-        }
-        p = cdr(p);
-        while (iscons(p)) {
-          accumulator += " ";
-          accumulator = print1(car(p), accumulator);
-          p = cdr(p);
-          if (p === cdr(p)) {
-            console.log("oh no recursive!");
-            debugger;
-          }
-        }
-        if (p !== symbol(NIL)) {
-          accumulator += " . ";
-          accumulator = print1(p, accumulator);
-        }
-        accumulator += ")";
-        break;
-      case STR:
-        accumulator += p.str;
-        break;
-      case NUM:
-      case DOUBLE:
-        accumulator = print_number(p, accumulator);
-        break;
-      case SYM:
-        accumulator += get_printname(p);
-        break;
-      default:
-        accumulator += "<tensor>";
-    }
-    if (topLevelCall) {
-      return console.log(accumulator);
-    } else {
-      return accumulator;
-    }
-  };
-
-  print_multiply_sign = function() {
-    if (test_flag === 0) {
-      return print_str(" ");
-    } else {
-      return print_str("*");
-    }
-  };
-
-  is_denominator = function(p) {
-    if (car(p) === symbol(POWER) && cadr(p) !== symbol(E) && isnegativeterm(caddr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  any_denominators = function(p) {
-    var q;
-    p = cdr(p);
-    while (iscons(p)) {
-      q = car(p);
-      if (is_denominator(q)) {
-        return 1;
-      }
-      p = cdr(p);
-    }
-    return 0;
-  };
-
-  Eval_product = function() {
-    var ac, i, j, k, ref1, ref2;
-    i = 0;
-    j = 0;
-    k = 0;
-    p6 = cadr(p1);
-    if (!issymbol(p6)) {
-      stop("product: 1st arg?");
-    }
-    push(caddr(p1));
-    Eval();
-    j = pop_integer();
-    if (j === 0x80000000) {
-      stop("product: 2nd arg?");
-    }
-    push(cadddr(p1));
-    Eval();
-    k = pop_integer();
-    if (k === 0x80000000) {
-      stop("product: 3rd arg?");
-    }
-    p1 = caddddr(p1);
-    p4 = get_binding(p6);
-    p3 = get_arglist(p6);
-    push_integer(1);
-    for (i = ac = ref1 = j, ref2 = k; ref1 <= ref2 ? ac <= ref2 : ac >= ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-      push_integer(i);
-      p5 = pop();
-      set_binding(p6, p5);
-      push(p1);
-      Eval();
-      multiply();
-    }
-    return set_binding_and_arglist(p6, p4, p3);
-  };
-
-  qadd = function() {
-    var a, ab, b, ba, c;
-    save();
-    p2 = pop();
-    p1 = pop();
-    ab = mmul(p1.q.a, p2.q.b);
-    ba = mmul(p1.q.b, p2.q.a);
-    a = madd(ab, ba);
-    if (MZERO(a)) {
-      push(zero);
-      restore();
-      return;
-    }
-    b = mmul(p1.q.b, p2.q.b);
-    c = mgcd(a, b);
-    c = makeSignSameAs(c, b);
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = mdiv(a, c);
-    p1.q.b = mdiv(b, c);
-    push(p1);
-    return restore();
-  };
-
-  qdiv = function() {
-    var aa, bb, c;
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (MZERO(p2.q.a)) {
-      stop("divide by zero");
-    }
-    if (MZERO(p1.q.a)) {
-      push(zero);
-      restore();
-      return;
-    }
-    aa = mmul(p1.q.a, p2.q.b);
-    bb = mmul(p1.q.b, p2.q.a);
-    c = mgcd(aa, bb);
-    c = makeSignSameAs(c, bb);
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = mdiv(aa, c);
-    p1.q.b = mdiv(bb, c);
-    push(p1);
-    return restore();
-  };
-
-  qmul = function() {
-    var aa, bb, c;
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (MZERO(p1.q.a) || MZERO(p2.q.a)) {
-      push(zero);
-      restore();
-      return;
-    }
-    aa = mmul(p1.q.a, p2.q.a);
-    bb = mmul(p1.q.b, p2.q.b);
-    c = mgcd(aa, bb);
-    c = makeSignSameAs(c, bb);
-    p1 = new U();
-    p1.k = NUM;
-    p1.q.a = mdiv(aa, c);
-    p1.q.b = mdiv(bb, c);
-    push(p1);
-    return restore();
-  };
-
-  qpow = function() {
-    save();
-    qpowf();
-    return restore();
-  };
-
-  qpowf = function() {
-    var a, b, expo, t, x, y;
-    expo = 0;
-    p2 = pop();
-    p1 = pop();
-    if (isplusone(p1) || iszero(p2)) {
-      push_integer(1);
-      return;
-    }
-    if (iszero(p1)) {
-      if (isnegativenumber(p2)) {
-        stop("divide by zero");
-      }
-      push(zero);
-      return;
-    }
-    if (isplusone(p2)) {
-      push(p1);
-      return;
-    }
-    if (isinteger(p2)) {
-      push(p2);
-      expo = pop_integer();
-      if (expo === 0x80000000) {
-        push_symbol(POWER);
-        push(p1);
-        push(p2);
-        list(3);
-        return;
-      }
-      x = mpow(p1.q.a, Math.abs(expo));
-      y = mpow(p1.q.b, Math.abs(expo));
-      if (expo < 0) {
-        t = x;
-        x = y;
-        y = t;
-        x = makeSignSameAs(x, y);
-        y = makePositive(y);
-      }
-      p3 = new U();
-      p3.k = NUM;
-      p3.q.a = x;
-      p3.q.b = y;
-      push(p3);
-      return;
-    }
-    if (isminusone(p1)) {
-      push(p2);
-      normalize_angle();
-      return;
-    }
-    if (isnegativenumber(p1)) {
-      push(p1);
-      negate();
-      push(p2);
-      qpow();
-      push_integer(-1);
-      push(p2);
-      qpow();
-      multiply();
-      return;
-    }
-    if (!isinteger(p1)) {
-      push(p1);
-      mp_numerator();
-      push(p2);
-      qpow();
-      push(p1);
-      mp_denominator();
-      push(p2);
-      negate();
-      qpow();
-      multiply();
-      return;
-    }
-    if (is_small_integer(p1)) {
-      push(p1);
-      push(p2);
-      quickfactor();
-      return;
-    }
-    if (!p2.q.a.isSmall || !p2.q.b.isSmall) {
-      push_symbol(POWER);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    a = p2.q.a;
-    b = p2.q.b;
-    x = mroot(p1.q.a, b);
-    if (x === 0) {
-      push_symbol(POWER);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    y = mpow(x, a);
-    p3 = new U();
-    p3.k = NUM;
-    if (p2.q.a.isNegative()) {
-      p3.q.a = bigInt(1);
-      p3.q.b = y;
-    } else {
-      p3.q.a = y;
-      p3.q.b = bigInt(1);
-    }
-    return push(p3);
-  };
-
-  normalize_angle = function() {
-    save();
-    p1 = pop();
-    if (isinteger(p1)) {
-      if (p1.q.a.isOdd()) {
-        push_integer(-1);
-      } else {
-        push_integer(1);
-      }
-      restore();
-      return;
-    }
-    push(p1);
-    bignum_truncate();
-    p2 = pop();
-    if (isnegativenumber(p1)) {
-      push(p2);
-      push_integer(-1);
-      add();
-      p2 = pop();
-    }
-    push(p1);
-    push(p2);
-    subtract();
-    p3 = pop();
-    push_symbol(POWER);
-    push_integer(-1);
-    push(p3);
-    list(3);
-    if (p2.q.a.isOdd()) {
-      negate();
-    }
-    return restore();
-  };
-
-  is_small_integer = function(p) {
-    return p.q.a.isSmall;
-  };
-
-  quickfactor = function() {
-    var ac, h, i, n, ref1, stackIndex;
-    i = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    push(p1);
-    factor_small_number();
-    n = tos - h;
-    stackIndex = h;
-    for (i = ac = 0, ref1 = n; ac < ref1; i = ac += 2) {
-      push(stack[stackIndex + i]);
-      push(stack[stackIndex + i + 1]);
-      push(p2);
-      multiply();
-      quickpower();
-    }
-    multiply_all(tos - h - n);
-    p1 = pop();
-    tos = h;
-    push(p1);
-    return restore();
-  };
-
-  quickpower = function() {
-    var expo;
-    expo = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    push(p2);
-    bignum_truncate();
-    p3 = pop();
-    push(p2);
-    push(p3);
-    subtract();
-    p4 = pop();
-    if (!iszero(p4)) {
-      push_symbol(POWER);
-      push(p1);
-      push(p4);
-      list(3);
-    }
-    push(p3);
-    expo = pop_integer();
-    if (expo === 0x80000000) {
-      push_symbol(POWER);
-      push(p1);
-      push(p3);
-      list(3);
-      restore();
-      return;
-    }
-    if (expo === 0) {
-      restore();
-      return;
-    }
-    push(p1);
-    bignum_power_number(expo);
-    return restore();
-  };
-
-  Eval_quotient = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    push(cadddr(p1));
-    Eval();
-    p1 = pop();
-    if (p1 === symbol(NIL)) {
-      p1 = symbol(SYMBOL_X);
-    }
-    push(p1);
-    return divpoly();
-  };
-
-  divpoly = function() {
-    var ac, dividend, divisor, h, i, m, n, ref1, x;
-    h = 0;
-    i = 0;
-    m = 0;
-    n = 0;
-    x = 0;
-    save();
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    h = tos;
-    dividend = tos;
-    push(p1);
-    push(p3);
-    m = coeff() - 1;
-    divisor = tos;
-    push(p2);
-    push(p3);
-    n = coeff() - 1;
-    x = m - n;
-    push_integer(0);
-    p5 = pop();
-    while (x >= 0) {
-      push(stack[dividend + m]);
-      push(stack[divisor + n]);
-      divide();
-      p4 = pop();
-      for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac <= ref1 : ac >= ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        push(stack[dividend + x + i]);
-        push(stack[divisor + i]);
-        push(p4);
-        multiply();
-        subtract();
-        stack[dividend + x + i] = pop();
-      }
-      push(p5);
-      push(p4);
-      push(p3);
-      push_integer(x);
-      power();
-      multiply();
-      add();
-      p5 = pop();
-      m--;
-      x--;
-    }
-    tos = h;
-    push(p5);
-    return restore();
-  };
-
-  DEBUG = 0;
-
-  Eval_rationalize = function() {
-    push(cadr(p1));
-    Eval();
-    return rationalize();
-  };
-
-  rationalize = function() {
-    var x;
-    x = expanding;
-    save();
-    yyrationalize();
-    restore();
-    return expanding = x;
-  };
-
-  yyrationalize = function() {
-    p1 = pop();
-    if (istensor(p1)) {
-      __rationalize_tensor();
-      return;
-    }
-    expanding = 0;
-    if (car(p1) !== symbol(ADD)) {
-      push(p1);
-      return;
-    }
-    if (DEBUG) {
-      printf("rationalize: this is the input expr:\n");
-      printline(p1);
-    }
-    push(one);
-    multiply_denominators(p1);
-    p2 = pop();
-    if (DEBUG) {
-      printf("rationalize: this is the common denominator:\n");
-      printline(p2);
-    }
-    push(zero);
-    p3 = cdr(p1);
-    while (iscons(p3)) {
-      push(p2);
-      push(car(p3));
-      multiply();
-      add();
-      p3 = cdr(p3);
-    }
-    if (DEBUG) {
-      printf("rationalize: original expr times common denominator:\n");
-      printline(stack[tos - 1]);
-    }
-    Condense();
-    if (DEBUG) {
-      printf("rationalize: after factoring:\n");
-      printline(stack[tos - 1]);
-    }
-    push(p2);
-    divide();
-    if (DEBUG) {
-      printf("rationalize: after dividing by common denom. (and we're done):\n");
-      return printline(stack[tos - 1]);
-    }
-  };
-
-  multiply_denominators = function(p) {
-    var results;
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        multiply_denominators_term(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      return multiply_denominators_term(p);
-    }
-  };
-
-  multiply_denominators_term = function(p) {
-    var results;
-    if (car(p) === symbol(MULTIPLY)) {
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        multiply_denominators_factor(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      return multiply_denominators_factor(p);
-    }
-  };
-
-  multiply_denominators_factor = function(p) {
-    if (car(p) !== symbol(POWER)) {
-      return;
-    }
-    push(p);
-    p = caddr(p);
-    if (isnegativenumber(p)) {
-      inverse();
-      __lcm();
-      return;
-    }
-    if (car(p) === symbol(MULTIPLY) && isnegativenumber(cadr(p))) {
-      inverse();
-      __lcm();
-      return;
-    }
-    return pop();
-  };
-
-  __rationalize_tensor = function() {
-    var ac, i, n, ref1;
-    i = 0;
-    push(p1);
-    Eval();
-    p1 = pop();
-    if (!istensor(p1)) {
-      push(p1);
-      return;
-    }
-    n = p1.tensor.nelem;
-    for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(p1.tensor.elem[i]);
-      rationalize();
-      p1.tensor.elem[i] = pop();
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    return push(p1);
-  };
-
-  __lcm = function() {
-    save();
-    p1 = pop();
-    p2 = pop();
-    push(p1);
-    push(p2);
-    multiply();
-    push(p1);
-    push(p2);
-    gcd();
-    divide();
-    return restore();
-  };
-
-
-  /*
-   Returns the real part of complex z
-  
-  	z		real(z)
-  	-		-------
-  
-  	a + i b		a
-  
-  	exp(i a)	cos(a)
-   */
-
-  Eval_real = function() {
-    push(cadr(p1));
-    Eval();
-    return real();
-  };
-
-  real = function() {
-    save();
-    rect();
-    p1 = pop();
-    push(p1);
-    push(p1);
-    conjugate();
-    add();
-    push_integer(2);
-    divide();
-    return restore();
-  };
-
-
-  /*
-  Convert complex z to rectangular form
-  
-  	Input:		push	z
-  
-  	Output:		Result on stack
-   */
-
-  Eval_rect = function() {
-    push(cadr(p1));
-    Eval();
-    return rect();
-  };
-
-  rect = function() {
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      push_integer(0);
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        rect();
-        add();
-        p1 = cdr(p1);
-      }
-    } else {
-      push(p1);
-      mag();
-      push(p1);
-      arg();
-      p1 = pop();
-      push(p1);
-      cosine();
-      push(imaginaryunit);
-      push(p1);
-      sine();
-      multiply();
-      add();
-      multiply();
-    }
-    return restore();
-  };
-
-  Eval_roots = function() {
-    p2 = cadr(p1);
-    if (car(p2) === symbol(SETQ) || car(p2) === symbol(TESTEQ)) {
-      push(cadr(p2));
-      Eval();
-      push(caddr(p2));
-      Eval();
-      subtract();
-    } else {
-      push(p2);
-      Eval();
-      p2 = pop();
-      if (car(p2) === symbol(SETQ) || car(p2) === symbol(TESTEQ)) {
-        push(cadr(p2));
-        Eval();
-        push(caddr(p2));
-        Eval();
-        subtract();
-      } else {
-        push(p2);
-      }
-    }
-    push(caddr(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p2);
-    }
-    p2 = pop();
-    p1 = pop();
-    if (!ispoly(p1, p2)) {
-      stop("roots: 1st argument is not a polynomial");
-    }
-    push(p1);
-    push(p2);
-    return roots();
-  };
-
-  hasImaginaryCoeff = function() {
-    var ac, h, i, imaginaryCoefficients, k, ref1;
-    polycoeff = tos;
-    push(p1);
-    push(p2);
-    k = coeff();
-    imaginaryCoefficients = false;
-    h = tos;
-    for (i = ac = ref1 = k; ac > 0; i = ac += -1) {
-      if (iscomplexnumber(stack[tos - i])) {
-        imaginaryCoefficients = true;
-        break;
-      }
-    }
-    tos -= k;
-    return imaginaryCoefficients;
-  };
-
-  roots = function() {
-    var ac, h, i, n, ref1;
-    h = 0;
-    i = 0;
-    n = 0;
-    h = tos - 2;
-    roots2();
-    n = tos - h;
-    if (n === 0) {
-      stop("roots: the polynomial is not factorable, try nroots");
-    }
-    if (n === 1) {
-      return;
-    }
-    sort_stack(n);
-    save();
-    p1 = alloc_tensor(n);
-    p1.tensor.ndim = 1;
-    p1.tensor.dim[0] = n;
-    for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p1.tensor.elem[i] = stack[h + i];
-    }
-    tos = h;
-    push(p1);
-    return restore();
-  };
-
-  roots2 = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    push(p1);
-    push(p2);
-    if (!hasImaginaryCoeff()) {
-      factorpoly();
-      p1 = pop();
-    } else {
-      pop();
-      pop();
-    }
-    if (car(p1) === symbol(MULTIPLY)) {
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        roots3();
-        p1 = cdr(p1);
-      }
-    } else {
-      push(p1);
-      push(p2);
-      roots3();
-    }
-    return restore();
-  };
-
-  roots3 = function() {
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (car(p1) === symbol(POWER) && ispoly(cadr(p1), p2) && isposint(caddr(p1))) {
-      push(cadr(p1));
-      push(p2);
-      mini_solve();
-    } else if (ispoly(p1, p2)) {
-      push(p1);
-      push(p2);
-      mini_solve();
-    }
-    return restore();
-  };
-
-  mini_solve = function() {
-    var C_CHECKED_AS_NOT_ZERO, R_18_a_b_c_d, R_27_a2_d, R_2_b3, R_3_a, R_3_a_C, R_3_a_c, R_4_DELTA03, R_6_a, R_6_a_C, R_C, R_C_over_3a, R_C_simplified_toCheckIfZero, R_DELTA0, R_DELTA0_toBeCheckedIfZero, R_DELTA1, R_Q, R_a_b_c, R_a_c, R_b2, R_b2_c2, R_b3, R_c2, R_c3, R_determinant, R_m27_a2_d2, R_m4_a_c3, R_m4_b3_d, R_m9_a_b_c, R_m_b_over_3a, flipSignOFQSoCIsNotZero, i_sqrt3, n, one_minus_i_sqrt3, one_plus_i_sqrt3, root_solution;
-    n = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    push(p1);
-    push(p2);
-    n = coeff();
-    if (n === 2) {
-      p3 = pop();
-      p4 = pop();
-      push(p4);
-      push(p3);
-      divide();
-      negate();
-      restore();
-      return;
-    }
-    if (n === 3) {
-      p3 = pop();
-      p4 = pop();
-      p5 = pop();
-      push(p4);
-      push(p4);
-      multiply();
-      push_integer(4);
-      push(p3);
-      multiply();
-      push(p5);
-      multiply();
-      subtract();
-      push_rational(1, 2);
-      power();
-      p6 = pop();
-      push(p6);
-      push(p4);
-      subtract();
-      push(p3);
-      divide();
-      push_rational(1, 2);
-      multiply();
-      push(p6);
-      push(p4);
-      add();
-      negate();
-      push(p3);
-      divide();
-      push_rational(1, 2);
-      multiply();
-      restore();
-      return;
-    }
-    if (n === 4) {
-      p3 = pop();
-      p4 = pop();
-      p5 = pop();
-      p6 = pop();
-      push(p5);
-      push(p5);
-      multiply();
-      R_c2 = pop();
-      push(R_c2);
-      push(p5);
-      multiply();
-      R_c3 = pop();
-      push(p4);
-      push(p4);
-      multiply();
-      R_b2 = pop();
-      push(R_b2);
-      push(p4);
-      multiply();
-      R_b3 = pop();
-      push(R_b3);
-      push(p6);
-      push_integer(-4);
-      multiply();
-      multiply();
-      R_m4_b3_d = pop();
-      push(R_b3);
-      push_integer(2);
-      multiply();
-      R_2_b3 = pop();
-      push_integer(3);
-      push(p3);
-      multiply();
-      R_3_a = pop();
-      push(R_3_a);
-      push_integer(9);
-      multiply();
-      push(p3);
-      multiply();
-      push(p6);
-      multiply();
-      R_27_a2_d = pop();
-      push(R_27_a2_d);
-      push(p6);
-      multiply();
-      negate();
-      R_m27_a2_d2 = pop();
-      push(R_3_a);
-      push_integer(2);
-      multiply();
-      R_6_a = pop();
-      push(p3);
-      push(p5);
-      multiply();
-      R_a_c = pop();
-      push(R_a_c);
-      push(p4);
-      multiply();
-      R_a_b_c = pop();
-      push(R_a_c);
-      push_integer(3);
-      multiply();
-      R_3_a_c = pop();
-      push_integer(-4);
-      push(p3);
-      push(R_c3);
-      multiply();
-      multiply();
-      R_m4_a_c3 = pop();
-      push(R_a_b_c);
-      push_integer(9);
-      multiply();
-      negate();
-      R_m9_a_b_c = pop();
-      push(R_m9_a_b_c);
-      push(p6);
-      push_integer(-2);
-      multiply();
-      multiply();
-      R_18_a_b_c_d = pop();
-      push(R_b2);
-      push(R_3_a_c);
-      subtract();
-      R_DELTA0 = pop();
-      push(R_b2);
-      push(R_c2);
-      multiply();
-      R_b2_c2 = pop();
-      push(R_DELTA0);
-      push_integer(3);
-      power();
-      push_integer(4);
-      multiply();
-      R_4_DELTA03 = pop();
-      push(R_DELTA0);
-      simplify();
-      Eval();
-      yyfloat();
-      Eval();
-      absval();
-      R_DELTA0_toBeCheckedIfZero = pop();
-      push(R_18_a_b_c_d);
-      push(R_m4_b3_d);
-      push(R_b2_c2);
-      push(R_m4_a_c3);
-      push(R_m27_a2_d2);
-      add();
-      add();
-      add();
-      add();
-      simplify();
-      Eval();
-      yyfloat();
-      Eval();
-      absval();
-      R_determinant = pop();
-      push(R_2_b3);
-      push(R_m9_a_b_c);
-      push(R_27_a2_d);
-      add();
-      add();
-      R_DELTA1 = pop();
-      push(R_DELTA1);
-      push_integer(2);
-      power();
-      push(R_4_DELTA03);
-      subtract();
-      push_rational(1, 2);
-      power();
-      R_Q = pop();
-      push(p4);
-      negate();
-      push(R_3_a);
-      divide();
-      R_m_b_over_3a = pop();
-      if (iszero(R_determinant)) {
-        if (iszero(R_DELTA0_toBeCheckedIfZero)) {
-          push(R_m_b_over_3a);
-          restore();
-          return;
-        } else {
-          push(p3);
-          push(p6);
-          push_integer(9);
-          multiply();
-          multiply();
-          push(p4);
-          push(p5);
-          multiply();
-          subtract();
-          push(R_DELTA0);
-          push_integer(2);
-          multiply();
-          divide();
-          root_solution = pop();
-          push(root_solution);
-          push(root_solution);
-          push(R_a_b_c);
-          push_integer(4);
-          multiply();
-          push(p3);
-          push(p3);
-          push(p6);
-          push_integer(9);
-          multiply();
-          multiply();
-          multiply();
-          negate();
-          push(R_b3);
-          negate();
-          add();
-          add();
-          push(p3);
-          push(R_DELTA0);
-          multiply();
-          divide();
-          restore();
-          return;
-        }
-      }
-      C_CHECKED_AS_NOT_ZERO = false;
-      flipSignOFQSoCIsNotZero = false;
-      while (!C_CHECKED_AS_NOT_ZERO) {
-        push(R_Q);
-        if (flipSignOFQSoCIsNotZero) {
-          negate();
-        }
-        push(R_DELTA1);
-        add();
-        push_rational(1, 2);
-        multiply();
-        push_rational(1, 3);
-        power();
-        R_C = pop();
-        push(R_C);
-        simplify();
-        Eval();
-        yyfloat();
-        Eval();
-        absval();
-        R_C_simplified_toCheckIfZero = pop();
-        if (iszero(R_C_simplified_toCheckIfZero)) {
-          flipSignOFQSoCIsNotZero = true;
-        } else {
-          C_CHECKED_AS_NOT_ZERO = true;
-        }
-      }
-      push(R_C);
-      push(R_3_a);
-      multiply();
-      R_3_a_C = pop();
-      push(R_3_a_C);
-      push_integer(2);
-      multiply();
-      R_6_a_C = pop();
-      push(imaginaryunit);
-      push_integer(3);
-      push_rational(1, 2);
-      power();
-      multiply();
-      i_sqrt3 = pop();
-      push_integer(1);
-      push(i_sqrt3);
-      add();
-      one_plus_i_sqrt3 = pop();
-      push_integer(1);
-      push(i_sqrt3);
-      subtract();
-      one_minus_i_sqrt3 = pop();
-      push(R_C);
-      push(R_3_a);
-      divide();
-      R_C_over_3a = pop();
-      push(R_m_b_over_3a);
-      push(R_C_over_3a);
-      negate();
-      push(R_DELTA0);
-      push(R_3_a_C);
-      divide();
-      negate();
-      add();
-      add();
-      simplify();
-      push(R_m_b_over_3a);
-      push(R_C_over_3a);
-      push(one_plus_i_sqrt3);
-      multiply();
-      push_integer(2);
-      divide();
-      push(one_minus_i_sqrt3);
-      push(R_DELTA0);
-      multiply();
-      push(R_6_a_C);
-      divide();
-      add();
-      add();
-      simplify();
-      push(R_m_b_over_3a);
-      push(R_C_over_3a);
-      push(one_minus_i_sqrt3);
-      multiply();
-      push_integer(2);
-      divide();
-      push(one_plus_i_sqrt3);
-      push(R_DELTA0);
-      multiply();
-      push(R_6_a_C);
-      divide();
-      add();
-      add();
-      simplify();
-      restore();
-      return;
-    }
-    tos -= n;
-    return restore();
-  };
-
-  T_INTEGER = 1001;
-
-  T_DOUBLE = 1002;
-
-  T_SYMBOL = 1003;
-
-  T_FUNCTION = 1004;
-
-  T_NEWLINE = 1006;
-
-  T_STRING = 1007;
-
-  T_GTEQ = 1008;
-
-  T_LTEQ = 1009;
-
-  T_EQ = 1010;
-
-  token = "";
-
-  newline_flag = 0;
-
-  meta_mode = 0;
-
-  input_str = 0;
-
-  scan_str = 0;
-
-  token_str = 0;
-
-  token_buf = 0;
-
-  scanned = "";
-
-  scan = function(s) {
-    if (DEBUG) {
-      console.log("#### scanning " + s);
-    }
-    scanned = s;
-    meta_mode = 0;
-    expanding++;
-    input_str = 0;
-    scan_str = 0;
-    get_next_token();
-    if (token === "") {
-      push(symbol(NIL));
-      expanding--;
-      return 0;
-    }
-    scan_stmt();
-    expanding--;
-    return token_str - input_str;
-  };
-
-  scan_meta = function(s) {
-    scanned = s;
-    meta_mode = 1;
-    expanding++;
-    input_str = 0;
-    scan_str = 0;
-    get_next_token();
-    if (token === "") {
-      push(symbol(NIL));
-      expanding--;
-      return 0;
-    }
-    scan_stmt();
-    expanding--;
-    return token_str - input_str;
-  };
-
-  scan_stmt = function() {
-    scan_relation();
-    if (token === '=') {
-      get_next_token();
-      push_symbol(SETQ);
-      swap();
-      scan_relation();
-      return list(3);
-    }
-  };
-
-  scan_relation = function() {
-    scan_expression();
-    switch (token) {
-      case T_EQ:
-        push_symbol(TESTEQ);
-        swap();
-        get_next_token();
-        scan_expression();
-        return list(3);
-      case T_LTEQ:
-        push_symbol(TESTLE);
-        swap();
-        get_next_token();
-        scan_expression();
-        return list(3);
-      case T_GTEQ:
-        push_symbol(TESTGE);
-        swap();
-        get_next_token();
-        scan_expression();
-        return list(3);
-      case '<':
-        push_symbol(TESTLT);
-        swap();
-        get_next_token();
-        scan_expression();
-        return list(3);
-      case '>':
-        push_symbol(TESTGT);
-        swap();
-        get_next_token();
-        scan_expression();
-        return list(3);
-    }
-  };
-
-  scan_expression = function() {
-    var h;
-    h = tos;
-    switch (token) {
-      case '+':
-        get_next_token();
-        scan_term();
-        break;
-      case '-':
-        get_next_token();
-        scan_term();
-        negate();
-        break;
-      default:
-        scan_term();
-    }
-    while (newline_flag === 0 && (token === '+' || token === '-')) {
-      if (token === '+') {
-        get_next_token();
-        scan_term();
-      } else {
-        get_next_token();
-        scan_term();
-        negate();
-      }
-    }
-    if (tos - h > 1) {
-      list(tos - h);
-      push_symbol(ADD);
-      swap();
-      return cons();
-    }
-  };
-
-  is_factor = function() {
-    switch (token) {
-      case '*':
-      case '/':
-        return 1;
-      case '(':
-      case T_SYMBOL:
-      case T_FUNCTION:
-      case T_INTEGER:
-      case T_DOUBLE:
-      case T_STRING:
-        if (newline_flag) {
-          scan_str = token_str;
-          return 0;
-        } else {
-          return 1;
-        }
-    }
-    return 0;
-  };
-
-  scan_term = function() {
-    var h;
-    h = tos;
-    scan_power();
-    if (tos > h && isrational(stack[tos - 1]) && equaln(stack[tos - 1], 1)) {
-      pop();
-    }
-    while (is_factor()) {
-      if (token === '*') {
-        get_next_token();
-        scan_power();
-      } else if (token === '/') {
-        get_next_token();
-        scan_power();
-        inverse();
-      } else {
-        scan_power();
-      }
-      if (tos > h + 1 && isnum(stack[tos - 2]) && isnum(stack[tos - 1])) {
-        multiply();
-      }
-      if (tos > h && isrational(stack[tos - 1]) && equaln(stack[tos - 1], 1)) {
-        pop();
-      }
-    }
-    if (h === tos) {
-      return push_integer(1);
-    } else if (tos - h > 1) {
-      list(tos - h);
-      push_symbol(MULTIPLY);
-      swap();
-      return cons();
-    }
-  };
-
-  scan_power = function() {
-    scan_factor();
-    if (token === '^') {
-      get_next_token();
-      push_symbol(POWER);
-      swap();
-      scan_power();
-      return list(3);
-    }
-  };
-
-  scan_factor = function() {
-    var h, results;
-    h = tos;
-    if (token === '(') {
-      scan_subexpr();
-    } else if (token === T_SYMBOL) {
-      scan_symbol();
-    } else if (token === T_FUNCTION) {
-      scan_function_call();
-    } else if (token === T_INTEGER) {
-      bignum_scan_integer(token_buf);
-      get_next_token();
-    } else if (token === T_DOUBLE) {
-      bignum_scan_float(token_buf);
-      get_next_token();
-    } else if (token === T_STRING) {
-      scan_string();
-    } else {
-      scan_error("syntax error");
-    }
-    if (token === '[') {
-      get_next_token();
-      push_symbol(INDEX);
-      swap();
-      scan_expression();
-      while (token === ',') {
-        get_next_token();
-        scan_expression();
-      }
-      if (token !== ']') {
-        scan_error("] expected");
-      }
-      get_next_token();
-      list(tos - h);
-    }
-    results = [];
-    while (token === '!') {
-      get_next_token();
-      push_symbol(FACTORIAL);
-      swap();
-      results.push(list(2));
-    }
-    return results;
-  };
-
-  scan_symbol = function() {
-    if (token !== T_SYMBOL) {
-      scan_error("symbol expected");
-    }
-    if (meta_mode && token_buf.length === 1) {
-      switch (token_buf[0]) {
-        case 'a':
-          push(symbol(METAA));
-          break;
-        case 'b':
-          push(symbol(METAB));
-          break;
-        case 'x':
-          push(symbol(METAX));
-          break;
-        default:
-          push(usr_symbol(token_buf));
-      }
-    } else {
-      push(usr_symbol(token_buf));
-    }
-    return get_next_token();
-  };
-
-  scan_string = function() {
-    new_string(token_buf);
-    return get_next_token();
-  };
-
-  scan_function_call = function() {
-    var n, p;
-    n = 1;
-    p = new U();
-    p = usr_symbol(token_buf);
-    push(p);
-    get_next_token();
-    get_next_token();
-    if (token !== ')') {
-      scan_stmt();
-      n++;
-      while (token === ',') {
-        get_next_token();
-        scan_stmt();
-        n++;
-      }
-    }
-    if (token !== ')') {
-      scan_error(") expected");
-    }
-    get_next_token();
-    return list(n);
-  };
-
-  scan_subexpr = function() {
-    var n;
-    n = 0;
-    if (token !== '(') {
-      scan_error("( expected");
-    }
-    get_next_token();
-    scan_stmt();
-    if (token === ',') {
-      n = 1;
-      while (token === ',') {
-        get_next_token();
-        scan_stmt();
-        n++;
-      }
-      build_tensor(n);
-    }
-    if (token !== ')') {
-      scan_error(") expected");
-    }
-    return get_next_token();
-  };
-
-  scan_error = function(errmsg) {
-    errorMessage = "";
-    while (input_str !== scan_str) {
-      if ((scanned[input_str] === '\n' || scanned[input_str] === '\r') && input_str + 1 === scan_str) {
-        break;
-      }
-      errorMessage += scanned[input_str++];
-    }
-    errorMessage += " ? ";
-    while (scanned[input_str] && (scanned[input_str] !== '\n' && scanned[input_str] !== '\r')) {
-      errorMessage += scanned[input_str++];
-    }
-    errorMessage += '\n';
-    return stop(errmsg);
-  };
-
-  build_tensor = function(n) {
-    var ac, i, ref1;
-    i = 0;
-    save();
-    p2 = alloc_tensor(n);
-    p2.tensor.ndim = 1;
-    p2.tensor.dim[0] = n;
-    for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p2.tensor.elem[i] = stack[tos - n + i];
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    tos -= n;
-    push(p2);
-    return restore();
-  };
-
-  get_next_token = function() {
-    newline_flag = 0;
-    while (1.) {
-      get_token();
-      if (token !== T_NEWLINE) {
-        break;
-      }
-      newline_flag = 1;
-    }
-    if (DEBUG) {
-      return console.log("get_next_token token: " + token);
-    }
-  };
-
-  get_token = function() {
-    while (isspace(scanned[scan_str])) {
-      if (scanned[scan_str] === '\n' || scanned[scan_str] === '\r') {
-        token = T_NEWLINE;
-        scan_str++;
-        return;
-      }
-      scan_str++;
-    }
-    token_str = scan_str;
-    if (scan_str === scanned.length) {
-      token = "";
-      return;
-    }
-    if (isdigit(scanned[scan_str]) || scanned[scan_str] === '.') {
-      while (isdigit(scanned[scan_str])) {
-        scan_str++;
-      }
-      if (scanned[scan_str] === '.') {
-        scan_str++;
-        while (isdigit(scanned[scan_str])) {
-          scan_str++;
-        }
-        if (scanned[scan_str] === 'e' && (scanned[scan_str + 1] === '+' || scanned[scan_str + 1] === '-' || isdigit(scanned[scan_str + 1]))) {
-          scan_str += 2;
-          while (isdigit(scanned[scan_str])) {
-            scan_str++;
-          }
-        }
-        token = T_DOUBLE;
-      } else {
-        token = T_INTEGER;
-      }
-      update_token_buf(token_str, scan_str);
-      return;
-    }
-    if (isalpha(scanned[scan_str])) {
-      while (isalnum(scanned[scan_str])) {
-        scan_str++;
-      }
-      if (scanned[scan_str] === '(') {
-        token = T_FUNCTION;
-      } else {
-        token = T_SYMBOL;
-      }
-      update_token_buf(token_str, scan_str);
-      return;
-    }
-    if (scanned[scan_str] === '"') {
-      scan_str++;
-      while (scanned[scan_str] !== '"') {
-        if (scan_str === scanned.length || scanned[scan_str] === '\n' || scanned[scan_str] === '\r') {
-          scan_error("runaway string");
-        }
-        scan_str++;
-      }
-      scan_str++;
-      token = T_STRING;
-      update_token_buf(token_str + 1, scan_str - 1);
-      return;
-    }
-    if (scanned[scan_str] === '#' || scanned[scan_str] === '-' && scanned[scan_str + 1] === '-') {
-      while (scanned[scan_str] && scanned[scan_str] !== '\n' && scanned[scan_str] !== '\r') {
-        scan_str++;
-      }
-      if (scanned[scan_str]) {
-        scan_str++;
-      }
-      token = T_NEWLINE;
-      return;
-    }
-    if (scanned[scan_str] === '=' && scanned[scan_str + 1] === '=') {
-      scan_str += 2;
-      token = T_EQ;
-      return;
-    }
-    if (scanned[scan_str] === '<' && scanned[scan_str + 1] === '=') {
-      scan_str += 2;
-      token = T_LTEQ;
-      return;
-    }
-    if (scanned[scan_str] === '>' && scanned[scan_str + 1] === '=') {
-      scan_str += 2;
-      token = T_GTEQ;
-      return;
-    }
-    return token = scanned[scan_str++];
-  };
-
-  update_token_buf = function(a, b) {
-    return token_buf = scanned.substring(a, b);
-  };
-
-  $.scan = scan;
-
-  Eval_sgn = function() {
-    push(cadr(p1));
-    Eval();
-    return sgn();
-  };
-
-  sgn = function() {
-    save();
-    yysgn();
-    return restore();
-  };
-
-  yysgn = function() {
-    p1 = pop();
-    if (isdouble(p1)) {
-      if (p1.d > 0) {
-        push_integer(1);
-        return;
-      } else {
-        if (p1.d === 0) {
-          push_integer(1);
-          return;
-        } else {
-          push_integer(-1);
-          return;
-        }
-      }
-    }
-    if (isrational(p1)) {
-      if (MSIGN(mmul(p1.q.a, p1.q.b)) === -1) {
-        push_integer(-1);
-        return;
-      } else {
-        if (MZERO(mmul(p1.q.a, p1.q.b))) {
-          push_integer(0);
-          return;
-        } else {
-          push_integer(1);
-          return;
-        }
-      }
-    }
-    if (iscomplexnumber(p1)) {
-      push_integer(-1);
-      push(p1);
-      absval();
-      power();
-      push(p1);
-      multiply();
-      return;
-    }
-    if (isnegativeterm(p1)) {
-      push_symbol(SGN);
-      push(p1);
-      negate();
-      list(2);
-      push_integer(-1);
-      multiply();
-      return;
-    }
-
-    /*
-    	push_integer(2)
-    	push(p1)
-    	heaviside()
-    	multiply()
-    	push_integer(-1)
-    	add()
-     */
-    push_symbol(SGN);
-    push(p1);
-    return list(2);
-  };
-
-  Eval_shape = function() {
-    push(cadr(p1));
-    Eval();
-    return shape();
-  };
-
-  shape = function() {
-    var ac, ad, ai, an, i, ndim, ref1, ref2, t;
-    i = 0;
-    ndim = 0;
-    t = 0;
-    ai = [];
-    an = [];
-    for (i = ac = 0, ref1 = MAXDIM; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      ai[i] = 0;
-      an[i] = 0;
-    }
-    save();
-    p1 = pop();
-    if (!istensor(p1)) {
-      if (!iszero(p1)) {
-        stop("transpose: tensor expected, 1st arg is not a tensor");
-      }
-      push(zero);
-      restore();
-      return;
-    }
-    ndim = p1.tensor.ndim;
-    p2 = alloc_tensor(ndim);
-    p2.tensor.ndim = 1;
-    p2.tensor.dim[0] = ndim;
-    for (i = ad = 0, ref2 = ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push_integer(p1.tensor.dim[i]);
-      p2.tensor.elem[i] = pop();
-    }
-    push(p2);
-    return restore();
-  };
-
-
-  /*
-   Simplify factorials
-  
-  The following script
-  
-  	F(n,k) = k binomial(n,k)
-  	(F(n,k) + F(n,k-1)) / F(n+1,k)
-  
-  generates
-  
-         k! n!             n! (1 - k + n)!              k! n!
-   -------------------- + -------------------- - ----------------------
-   (-1 + k)! (1 + n)!     (1 + n)! (-k + n)!     k (-1 + k)! (1 + n)!
-  
-  Simplify each term to get
-  
-     k       1 - k + n       1
-  ------- + ----------- - -------
-   1 + n       1 + n       1 + n
-  
-  Then simplify the sum to get
-  
-     n
-  -------
-   1 + n
-   */
-
-  Eval_simfac = function() {
-    push(cadr(p1));
-    Eval();
-    return simfac();
-  };
-
-  simfac = function() {
-    var h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      h = tos;
-      p1 = cdr(p1);
-      while (p1 !== symbol(NIL)) {
-        push(car(p1));
-        simfac_term();
-        p1 = cdr(p1);
-      }
-      add_all(tos - h);
-    } else {
-      push(p1);
-      simfac_term();
-    }
-    return restore();
-  };
-
-
-  /*
-  void
-  simfac(void)
-  {
-  	int h
-  	save()
-  	p1 = pop()
-  	if (car(p1) == symbol(ADD)) {
-  		h = tos
-  		p1 = cdr(p1)
-  		while (p1 != symbol(NIL)) {
-  			push(car(p1))
-  			simfac_term()
-  			p1 = cdr(p1)
-  		}
-  		addk(tos - h)
-  		p1 = pop()
-  		if (find(p1, symbol(FACTORIAL))) {
-  			push(p1)
-  			if (car(p1) == symbol(ADD)) {
-  				Condense()
-  				simfac_term()
-  			}
-  		}
-  	} else {
-  		push(p1)
-  		simfac_term()
-  	}
-  	restore()
-  }
-  
-  #endif
-   */
-
-  simfac_term = function() {
-    var doNothing, h;
-    h = 0;
-    save();
-    p1 = pop();
-    if (car(p1) !== symbol(MULTIPLY)) {
-      push(p1);
-      restore();
-      return;
-    }
-    h = tos;
-    p1 = cdr(p1);
-    while (p1 !== symbol(NIL)) {
-      push(car(p1));
-      p1 = cdr(p1);
-    }
-    while (yysimfac(h)) {
-      doNothing = 1;
-    }
-    multiply_all_noexpand(tos - h);
-    return restore();
-  };
-
-  yysimfac = function(h) {
-    var ac, ad, i, j, ref1, ref2, ref3, ref4;
-    i = 0;
-    j = 0;
-    for (i = ac = ref1 = h, ref2 = tos; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-      p1 = stack[i];
-      for (j = ad = ref3 = h, ref4 = tos; ref3 <= ref4 ? ad < ref4 : ad > ref4; j = ref3 <= ref4 ? ++ad : --ad) {
-        if (i === j) {
-          continue;
-        }
-        p2 = stack[j];
-        if (car(p1) === symbol(FACTORIAL) && car(p2) === symbol(POWER) && isminusone(caddr(p2)) && equal(cadr(p1), cadr(p2))) {
-          push(cadr(p1));
-          push(one);
-          subtract();
-          factorial();
-          stack[i] = pop();
-          stack[j] = one;
-          return 1;
-        }
-        if (car(p2) === symbol(POWER) && isminusone(caddr(p2)) && caadr(p2) === symbol(FACTORIAL) && equal(p1, cadadr(p2))) {
-          push(p1);
-          push_integer(-1);
-          add();
-          factorial();
-          reciprocate();
-          stack[i] = pop();
-          stack[j] = one;
-          return 1;
-        }
-        if (car(p2) === symbol(FACTORIAL)) {
-          push(p1);
-          push(cadr(p2));
-          subtract();
-          p3 = pop();
-          if (isplusone(p3)) {
-            push(p1);
-            factorial();
-            stack[i] = pop();
-            stack[j] = one;
-            return 1;
-          }
-        }
-        if (car(p1) === symbol(POWER) && isminusone(caddr(p1)) && car(p2) === symbol(POWER) && isminusone(caddr(p2)) && caadr(p2) === symbol(FACTORIAL)) {
-          push(cadr(p1));
-          push(cadr(cadr(p2)));
-          subtract();
-          p3 = pop();
-          if (isplusone(p3)) {
-            push(cadr(p1));
-            factorial();
-            reciprocate();
-            stack[i] = pop();
-            stack[j] = one;
-            return 1;
-          }
-        }
-        if (car(p1) === symbol(FACTORIAL) && car(p2) === symbol(POWER) && isminusone(caddr(p2)) && caadr(p2) === symbol(FACTORIAL)) {
-          push(cadr(p1));
-          push(cadr(cadr(p2)));
-          subtract();
-          p3 = pop();
-          if (isplusone(p3)) {
-            stack[i] = cadr(p1);
-            stack[j] = one;
-            return 1;
-          }
-          if (isminusone(p3)) {
-            push(cadr(cadr(p2)));
-            reciprocate();
-            stack[i] = pop();
-            stack[j] = one;
-            return 1;
-          }
-          if (equaln(p3, 2)) {
-            stack[i] = cadr(p1);
-            push(cadr(p1));
-            push_integer(-1);
-            add();
-            stack[j] = pop();
-            return 1;
-          }
-          if (equaln(p3, -2)) {
-            push(cadr(cadr(p2)));
-            reciprocate();
-            stack[i] = pop();
-            push(cadr(cadr(p2)));
-            push_integer(-1);
-            add();
-            reciprocate();
-            stack[j] = pop();
-            return 1;
-          }
-        }
-      }
-    }
-    return 0;
-  };
-
-  Eval_simplify = function() {
-    push(cadr(p1));
-    Eval();
-    return simplify();
-  };
-
-  simplify = function() {
-    save();
-    simplify_main();
-    return restore();
-  };
-
-  simplify_main = function() {
-    p1 = pop();
-    if (istensor(p1)) {
-      simplify_tensor();
-      return;
-    }
-    if (Find(p1, symbol(FACTORIAL))) {
-      push(p1);
-      simfac();
-      p2 = pop();
-      push(p1);
-      rationalize();
-      simfac();
-      p3 = pop();
-      if (count(p2) < count(p3)) {
-        p1 = p2;
-      } else {
-        p1 = p3;
-      }
-    }
-    f1();
-    f2();
-    f3();
-    f4();
-    f5();
-    f9();
-    return push(p1);
-  };
-
-  simplify_tensor = function() {
-    var ac, ad, i, ref1, ref2;
-    i = 0;
-    p2 = alloc_tensor(p1.tensor.nelem);
-    p2.tensor.ndim = p1.tensor.ndim;
-    for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p2.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    for (i = ad = 0, ref2 = p1.tensor.nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(p1.tensor.elem[i]);
-      simplify();
-      p2.tensor.elem[i] = pop();
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (iszero(p2)) {
-      p2 = zero;
-    }
-    return push(p2);
-  };
-
-  count = function(p) {
-    var n;
-    if (iscons(p)) {
-      n = 0;
-      while (iscons(p)) {
-        n += count(car(p)) + 1;
-        p = cdr(p);
-      }
-    } else {
-      n = 1;
-    }
-    return n;
-  };
-
-  f1 = function() {
-    if (car(p1) !== symbol(ADD)) {
-      return;
-    }
-    push(p1);
-    rationalize();
-    p2 = pop();
-    if (count(p2) < count(p1)) {
-      return p1 = p2;
-    }
-  };
-
-  f2 = function() {
-    if (car(p1) !== symbol(ADD)) {
-      return;
-    }
-    push(p1);
-    Condense();
-    p2 = pop();
-    if (count(p2) <= count(p1)) {
-      return p1 = p2;
-    }
-  };
-
-  f3 = function() {
-    push(p1);
-    rationalize();
-    negate();
-    rationalize();
-    negate();
-    rationalize();
-    p2 = pop();
-    if (count(p2) < count(p1)) {
-      return p1 = p2;
-    }
-  };
-
-  f4 = function() {
-    if (iszero(p1)) {
-      return;
-    }
-    push(p1);
-    rationalize();
-    inverse();
-    rationalize();
-    inverse();
-    rationalize();
-    p2 = pop();
-    if (count(p2) < count(p1)) {
-      return p1 = p2;
-    }
-  };
-
-  simplify_trig = function() {
-    save();
-    p1 = pop();
-    f5();
-    push(p1);
-    return restore();
-  };
-
-  f5 = function() {
-    if (Find(p1, symbol(SIN)) === 0 && Find(p1, symbol(COS)) === 0) {
-      return;
-    }
-    p2 = p1;
-    trigmode = 1;
-    push(p2);
-    Eval();
-    p3 = pop();
-    trigmode = 2;
-    push(p2);
-    Eval();
-    p4 = pop();
-    trigmode = 0;
-    if (count(p4) < count(p3) || nterms(p4) < nterms(p3)) {
-      p3 = p4;
-    }
-    if (count(p3) < count(p1) || nterms(p3) < nterms(p1)) {
-      return p1 = p3;
-    }
-  };
-
-  f9 = function() {
-    if (car(p1) !== symbol(ADD)) {
-      return;
-    }
-    push_integer(0);
-    p2 = cdr(p1);
-    while (iscons(p2)) {
-      push(car(p2));
-      simplify();
-      add();
-      p2 = cdr(p2);
-    }
-    p2 = pop();
-    if (count(p2) < count(p1)) {
-      return p1 = p2;
-    }
-  };
-
-  nterms = function(p) {
-    if (car(p) !== symbol(ADD)) {
-      return 1;
-    } else {
-      return length(p) - 1;
-    }
-  };
-
-  Eval_sin = function() {
-    push(cadr(p1));
-    Eval();
-    return sine();
-  };
-
-  sine = function() {
-    save();
-    p1 = pop();
-    if (car(p1) === symbol(ADD)) {
-      sine_of_angle_sum();
-    } else {
-      sine_of_angle();
-    }
-    return restore();
-  };
-
-  sine_of_angle_sum = function() {
-    p2 = cdr(p1);
-    while (iscons(p2)) {
-      p4 = car(p2);
-      if (isnpi(p4)) {
-        push(p1);
-        push(p4);
-        subtract();
-        p3 = pop();
-        push(p3);
-        sine();
-        push(p4);
-        cosine();
-        multiply();
-        push(p3);
-        cosine();
-        push(p4);
-        sine();
-        multiply();
-        add();
-        return;
-      }
-      p2 = cdr(p2);
-    }
-    return sine_of_angle();
-  };
-
-  sine_of_angle = function() {
-    var d, n;
-    if (car(p1) === symbol(ARCSIN)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.sin(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (isnegative(p1)) {
-      push(p1);
-      negate();
-      sine();
-      negate();
-      return;
-    }
-    if (car(p1) === symbol(ARCTAN)) {
-      push(cadr(p1));
-      push_integer(1);
-      push(cadr(p1));
-      push_integer(2);
-      power();
-      add();
-      push_rational(-1, 2);
-      power();
-      multiply();
-      return;
-    }
-    push(p1);
-    push_integer(180);
-    multiply();
-    push_symbol(PI);
-    divide();
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push(symbol(SIN));
-      push(p1);
-      list(2);
-      return;
-    }
-    switch (n % 360) {
-      case 0:
-      case 180:
-        return push_integer(0);
-      case 30:
-      case 150:
-        return push_rational(1, 2);
-      case 210:
-      case 330:
-        return push_rational(-1, 2);
-      case 45:
-      case 135:
-        push_rational(1, 2);
-        push_integer(2);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 225:
-      case 315:
-        push_rational(-1, 2);
-        push_integer(2);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 60:
-      case 120:
-        push_rational(1, 2);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 240:
-      case 300:
-        push_rational(-1, 2);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 90:
-        return push_integer(1);
-      case 270:
-        return push_integer(-1);
-      default:
-        push(symbol(SIN));
-        push(p1);
-        return list(2);
-    }
-  };
-
-  Eval_sinh = function() {
-    push(cadr(p1));
-    Eval();
-    return ysinh();
-  };
-
-  ysinh = function() {
-    save();
-    yysinh();
-    return restore();
-  };
-
-  yysinh = function() {
-    var d;
-    d = 0.0;
-    p1 = pop();
-    if (car(p1) === symbol(ARCSINH)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.sinh(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (iszero(p1)) {
-      push(zero);
-      return;
-    }
-    push_symbol(SINH);
-    push(p1);
-    return list(2);
-  };
-
-
-  /*
-  	Substitute new expr for old expr in expr.
-  
-  	Input:	push	expr
-  
-  		push	old expr
-  
-  		push	new expr
-  
-  	Output:	Result on stack
-   */
-
-  subst = function() {
-    var ac, ad, i, ref1, ref2;
-    i = 0;
-    save();
-    p3 = pop();
-    p2 = pop();
-    if (p2 === symbol(NIL) || p3 === symbol(NIL)) {
-      restore();
-      return;
-    }
-    p1 = pop();
-    if (istensor(p1)) {
-      p4 = alloc_tensor(p1.tensor.nelem);
-      p4.tensor.ndim = p1.tensor.ndim;
-      for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        p4.tensor.dim[i] = p1.tensor.dim[i];
-      }
-      for (i = ad = 0, ref2 = p1.tensor.nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-        push(p1.tensor.elem[i]);
-        push(p2);
-        push(p3);
-        subst();
-        p4.tensor.elem[i] = pop();
-        if (p4.tensor.nelem !== p4.tensor.elem.length) {
-          console.log("something wrong in tensor dimensions");
-          debugger;
-        }
-      }
-      push(p4);
-    } else if (equal(p1, p2)) {
-      push(p3);
-    } else if (iscons(p1)) {
-      push(car(p1));
-      push(p2);
-      push(p3);
-      subst();
-      push(cdr(p1));
-      push(p2);
-      push(p3);
-      subst();
-      cons();
-    } else {
-      push(p1);
-    }
-    return restore();
-  };
-
-  Eval_tan = function() {
-    push(cadr(p1));
-    Eval();
-    return tangent();
-  };
-
-  tangent = function() {
-    save();
-    yytangent();
-    return restore();
-  };
-
-  yytangent = function() {
-    var d, n;
-    n = 0;
-    d = 0.0;
-    p1 = pop();
-    if (car(p1) === symbol(ARCTAN)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.tan(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (isnegative(p1)) {
-      push(p1);
-      negate();
-      tangent();
-      negate();
-      return;
-    }
-    push(p1);
-    push_integer(180);
-    multiply();
-    push_symbol(PI);
-    divide();
-    n = pop_integer();
-    if (n < 0 || n === 0x80000000) {
-      push(symbol(TAN));
-      push(p1);
-      list(2);
-      return;
-    }
-    switch (n % 360) {
-      case 0:
-      case 180:
-        return push_integer(0);
-      case 30:
-      case 210:
-        push_rational(1, 3);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 150:
-      case 330:
-        push_rational(-1, 3);
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return multiply();
-      case 45:
-      case 225:
-        return push_integer(1);
-      case 135:
-      case 315:
-        return push_integer(-1);
-      case 60:
-      case 240:
-        push_integer(3);
-        push_rational(1, 2);
-        return power();
-      case 120:
-      case 300:
-        push_integer(3);
-        push_rational(1, 2);
-        power();
-        return negate();
-      default:
-        push(symbol(TAN));
-        push(p1);
-        return list(2);
-    }
-  };
-
-  Eval_tanh = function() {
-    var d;
-    d = 0.0;
-    push(cadr(p1));
-    Eval();
-    p1 = pop();
-    if (car(p1) === symbol(ARCTANH)) {
-      push(cadr(p1));
-      return;
-    }
-    if (isdouble(p1)) {
-      d = Math.tanh(p1.d);
-      if (Math.abs(d) < 1e-10) {
-        d = 0.0;
-      }
-      push_double(d);
-      return;
-    }
-    if (iszero(p1)) {
-      push(zero);
-      return;
-    }
-    push_symbol(TANH);
-    push(p1);
-    return list(2);
-  };
-
-
-  /*
-  Taylor expansion of a function
-  
-  	push(F)
-  	push(X)
-  	push(N)
-  	push(A)
-  	taylor()
-   */
-
-  Eval_taylor = function() {
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      guess();
-    } else {
-      push(p2);
-    }
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push_integer(24);
-    } else {
-      push(p2);
-    }
-    p1 = cdr(p1);
-    push(car(p1));
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push_integer(0);
-    } else {
-      push(p2);
-    }
-    return taylor();
-  };
-
-  taylor = function() {
-    var ac, i, k, ref1;
-    i = 0;
-    k = 0;
-    save();
-    p4 = pop();
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    push(p3);
-    k = pop_integer();
-    if (k === 0x80000000) {
-      push_symbol(TAYLOR);
-      push(p1);
-      push(p2);
-      push(p3);
-      push(p4);
-      list(5);
-      restore();
-      return;
-    }
-    push(p1);
-    push(p2);
-    push(p4);
-    subst();
-    Eval();
-    push_integer(1);
-    p5 = pop();
-    for (i = ac = 1, ref1 = k; 1 <= ref1 ? ac <= ref1 : ac >= ref1; i = 1 <= ref1 ? ++ac : --ac) {
-      push(p1);
-      push(p2);
-      derivative();
-      p1 = pop();
-      if (iszero(p1)) {
-        break;
-      }
-      push(p5);
-      push(p2);
-      push(p4);
-      subtract();
-      multiply();
-      p5 = pop();
-      push(p1);
-      push(p2);
-      push(p4);
-      subst();
-      Eval();
-      push(p5);
-      multiply();
-      push_integer(i);
-      factorial();
-      divide();
-      add();
-    }
-    return restore();
-  };
-
-  Eval_tensor = function() {
-    var a, ac, ad, b, i, ndim, nelem, ref1, ref2;
-    i = 0;
-    ndim = 0;
-    nelem = 0;
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    nelem = p1.tensor.nelem;
-    ndim = p1.tensor.ndim;
-    p2 = alloc_tensor(nelem);
-    p2.tensor.ndim = ndim;
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p2.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    for (i = ad = 0, ref2 = nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(a[i]);
-      Eval();
-      b[i] = pop();
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    push(p2);
-    return promote_tensor();
-  };
-
-  tensor_plus_tensor = function() {
-    var a, ac, ad, ae, b, c, i, ndim, nelem, ref1, ref2, ref3;
-    i = 0;
-    ndim = 0;
-    nelem = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    ndim = p1.tensor.ndim;
-    if (ndim !== p2.tensor.ndim) {
-      push(symbol(NIL));
-      restore();
-      return;
-    }
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      if (p1.tensor.dim[i] !== p2.tensor.dim[i]) {
-        push(symbol(NIL));
-        restore();
-        return;
-      }
-    }
-    nelem = p1.tensor.nelem;
-    p3 = alloc_tensor(nelem);
-    p3.tensor.ndim = ndim;
-    for (i = ad = 0, ref2 = ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    c = p3.tensor.elem;
-    for (i = ae = 0, ref3 = nelem; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      push(a[i]);
-      push(b[i]);
-      add();
-      c[i] = pop();
-    }
-    push(p3);
-    return restore();
-  };
-
-  tensor_times_scalar = function() {
-    var a, ac, ad, b, i, ndim, nelem, ref1, ref2;
-    i = 0;
-    ndim = 0;
-    nelem = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    ndim = p1.tensor.ndim;
-    nelem = p1.tensor.nelem;
-    p3 = alloc_tensor(nelem);
-    p3.tensor.ndim = ndim;
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    a = p1.tensor.elem;
-    b = p3.tensor.elem;
-    for (i = ad = 0, ref2 = nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(a[i]);
-      push(p2);
-      multiply();
-      b[i] = pop();
-    }
-    push(p3);
-    return restore();
-  };
-
-  scalar_times_tensor = function() {
-    var a, ac, ad, b, i, ndim, nelem, ref1, ref2;
-    i = 0;
-    ndim = 0;
-    nelem = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    ndim = p2.tensor.ndim;
-    nelem = p2.tensor.nelem;
-    p3 = alloc_tensor(nelem);
-    p3.tensor.ndim = ndim;
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p3.tensor.dim[i] = p2.tensor.dim[i];
-    }
-    a = p2.tensor.elem;
-    b = p3.tensor.elem;
-    for (i = ad = 0, ref2 = nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(p1);
-      push(a[i]);
-      multiply();
-      b[i] = pop();
-    }
-    push(p3);
-    return restore();
-  };
-
-  is_square_matrix = function(p) {
-    if (istensor(p) && p.tensor.ndim === 2 && p.tensor.dim[0] === p.tensor.dim[1]) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  d_tensor_tensor = function() {
-    var a, ac, ad, ae, b, c, i, j, ndim, nelem, ref1, ref2, ref3;
-    i = 0;
-    j = 0;
-    ndim = 0;
-    nelem = 0;
-    ndim = p1.tensor.ndim;
-    nelem = p1.tensor.nelem;
-    if (ndim + 1 >= MAXDIM) {
-      push_symbol(DERIVATIVE);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    p3 = alloc_tensor(nelem * p2.tensor.nelem);
-    p3.tensor.ndim = ndim + 1;
-    for (i = ac = 0, ref1 = ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    p3.tensor.dim[ndim] = p2.tensor.dim[0];
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    c = p3.tensor.elem;
-    for (i = ad = 0, ref2 = nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      for (j = ae = 0, ref3 = p2.tensor.nelem; 0 <= ref3 ? ae < ref3 : ae > ref3; j = 0 <= ref3 ? ++ae : --ae) {
-        push(a[i]);
-        push(b[j]);
-        derivative();
-        c[i * p2.tensor.nelem + j] = pop();
-      }
-    }
-    return push(p3);
-  };
-
-  d_scalar_tensor = function() {
-    var a, ac, b, i, ref1;
-    p3 = alloc_tensor(p2.tensor.nelem);
-    p3.tensor.ndim = 1;
-    p3.tensor.dim[0] = p2.tensor.dim[0];
-    a = p2.tensor.elem;
-    b = p3.tensor.elem;
-    for (i = ac = 0, ref1 = p2.tensor.nelem; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(p1);
-      push(a[i]);
-      derivative();
-      b[i] = pop();
-    }
-    return push(p3);
-  };
-
-  d_tensor_scalar = function() {
-    var a, ac, ad, b, i, ref1, ref2;
-    i = 0;
-    p3 = alloc_tensor(p1.tensor.nelem);
-    p3.tensor.ndim = p1.tensor.ndim;
-    for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    a = p1.tensor.elem;
-    b = p3.tensor.elem;
-    for (i = ad = 0, ref2 = p1.tensor.nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      push(a[i]);
-      push(p2);
-      derivative();
-      b[i] = pop();
-    }
-    return push(p3);
-  };
-
-  compare_tensors = function(p1, p2) {
-    var ac, ad, i, ref1, ref2;
-    i = 0;
-    if (p1.tensor.ndim < p2.tensor.ndim) {
-      return -1;
-    }
-    if (p1.tensor.ndim > p2.tensor.ndim) {
-      return 1;
-    }
-    for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      if (p1.tensor.dim[i] < p2.tensor.dim[i]) {
-        return -1;
-      }
-      if (p1.tensor.dim[i] > p2.tensor.dim[i]) {
-        return 1;
-      }
-    }
-    for (i = ad = 0, ref2 = p1.tensor.nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      if (equal(p1.tensor.elem[i], p2.tensor.elem[i])) {
-        continue;
-      }
-      if (lessp(p1.tensor.elem[i], p2.tensor.elem[i])) {
-        return -1;
-      } else {
-        return 1;
-      }
-    }
-    return 0;
-  };
-
-  power_tensor = function() {
-    var ac, ad, i, k, n, ref1, ref2, results;
-    i = 0;
-    k = 0;
-    n = 0;
-    k = p1.tensor.ndim - 1;
-    if (p1.tensor.dim[0] !== p1.tensor.dim[k]) {
-      push_symbol(POWER);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    push(p2);
-    n = pop_integer();
-    if (n === 0x80000000) {
-      push_symbol(POWER);
-      push(p1);
-      push(p2);
-      list(3);
-      return;
-    }
-    if (n === 0) {
-      if (p1.tensor.ndim !== 2) {
-        stop("power(tensor,0) with tensor rank not equal to 2");
-      }
-      n = p1.tensor.dim[0];
-      p1 = alloc_tensor(n * n);
-      p1.tensor.ndim = 2;
-      p1.tensor.dim[0] = n;
-      p1.tensor.dim[1] = n;
-      for (i = ac = 0, ref1 = n; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-        p1.tensor.elem[n * i + i] = one;
-      }
-      if (p1.tensor.nelem !== p1.tensor.elem.length) {
-        console.log("something wrong in tensor dimensions");
-        debugger;
-      }
-      push(p1);
-      return;
-    }
-    if (n < 0) {
-      n = -n;
-      push(p1);
-      inv();
-      p1 = pop();
-    }
-    push(p1);
-    results = [];
-    for (i = ad = 1, ref2 = n; 1 <= ref2 ? ad < ref2 : ad > ref2; i = 1 <= ref2 ? ++ad : --ad) {
-      push(p1);
-      inner();
-      if (iszero(stack[tos - 1])) {
-        break;
-      } else {
-        results.push(void 0);
-      }
-    }
-    return results;
-  };
-
-  copy_tensor = function() {
-    var ac, ad, i, ref1, ref2;
-    i = 0;
-    save();
-    p1 = pop();
-    p2 = alloc_tensor(p1.tensor.nelem);
-    p2.tensor.ndim = p1.tensor.ndim;
-    for (i = ac = 0, ref1 = p1.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p2.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    for (i = ad = 0, ref2 = p1.tensor.nelem; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p2.tensor.elem[i] = p1.tensor.elem[i];
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    push(p2);
-    return restore();
-  };
-
-  promote_tensor = function() {
-    var ac, ad, ae, af, ag, i, j, k, ndim, nelem, ref1, ref2, ref3, ref4, ref5;
-    i = 0;
-    j = 0;
-    k = 0;
-    nelem = 0;
-    ndim = 0;
-    save();
-    p1 = pop();
-    if (!istensor(p1)) {
-      push(p1);
-      restore();
-      return;
-    }
-    p2 = p1.tensor.elem[0];
-    for (i = ac = 1, ref1 = p1.tensor.nelem; 1 <= ref1 ? ac < ref1 : ac > ref1; i = 1 <= ref1 ? ++ac : --ac) {
-      if (!compatible(p2, p1.tensor.elem[i])) {
-        stop("Cannot promote tensor due to inconsistent tensor components.");
-      }
-    }
-    if (!istensor(p2)) {
-      push(p1);
-      restore();
-      return;
-    }
-    ndim = p1.tensor.ndim + p2.tensor.ndim;
-    if (ndim > MAXDIM) {
-      stop("tensor rank > 24");
-    }
-    nelem = p1.tensor.nelem * p2.tensor.nelem;
-    p3 = alloc_tensor(nelem);
-    p3.tensor.ndim = ndim;
-    for (i = ad = 0, ref2 = p1.tensor.ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p3.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    for (j = ae = 0, ref3 = p2.tensor.ndim; 0 <= ref3 ? ae < ref3 : ae > ref3; j = 0 <= ref3 ? ++ae : --ae) {
-      p3.tensor.dim[i + j] = p2.tensor.dim[j];
-    }
-    k = 0;
-    for (i = af = 0, ref4 = p1.tensor.nelem; 0 <= ref4 ? af < ref4 : af > ref4; i = 0 <= ref4 ? ++af : --af) {
-      p2 = p1.tensor.elem[i];
-      for (j = ag = 0, ref5 = p2.tensor.nelem; 0 <= ref5 ? ag < ref5 : ag > ref5; j = 0 <= ref5 ? ++ag : --ag) {
-        p3.tensor.elem[k++] = p2.tensor.elem[j];
-      }
-    }
-    if (p2.tensor.nelem !== p2.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    if (p3.tensor.nelem !== p3.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    push(p3);
-    return restore();
-  };
-
-  compatible = function(p, q) {
-    var ac, i, ref1;
-    if (!istensor(p) && !istensor(q)) {
-      return 1;
-    }
-    if (!istensor(p) || !istensor(q)) {
-      return 0;
-    }
-    if (p.tensor.ndim !== q.tensor.ndim) {
-      return 0;
-    }
-    for (i = ac = 0, ref1 = p.tensor.ndim; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      if (p.tensor.dim[i] !== q.tensor.dim[i]) {
-        return 0;
-      }
-    }
-    return 1;
-  };
-
-  Eval_test = function() {
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      if (cdr(p1) === symbol(NIL)) {
-        push(car(p1));
-        Eval();
-        return;
-      }
-      push(car(p1));
-      Eval_predicate();
-      p2 = pop();
-      if (!iszero(p2)) {
-        push(cadr(p1));
-        Eval();
-        return;
-      }
-      p1 = cddr(p1);
-    }
-    return push_integer(0);
-  };
-
-  Eval_testeq = function() {
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    subtract();
-    p1 = pop();
-    if (iszero(p1)) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_testge = function() {
-    if (cmp_args() >= 0) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_testgt = function() {
-    if (cmp_args() > 0) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_testle = function() {
-    if (cmp_args() <= 0) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_testlt = function() {
-    if (cmp_args() < 0) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_not = function() {
-    push(cadr(p1));
-    Eval_predicate();
-    p1 = pop();
-    if (iszero(p1)) {
-      return push_integer(1);
-    } else {
-      return push_integer(0);
-    }
-  };
-
-  Eval_and = function() {
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval_predicate();
-      p2 = pop();
-      if (iszero(p2)) {
-        push_integer(0);
-        return;
-      }
-      p1 = cdr(p1);
-    }
-    return push_integer(1);
-  };
-
-  Eval_or = function() {
-    p1 = cdr(p1);
-    while (iscons(p1)) {
-      push(car(p1));
-      Eval_predicate();
-      p2 = pop();
-      if (!iszero(p2)) {
-        push_integer(1);
-        return;
-      }
-      p1 = cdr(p1);
-    }
-    return push_integer(0);
-  };
-
-  cmp_args = function() {
-    var t;
-    t = 0;
-    push(cadr(p1));
-    Eval();
-    push(caddr(p1));
-    Eval();
-    subtract();
-    p1 = pop();
-    if (p1.k !== NUM && p1.k !== DOUBLE) {
-      push(p1);
-      yyfloat();
-      Eval();
-      p1 = pop();
-    }
-    if (iszero(p1)) {
-      return 0;
-    }
-    switch (p1.k) {
-      case NUM:
-        if (MSIGN(p1.q.a) === -1) {
-          t = -1;
-        } else {
-          t = 1;
-        }
-        break;
-      case DOUBLE:
-        if (p1.d < 0.0) {
-          t = -1;
-        } else {
-          t = 1;
-        }
-        break;
-      default:
-        stop("relational operator: cannot determine due to non-numerical comparison");
-        t = 0;
-    }
-    return t;
-  };
-
-
-  /*
-  Transform an expression using table look-up
-  
-  The expression and free variable are on the stack.
-  
-  The argument s is a null terminated list of transform rules.
-  
-  For example, see itab.cpp
-  
-  Internally, the following symbols are used:
-  
-  	F	input expression
-  
-  	X	free variable, i.e. F of X
-  
-  	A	template expression
-  
-  	B	result expression
-  
-  	C	list of conditional expressions
-   */
-
-  transform = function(s) {
-    var ac, eachEntry, h, len;
-    h = 0;
-    save();
-    p4 = pop();
-    p3 = pop();
-    push(get_binding(symbol(METAA)));
-    push(get_binding(symbol(METAB)));
-    push(get_binding(symbol(METAX)));
-    set_binding(symbol(METAX), p4);
-    h = tos;
-    push_integer(1);
-    push(p3);
-    push(p4);
-    polyform();
-    push(p4);
-    decomp();
-    for (ac = 0, len = s.length; ac < len; ac++) {
-      eachEntry = s[ac];
-      if (DEBUG) {
-        console.log("scanning table entry " + eachEntry);
-      }
-      if (eachEntry) {
-        scan_meta(eachEntry);
-        p1 = pop();
-        p5 = cadr(p1);
-        p6 = caddr(p1);
-        p7 = cdddr(p1);
-        if (f_equals_a(h)) {
-          break;
-        }
-      }
-    }
-    tos = h;
-    if (eachEntry) {
-      push(p6);
-      Eval();
-      p1 = pop();
-    } else {
-      p1 = symbol(NIL);
-    }
-    set_binding(symbol(METAX), pop());
-    set_binding(symbol(METAB), pop());
-    set_binding(symbol(METAA), pop());
-    push(p1);
-    return restore();
-  };
-
-  f_equals_a = function(h) {
-    var ac, ad, i, j, ref1, ref2, ref3, ref4;
-    i = 0;
-    j = 0;
-    for (i = ac = ref1 = h, ref2 = tos; ref1 <= ref2 ? ac < ref2 : ac > ref2; i = ref1 <= ref2 ? ++ac : --ac) {
-      set_binding(symbol(METAA), stack[i]);
-      for (j = ad = ref3 = h, ref4 = tos; ref3 <= ref4 ? ad < ref4 : ad > ref4; j = ref3 <= ref4 ? ++ad : --ad) {
-        set_binding(symbol(METAB), stack[j]);
-        p1 = p7;
-        while (iscons(p1)) {
-          push(car(p1));
-          Eval();
-          p2 = pop();
-          if (iszero(p2)) {
-            break;
-          }
-          p1 = cdr(p1);
-        }
-        if (iscons(p1)) {
-          continue;
-        }
-        push(p3);
-        push(p5);
-        Eval();
-        subtract();
-        p1 = pop();
-        if (iszero(p1)) {
-          return 1;
-        }
-      }
-    }
-    return 0;
-  };
-
-  Eval_transpose = function() {
-    push(cadr(p1));
-    Eval();
-    if (cddr(p1) === symbol(NIL)) {
-      push_integer(1);
-      push_integer(2);
-    } else {
-      push(caddr(p1));
-      Eval();
-      push(cadddr(p1));
-      Eval();
-    }
-    return transpose();
-  };
-
-  transpose = function() {
-    var a, ac, ad, ae, af, ag, ah, ai, an, b, i, j, k, l, m, ndim, nelem, ref1, ref2, ref3, ref4, ref5, ref6, t;
-    i = 0;
-    j = 0;
-    k = 0;
-    l = 0;
-    m = 0;
-    ndim = 0;
-    nelem = 0;
-    t = 0;
-    ai = [];
-    an = [];
-    for (i = ac = 0, ref1 = MAXDIM; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      ai[i] = 0;
-      an[i] = 0;
-    }
-    save();
-    p3 = pop();
-    p2 = pop();
-    p1 = pop();
-    if (!istensor(p1)) {
-      if (!iszero(p1)) {
-        stop("transpose: tensor expected, 1st arg is not a tensor");
-      }
-      push(zero);
-      restore();
-      return;
-    }
-    ndim = p1.tensor.ndim;
-    nelem = p1.tensor.nelem;
-    if (ndim === 1) {
-      push(p1);
-      restore();
-      return;
-    }
-    push(p2);
-    l = pop_integer();
-    push(p3);
-    m = pop_integer();
-    if (l < 1 || l > ndim || m < 1 || m > ndim) {
-      stop("transpose: index out of range");
-    }
-    l--;
-    m--;
-    p2 = alloc_tensor(nelem);
-    p2.tensor.ndim = ndim;
-    for (i = ad = 0, ref2 = ndim; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p2.tensor.dim[i] = p1.tensor.dim[i];
-    }
-    p2.tensor.dim[l] = p1.tensor.dim[m];
-    p2.tensor.dim[m] = p1.tensor.dim[l];
-    a = p1.tensor.elem;
-    b = p2.tensor.elem;
-    for (i = ae = 0, ref3 = ndim; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-      ai[i] = 0;
-      an[i] = p1.tensor.dim[i];
-    }
-    for (i = af = 0, ref4 = nelem; 0 <= ref4 ? af < ref4 : af > ref4; i = 0 <= ref4 ? ++af : --af) {
-      t = ai[l];
-      ai[l] = ai[m];
-      ai[m] = t;
-      t = an[l];
-      an[l] = an[m];
-      an[m] = t;
-      k = 0;
-      for (j = ag = 0, ref5 = ndim; 0 <= ref5 ? ag < ref5 : ag > ref5; j = 0 <= ref5 ? ++ag : --ag) {
-        k = (k * an[j]) + ai[j];
-      }
-      t = ai[l];
-      ai[l] = ai[m];
-      ai[m] = t;
-      t = an[l];
-      an[l] = an[m];
-      an[m] = t;
-      b[k] = a[i];
-      for (j = ah = ref6 = ndim - 1; ref6 <= 0 ? ah <= 0 : ah >= 0; j = ref6 <= 0 ? ++ah : --ah) {
-        if (++ai[j] < an[j]) {
-          break;
-        }
-        ai[j] = 0;
-      }
-    }
-    push(p2);
-    return restore();
-  };
-
-  Eval_user_function = function() {
-    var h;
-    if (car(p1) === symbol(SYMBOL_D) && get_arglist(symbol(SYMBOL_D)) === symbol(NIL)) {
-      Eval_derivative();
-      return;
-    }
-    p3 = get_binding(car(p1));
-    p4 = get_arglist(car(p1));
-    p5 = cdr(p1);
-    if (p3 === car(p1)) {
-      h = tos;
-      push(p3);
-      p1 = p5;
-      while (iscons(p1)) {
-        push(car(p1));
-        Eval();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-      return;
-    }
-    p1 = p4;
-    p2 = p5;
-    h = tos;
-    while (iscons(p1) && iscons(p2)) {
-      push(car(p1));
-      push(car(p2));
-      Eval();
-      p1 = cdr(p1);
-      p2 = cdr(p2);
-    }
-    list(tos - h);
-    p6 = pop();
-    push(p3);
-    if (iscons(p6)) {
-      push(p6);
-      rewrite_args();
-    }
-    return Eval();
-  };
-
-  rewrite_args = function() {
-    var h, n;
-    n = 0;
-    save();
-    p2 = pop();
-    p1 = pop();
-    if (istensor(p1)) {
-      n = rewrite_args_tensor();
-      restore();
-      return n;
-    }
-    if (iscons(p1)) {
-      h = tos;
-      push(car(p1));
-      p1 = cdr(p1);
-      while (iscons(p1)) {
-        push(car(p1));
-        push(p2);
-        n += rewrite_args();
-        p1 = cdr(p1);
-      }
-      list(tos - h);
-      restore();
-      return n;
-    }
-    if (!issymbol(p1)) {
-      push(p1);
-      restore();
-      return 0;
-    }
-    p3 = p2;
-    while (iscons(p3)) {
-      if (p1 === car(p3)) {
-        push(cadr(p3));
-        restore();
-        return 1;
-      }
-      p3 = cddr(p3);
-    }
-    p3 = get_binding(p1);
-    push(p3);
-    if (p1 !== p3) {
-      push(p2);
-      n = rewrite_args();
-      if (n === 0) {
-        pop();
-        push(p1);
-      }
-    }
-    restore();
-    return n;
-  };
-
-  rewrite_args_tensor = function() {
-    var ac, i, n, ref1;
-    n = 0;
-    i = 0;
-    push(p1);
-    copy_tensor();
-    p1 = pop();
-    for (i = ac = 0, ref1 = p1.tensor.nelem; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      push(p1.tensor.elem[i]);
-      push(p2);
-      n += rewrite_args();
-      p1.tensor.elem[i] = pop();
-    }
-    if (p1.tensor.nelem !== p1.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    push(p1);
-    return n;
-  };
-
-  Eval_zero = function() {
-    var ac, ad, i, k, m, n, ref1, ref2;
-    i = 0;
-    k = [];
-    m = 0;
-    n = 0;
-    for (i = ac = 0, ref1 = MAXDIM; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      k[i] = 0;
-    }
-    m = 1;
-    n = 0;
-    p2 = cdr(p1);
-    while (iscons(p2)) {
-      push(car(p2));
-      Eval();
-      i = pop_integer();
-      if (i < 2) {
-        push(zero);
-        return;
-      }
-      m *= i;
-      k[n++] = i;
-      p2 = cdr(p2);
-    }
-    if (n === 0) {
-      push(zero);
-      return;
-    }
-    p1 = alloc_tensor(m);
-    p1.tensor.ndim = n;
-    for (i = ad = 0, ref2 = n; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      p1.tensor.dim[i] = k[i];
-    }
-    return push(p1);
-  };
-
-
-  /*
-  // up to 100 blocks of 100,000 atoms
-  
-  #define M 100
-  #define N 100000
-  
-  U *mem[M]
-  int mcount
-  
-  U *free_list
-  int free_count
-  
-  U *
-  alloc(void)
-  {
-  	U *p
-  	if (free_count == 0) {
-  		if (mcount == 0)
-  			alloc_mem()
-  		else {
-  			gc()
-  			if (free_count < N * mcount / 2)
-  				alloc_mem()
-  		}
-  		if (free_count == 0)
-  			stop("atom space exhausted")
-  	}
-  	p = free_list
-  	free_list = free_list->u.cons.cdr
-  	free_count--
-  	return p
-  }
-   */
-
-  allocatedId = 0;
-
-  alloc_tensor = function(nelem) {
-    var ac, i, p, ref1;
-    i = 0;
-    p = new U();
-    p.k = TENSOR;
-    p.tensor = new tensor();
-    p.tensor.nelem = nelem;
-    for (i = ac = 0, ref1 = nelem; 0 <= ref1 ? ac < ref1 : ac > ref1; i = 0 <= ref1 ? ++ac : --ac) {
-      p.tensor.elem[i] = zero;
-    }
-    p.tensor.allocatedId = allocatedId;
-    allocatedId++;
-    if (p.tensor.nelem !== p.tensor.elem.length) {
-      console.log("something wrong in tensor dimensions");
-      debugger;
-    }
-    return p;
-  };
-
-
-  /*
-  // garbage collector
-  
-  void
-  gc(void)
-  {
-  	int i, j
-  	U *p
-  
-  	// tag everything
-  
-  	for (i = 0; i < mcount; i++) {
-  		p = mem[i]
-  		for (j = 0; j < N; j++)
-  			p[j].tag = 1
-  	}
-  
-  	// untag what's used
-  
-  	untag(p0)
-  	untag(p1)
-  	untag(p2)
-  	untag(p3)
-  	untag(p4)
-  	untag(p5)
-  	untag(p6)
-  	untag(p7)
-  	untag(p8)
-  	untag(p9)
-  
-  	untag(one)
-  	untag(zero)
-  	untag(imaginaryunit)
-  
-  	for (i = 0; i < NSYM; i++) {
-  		untag(binding[i])
-  		untag(arglist[i])
-  	}
-  
-  	for (i = 0; i < tos; i++)
-  		untag(stack[i])
-  
-  	for (i = (int) (frame - stack); i < TOS; i++)
-  		untag(stack[i])
-  
-  	// collect everything that's still tagged
-  
-  	free_count = 0
-  
-  	for (i = 0; i < mcount; i++) {
-  		p = mem[i]
-  		for (j = 0; j < N; j++) {
-  			if (p[j].tag == 0)
-  				continue
-  			// still tagged so it's unused, put on free list
-  			switch (p[j].k) {
-  			case TENSOR:
-  				free(p[j].u.tensor)
-  				break
-  			case STR:
-  				free(p[j].u.str)
-  				break
-  			case NUM:
-  				mfree(p[j].u.q.a)
-  				mfree(p[j].u.q.b)
-  				break
-  			}
-  			p[j].k = CONS; // so no double free occurs above
-  			p[j].u.cons.cdr = free_list
-  			free_list = p + j
-  			free_count++
-  		}
-  	}
-  }
-  
-  void
-  untag(U *p)
-  {
-  	int i
-  
-  	if (iscons(p)) {
-  		do {
-  			if (p->tag == 0)
-  				return
-  			p->tag = 0
-  			untag(p->u.cons.car)
-  			p = p->u.cons.cdr
-  		} while (iscons(p))
-  		untag(p)
-  		return
-  	}
-  
-  	if (p->tag) {
-  		p->tag = 0
-   		if (istensor(p)) {
-  			for (i = 0; i < p->u.tensor->nelem; i++)
-  				untag(p->u.tensor->elem[i])
-  		}
-  	}
-  }
-  
-  // get memory for 100,000 atoms
-  
-  void
-  alloc_mem(void)
-  {
-  	int i
-  	U *p
-  	if (mcount == M)
-  		return
-  	p = (U *) malloc(N * sizeof (struct U))
-  	if (p == NULL)
-  		return
-  	mem[mcount++] = p
-  	for (i = 0; i < N; i++) {
-  		p[i].k = CONS; // so no free in gc
-  		p[i].u.cons.cdr = p + i + 1
-  	}
-  	p[N - 1].u.cons.cdr = free_list
-  	free_list = p
-  	free_count += N
-  }
-  
-  void
-  print_mem_info(void)
-  {
-  	char buf[100]
-  
-  	sprintf(buf, "%d blocks (%d bytes/block)\n", N * mcount, (int) sizeof (U))
-  	printstr(buf)
-  
-  	sprintf(buf, "%d free\n", free_count)
-  	printstr(buf)
-  
-  	sprintf(buf, "%d used\n", N * mcount - free_count)
-  	printstr(buf)
-  }
-   */
-
-  YMAX = 10000;
-
-  glyph = (function() {
-    function glyph() {}
-
-    glyph.prototype.c = 0;
-
-    glyph.prototype.x = 0;
-
-    glyph.prototype.y = 0;
-
-    return glyph;
-
-  })();
-
-  chartab = [];
-
-  for (charTabIndex = ac = 0, ref1 = YMAX; 0 <= ref1 ? ac < ref1 : ac > ref1; charTabIndex = 0 <= ref1 ? ++ac : --ac) {
-    chartab[charTabIndex] = new glyph();
-  }
-
-  yindex = 0;
-
-  level = 0;
-
-  emit_x = 0;
-
-  expr_level = 0;
-
-  display_flag = 0;
-
-  printchar_nowrap = function(character, accumulator) {
-    var topLevelCall;
-    if (accumulator == null) {
-      topLevelCall = true;
-      accumulator = "";
-    }
-    accumulator += character;
-    return accumulator;
-  };
-
-  printchar = function(character, accumulator) {
-    return printchar_nowrap(character, accumulator);
-  };
-
-  display = function(p) {
-    var h, ref2, w, y;
-    h = 0;
-    w = 0;
-    y = 0;
-    save();
-    yindex = 0;
-    level = 0;
-    emit_x = 0;
-    emit_top_expr(p);
-    ref2 = get_size(0, yindex), h = ref2[0], w = ref2[1], y = ref2[2];
-    if (w > 100) {
-      printline(p);
-      restore();
-      return;
-    }
-    print_it();
-    return restore();
-  };
-
-  emit_top_expr = function(p) {
-    if (car(p) === symbol(SETQ)) {
-      emit_expr(cadr(p));
-      __emit_str(" = ");
-      emit_expr(caddr(p));
-      return;
-    }
-    if (istensor(p)) {
-      return emit_tensor(p);
-    } else {
-      return emit_expr(p);
-    }
-  };
-
-  will_be_displayed_as_fraction = function(p) {
-    if (level > 0) {
-      return 0;
-    }
-    if (isfraction(p)) {
-      return 1;
-    }
-    if (car(p) !== symbol(MULTIPLY)) {
-      return 0;
-    }
-    if (isfraction(cadr(p))) {
-      return 1;
-    }
-    while (iscons(p)) {
-      if (isdenominator(car(p))) {
-        return 1;
-      }
-      p = cdr(p);
-    }
-    return 0;
-  };
-
-  emit_expr = function(p) {
-    expr_level++;
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      if (__is_negative(car(p))) {
-        __emit_char('-');
-        if (will_be_displayed_as_fraction(car(p))) {
-          __emit_char(' ');
-        }
-      }
-      emit_term(car(p));
-      p = cdr(p);
-      while (iscons(p)) {
-        if (__is_negative(car(p))) {
-          __emit_char(' ');
-          __emit_char('-');
-          __emit_char(' ');
-        } else {
-          __emit_char(' ');
-          __emit_char('+');
-          __emit_char(' ');
-        }
-        emit_term(car(p));
-        p = cdr(p);
-      }
-    } else {
-      if (__is_negative(p)) {
-        __emit_char('-');
-        if (will_be_displayed_as_fraction(p)) {
-          __emit_char(' ');
-        }
-      }
-      emit_term(p);
-    }
-    return expr_level--;
-  };
-
-  emit_unsigned_expr = function(p) {
-    var results;
-    if (car(p) === symbol(ADD)) {
-      p = cdr(p);
-      emit_term(car(p));
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        if (__is_negative(car(p))) {
-          __emit_char(' ');
-          __emit_char('-');
-          __emit_char(' ');
-        } else {
-          __emit_char(' ');
-          __emit_char('+');
-          __emit_char(' ');
-        }
-        emit_term(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      return emit_term(p);
-    }
-  };
-
-  __is_negative = function(p) {
-    if (isnegativenumber(p)) {
-      return 1;
-    }
-    if (car(p) === symbol(MULTIPLY) && isnegativenumber(cadr(p))) {
-      return 1;
-    }
-    return 0;
-  };
-
-  emit_term = function(p) {
-    var n;
-    if (car(p) === symbol(MULTIPLY)) {
-      n = count_denominators(p);
-      if (n && level === 0) {
-        return emit_fraction(p, n);
-      } else {
-        return emit_multiply(p, n);
-      }
-    } else {
-      return emit_factor(p);
-    }
-  };
-
-  isdenominator = function(p) {
-    if (car(p) === symbol(POWER) && cadr(p) !== symbol(E) && __is_negative(caddr(p))) {
-      return 1;
-    } else {
-      return 0;
-    }
-  };
-
-  count_denominators = function(p) {
-    var q;
-    count = 0;
-    p = cdr(p);
-    while (iscons(p)) {
-      q = car(p);
-      if (isdenominator(q)) {
-        count++;
-      }
-      p = cdr(p);
-    }
-    return count;
-  };
-
-  emit_multiply = function(p, n) {
-    var results;
-    if (n === 0) {
-      p = cdr(p);
-      if (isplusone(car(p)) || isminusone(car(p))) {
-        p = cdr(p);
-      }
-      emit_factor(car(p));
-      p = cdr(p);
-      results = [];
-      while (iscons(p)) {
-        __emit_char(' ');
-        emit_factor(car(p));
-        results.push(p = cdr(p));
-      }
-      return results;
-    } else {
-      emit_numerators(p);
-      __emit_char('/');
-      if (n > 1 || isfraction(cadr(p))) {
-        __emit_char('(');
-        emit_denominators(p);
-        return __emit_char(')');
-      } else {
-        return emit_denominators(p);
-      }
-    }
-  };
-
-  emit_fraction = function(p, d) {
-    var doNothing, k1, k2, n, x;
-    count = 0;
-    k1 = 0;
-    k2 = 0;
-    n = 0;
-    x = 0;
-    save();
-    p3 = one;
-    p4 = one;
-    if (isrational(cadr(p))) {
-      push(cadr(p));
-      mp_numerator();
-      absval();
-      p3 = pop();
-      push(cadr(p));
-      mp_denominator();
-      p4 = pop();
-    }
-    if (isdouble(cadr(p))) {
-      push(cadr(p));
-      absval();
-      p3 = pop();
-    }
-    if (isplusone(p3)) {
-      n = 0;
-    } else {
-      n = 1;
-    }
-    p1 = cdr(p);
-    if (isnum(car(p1))) {
-      p1 = cdr(p1);
-    }
-    while (iscons(p1)) {
-      p2 = car(p1);
-      if (isdenominator(p2)) {
-        doNothing = 1;
-      } else {
-        n++;
-      }
-      p1 = cdr(p1);
-    }
-    x = emit_x;
-    k1 = yindex;
-    count = 0;
-    if (!isplusone(p3)) {
-      emit_number(p3, 0);
-      count++;
-    }
-    p1 = cdr(p);
-    if (isnum(car(p1))) {
-      p1 = cdr(p1);
-    }
-    while (iscons(p1)) {
-      p2 = car(p1);
-      if (isdenominator(p2)) {
-        doNothing = 1;
-      } else {
-        if (count > 0) {
-          __emit_char(' ');
-        }
-        if (n === 1) {
-          emit_expr(p2);
-        } else {
-          emit_factor(p2);
-        }
-        count++;
-      }
-      p1 = cdr(p1);
-    }
-    if (count === 0) {
-      __emit_char('1');
-    }
-    k2 = yindex;
-    count = 0;
-    if (!isplusone(p4)) {
-      emit_number(p4, 0);
-      count++;
-      d++;
-    }
-    p1 = cdr(p);
-    if (isrational(car(p1))) {
-      p1 = cdr(p1);
-    }
-    while (iscons(p1)) {
-      p2 = car(p1);
-      if (isdenominator(p2)) {
-        if (count > 0) {
-          __emit_char(' ');
-        }
-        emit_denominator(p2, d);
-        count++;
-      }
-      p1 = cdr(p1);
-    }
-    fixup_fraction(x, k1, k2);
-    return restore();
-  };
-
-  emit_numerators = function(p) {
-    var doNothing, n;
-    int(n);
-    save();
-    p1 = one;
-    p = cdr(p);
-    if (isrational(car(p))) {
-      push(car(p));
-      mp_numerator();
-      absval();
-      p1 = pop();
-      p = cdr(p);
-    } else if (isdouble(car(p))) {
-      push(car(p));
-      absval();
-      p1 = pop();
-      p = cdr(p);
-    }
-    n = 0;
-    if (!isplusone(p1)) {
-      emit_number(p1, 0);
-      n++;
-    }
-    while (iscons(p)) {
-      if (isdenominator(car(p))) {
-        doNothing = 1;
-      } else {
-        if (n > 0) {
-          __emit_char(' ');
-        }
-        emit_factor(car(p));
-        n++;
-      }
-      p = cdr(p);
-    }
-    if (n === 0) {
-      __emit_char('1');
-    }
-    return restore();
-  };
-
-  emit_denominators = function(p) {
-    var n;
-    int(n);
-    save();
-    n = 0;
-    p = cdr(p);
-    if (isfraction(car(p))) {
-      push(car(p));
-      mp_denominator();
-      p1 = pop();
-      emit_number(p1, 0);
-      n++;
-      p = cdr(p);
-    }
-    while (iscons(p)) {
-      if (isdenominator(car(p))) {
-        if (n > 0) {
-          __emit_char(' ');
-        }
-        emit_denominator(car(p), 0);
-        n++;
-      }
-      p = cdr(p);
-    }
-    return restore();
-  };
-
-  emit_factor = function(p) {
-    if (istensor(p)) {
-      if (level === 0) {
-        emit_flat_tensor(p);
-      } else {
-        emit_flat_tensor(p);
-      }
-      return;
-    }
-    if (isdouble(p)) {
-      emit_number(p, 0);
-      return;
-    }
-    if (car(p) === symbol(ADD) || car(p) === symbol(MULTIPLY)) {
-      emit_subexpr(p);
-      return;
-    }
-    if (car(p) === symbol(POWER)) {
-      emit_power(p);
-      return;
-    }
-    if (iscons(p)) {
-      emit_function(p);
-      return;
-    }
-    if (isnum(p)) {
-      if (level === 0) {
-        emit_numerical_fraction(p);
-      } else {
-        emit_number(p, 0);
-      }
-      return;
-    }
-    if (issymbol(p)) {
-      emit_symbol(p);
-      return;
-    }
-    if (isstr(p)) {
-      emit_string(p);
-    }
-  };
-
-  emit_numerical_fraction = function(p) {
-    var k1, k2, x;
-    k1 = 0;
-    k2 = 0;
-    x = 0;
-    save();
-    push(p);
-    mp_numerator();
-    absval();
-    p3 = pop();
-    push(p);
-    mp_denominator();
-    p4 = pop();
-    if (isplusone(p4)) {
-      emit_number(p3, 0);
-      restore();
-      return;
-    }
-    x = emit_x;
-    k1 = yindex;
-    emit_number(p3, 0);
-    k2 = yindex;
-    emit_number(p4, 0);
-    fixup_fraction(x, k1, k2);
-    return restore();
-  };
-
-  isfactor = function(p) {
-    if (iscons(p) && car(p) !== symbol(ADD) && car(p) !== symbol(MULTIPLY) && car(p) !== symbol(POWER)) {
-      return 1;
-    }
-    if (issymbol(p)) {
-      return 1;
-    }
-    if (isfraction(p)) {
-      return 0;
-    }
-    if (isnegativenumber(p)) {
-      return 0;
-    }
-    if (isnum(p)) {
-      return 1;
-    }
-    return 0;
-  };
-
-  emit_power = function(p) {
-    var k1, k2, x;
-    k1 = 0;
-    k2 = 0;
-    x = 0;
-    if (cadr(p) === symbol(E)) {
-      __emit_str("exp(");
-      emit_expr(caddr(p));
-      __emit_char(')');
-      return;
-    }
-    if (level > 0) {
-      if (isminusone(caddr(p))) {
-        __emit_char('1');
-        __emit_char('/');
-        if (isfactor(cadr(p))) {
-          emit_factor(cadr(p));
-        } else {
-          emit_subexpr(cadr(p));
-        }
-      } else {
-        if (isfactor(cadr(p))) {
-          emit_factor(cadr(p));
-        } else {
-          emit_subexpr(cadr(p));
-        }
-        __emit_char('^');
-        if (isfactor(caddr(p))) {
-          emit_factor(caddr(p));
-        } else {
-          emit_subexpr(caddr(p));
-        }
-      }
-      return;
-    }
-    if (__is_negative(caddr(p))) {
-      x = emit_x;
-      k1 = yindex;
-      __emit_char('1');
-      k2 = yindex;
-      emit_denominator(p, 1);
-      fixup_fraction(x, k1, k2);
-      return;
-    }
-    k1 = yindex;
-    if (isfactor(cadr(p))) {
-      emit_factor(cadr(p));
-    } else {
-      emit_subexpr(cadr(p));
-    }
-    k2 = yindex;
-    level++;
-    emit_expr(caddr(p));
-    level--;
-    return fixup_power(k1, k2);
-  };
-
-  emit_denominator = function(p, n) {
-    var k1, k2;
-    k1 = 0;
-    k2 = 0;
-    if (isminusone(caddr(p))) {
-      if (n === 1) {
-        emit_expr(cadr(p));
-      } else {
-        emit_factor(cadr(p));
-      }
-      return;
-    }
-    k1 = yindex;
-    if (isfactor(cadr(p))) {
-      emit_factor(cadr(p));
-    } else {
-      emit_subexpr(cadr(p));
-    }
-    k2 = yindex;
-    level++;
-    emit_unsigned_expr(caddr(p));
-    level--;
-    return fixup_power(k1, k2);
-  };
-
-  emit_function = function(p) {
-    if (car(p) === symbol(INDEX) && issymbol(cadr(p))) {
-      emit_index_function(p);
-      return;
-    }
-    if (car(p) === symbol(FACTORIAL)) {
-      emit_factorial_function(p);
-      return;
-    }
-    if (car(p) === symbol(DERIVATIVE)) {
-      __emit_char('d');
-    } else {
-      emit_symbol(car(p));
-    }
-    __emit_char('(');
-    p = cdr(p);
-    if (iscons(p)) {
-      emit_expr(car(p));
-      p = cdr(p);
-      while (iscons(p)) {
-        __emit_char(',');
-        emit_expr(car(p));
-        p = cdr(p);
-      }
-    }
-    return __emit_char(')');
-  };
-
-  emit_index_function = function(p) {
-    p = cdr(p);
-    if (caar(p) === symbol(ADD) || caar(p) === symbol(MULTIPLY) || caar(p) === symbol(POWER) || caar(p) === symbol(FACTORIAL)) {
-      emit_subexpr(car(p));
-    } else {
-      emit_expr(car(p));
-    }
-    __emit_char('[');
-    p = cdr(p);
-    if (iscons(p)) {
-      emit_expr(car(p));
-      p = cdr(p);
-      while (iscons(p)) {
-        __emit_char(',');
-        emit_expr(car(p));
-        p = cdr(p);
-      }
-    }
-    return __emit_char(']');
-  };
-
-  emit_factorial_function = function(p) {
-    p = cadr(p);
-    if (car(p) === symbol(ADD) || car(p) === symbol(MULTIPLY) || car(p) === symbol(POWER) || car(p) === symbol(FACTORIAL)) {
-      emit_subexpr(p);
-    } else {
-      emit_expr(p);
-    }
-    return __emit_char('!');
-  };
-
-  emit_subexpr = function(p) {
-    __emit_char('(');
-    emit_expr(p);
-    return __emit_char(')');
-  };
-
-  emit_symbol = function(p) {
-    var ad, i, pPrintName, ref2, results;
-    i = 0;
-    if (p === symbol(E)) {
-      __emit_str("exp(1)");
-      return;
-    }
-    pPrintName = get_printname(p);
-    results = [];
-    for (i = ad = 0, ref2 = pPrintName.length; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      results.push(__emit_char(pPrintName[i]));
-    }
-    return results;
-  };
-
-  emit_string = function(p) {
-    var ad, i, pString, ref2;
-    i = 0;
-    pString = p.str;
-    __emit_char('"');
-    for (i = ad = 0, ref2 = pString.length; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      __emit_char(pString[i]);
-    }
-    return __emit_char('"');
-  };
-
-  fixup_fraction = function(x, k1, k2) {
-    var ad, dx, dy, h1, h2, i, ref2, ref3, ref4, results, w, w1, w2, y, y1, y2;
-    dx = 0;
-    dy = 0;
-    i = 0;
-    w = 0;
-    y = 0;
-    h1 = 0;
-    w1 = 0;
-    y1 = 0;
-    h2 = 0;
-    w2 = 0;
-    y2 = 0;
-    ref2 = get_size(k1, k2), h1 = ref2[0], w1 = ref2[1], y1 = ref2[2];
-    ref3 = get_size(k2, yindex), h2 = ref3[0], w2 = ref3[1], y2 = ref3[2];
-    if (w2 > w1) {
-      dx = (w2 - w1) / 2;
-    } else {
-      dx = 0;
-    }
-    dx++;
-    y = y1 + h1 - 1;
-    dy = -y - 1;
-    move(k1, k2, dx, dy);
-    if (w2 > w1) {
-      dx = -w1;
-    } else {
-      dx = -w1 + (w1 - w2) / 2;
-    }
-    dx++;
-    dy = -y2 + 1;
-    move(k2, yindex, dx, dy);
-    if (w2 > w1) {
-      w = w2;
-    } else {
-      w = w1;
-    }
-    w += 2;
-    emit_x = x;
-    results = [];
-    for (i = ad = 0, ref4 = w; 0 <= ref4 ? ad < ref4 : ad > ref4; i = 0 <= ref4 ? ++ad : --ad) {
-      results.push(__emit_char('-'));
-    }
-    return results;
-  };
-
-  fixup_power = function(k1, k2) {
-    var dy, h1, h2, ref2, ref3, w1, w2, y1, y2;
-    dy = 0;
-    h1 = 0;
-    w1 = 0;
-    y1 = 0;
-    h2 = 0;
-    w2 = 0;
-    y2 = 0;
-    ref2 = get_size(k1, k2), h1 = ref2[0], w1 = ref2[1], y1 = ref2[2];
-    ref3 = get_size(k2, yindex), h2 = ref3[0], w2 = ref3[1], y2 = ref3[2];
-    dy = -y2 - h2 + 1;
-    dy += y1 - 1;
-    return move(k2, yindex, 0, dy);
-  };
-
-  move = function(j, k, dx, dy) {
-    var ad, i, ref2, ref3, results;
-    i = 0;
-    results = [];
-    for (i = ad = ref2 = j, ref3 = k; ref2 <= ref3 ? ad < ref3 : ad > ref3; i = ref2 <= ref3 ? ++ad : --ad) {
-      chartab[i].x += dx;
-      results.push(chartab[i].y += dy);
-    }
-    return results;
-  };
-
-  get_size = function(j, k) {
-    var ad, h, i, max_x, max_y, min_x, min_y, ref2, ref3, w, y;
-    i = 0;
-    min_x = chartab[j].x;
-    max_x = chartab[j].x;
-    min_y = chartab[j].y;
-    max_y = chartab[j].y;
-    for (i = ad = ref2 = j + 1, ref3 = k; ref2 <= ref3 ? ad < ref3 : ad > ref3; i = ref2 <= ref3 ? ++ad : --ad) {
-      if (chartab[i].x < min_x) {
-        min_x = chartab[i].x;
-      }
-      if (chartab[i].x > max_x) {
-        max_x = chartab[i].x;
-      }
-      if (chartab[i].y < min_y) {
-        min_y = chartab[i].y;
-      }
-      if (chartab[i].y > max_y) {
-        max_y = chartab[i].y;
-      }
-    }
-    h = max_y - min_y + 1;
-    w = max_x - min_x + 1;
-    y = min_y;
-    return [h, w, y];
-  };
-
-  displaychar = function(c) {
-    return __emit_char(c);
-  };
-
-  __emit_char = function(c) {
-    if (yindex === YMAX) {
-      return;
-    }
-    if (chartab[yindex] == null) {
-      debugger;
-    }
-    chartab[yindex].c = c;
-    chartab[yindex].x = emit_x;
-    chartab[yindex].y = 0;
-    yindex++;
-    return emit_x++;
-  };
-
-  __emit_str = function(s) {
-    var ad, i, ref2, results;
-    i = 0;
-    results = [];
-    for (i = ad = 0, ref2 = s.length; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      results.push(__emit_char(s[i]));
-    }
-    return results;
-  };
-
-  emit_number = function(p, emit_sign) {
-    var ad, ae, af, i, ref2, ref3, ref4, results, results1, tmpString;
-    tmpString = "";
-    i = 0;
-    switch (p.k) {
-      case NUM:
-        tmpString = p.q.a.toString();
-        if (tmpString[0] === '-' && emit_sign === 0) {
-          tmpString = tmpString.substring(1);
-        }
-        for (i = ad = 0, ref2 = tmpString.length; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-          __emit_char(tmpString[i]);
-        }
-        tmpString = p.q.b.toString();
-        if (tmpString === "1") {
-          break;
-        }
-        __emit_char('/');
-        results = [];
-        for (i = ae = 0, ref3 = tmpString.length; 0 <= ref3 ? ae < ref3 : ae > ref3; i = 0 <= ref3 ? ++ae : --ae) {
-          results.push(__emit_char(tmpString[i]));
-        }
-        return results;
-        break;
-      case DOUBLE:
-        tmpString = doubleToReasonableString(p.d);
-        if (tmpString[0] === '-' && emit_sign === 0) {
-          tmpString = tmpString.substring(1);
-        }
-        results1 = [];
-        for (i = af = 0, ref4 = tmpString.length; 0 <= ref4 ? af < ref4 : af > ref4; i = 0 <= ref4 ? ++af : --af) {
-          results1.push(__emit_char(tmpString[i]));
-        }
-        return results1;
-    }
-  };
-
-  cmpGlyphs = function(a, b) {
-    if (a.y < b.y) {
-      return -1;
-    }
-    if (a.y > b.y) {
-      return 1;
-    }
-    if (a.x < b.x) {
-      return -1;
-    }
-    if (a.x > b.x) {
-      return 1;
-    }
-    return 0;
-  };
-
-  print_it = function() {
-    var accumulatedPrint, ad, i, ref2, subsetOfStack, x, y;
-    i = 0;
-    accumulatedPrint = "";
-    subsetOfStack = chartab.slice(0, yindex);
-    subsetOfStack.sort(cmpGlyphs);
-    chartab = [].concat(subsetOfStack).concat(chartab.slice(yindex));
-    x = 0;
-    y = chartab[0].y;
-    for (i = ad = 0, ref2 = yindex; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      while (chartab[i].y > y) {
-        accumulatedPrint = printchar('\n', accumulatedPrint);
-        x = 0;
-        y++;
-      }
-      while (chartab[i].x > x) {
-        accumulatedPrint = printchar_nowrap(' ', accumulatedPrint);
-        x++;
-      }
-      accumulatedPrint = printchar_nowrap(chartab[i].c, accumulatedPrint);
-      x++;
-    }
-    if (PRINTOUTRESULT) {
-      return console.log(accumulatedPrint);
-    }
-  };
-
-  buffer = "";
-
-  getdisplaystr = function() {
-    yindex = 0;
-    level = 0;
-    emit_x = 0;
-    emit_expr(pop());
-    fill_buf();
-    return buffer;
-  };
-
-  fill_buf = function() {
-    var ad, i, ref2, sIndex, subsetOfStack, tmpBuffer, x, y;
-    tmpBuffer = buffer;
-    sIndex = 0;
-    i = 0;
-    subsetOfStack = chartab.slice(0, yindex);
-    subsetOfStack.sort(cmpGlyphs);
-    chartab = [].concat(subsetOfStack).concat(chartab.slice(yindex));
-    x = 0;
-    y = chartab[0].y;
-    for (i = ad = 0, ref2 = yindex; 0 <= ref2 ? ad < ref2 : ad > ref2; i = 0 <= ref2 ? ++ad : --ad) {
-      while (chartab[i].y > y) {
-        tmpBuffer[sIndex++] = '\n';
-        x = 0;
-        y++;
-      }
-      while (chartab[i].x > x) {
-        tmpBuffer[sIndex++] = ' ';
-        x++;
-      }
-      tmpBuffer[sIndex++] = chartab[i].c;
-      x++;
-    }
-    return tmpBuffer[sIndex++] = '\n';
-  };
-
-  N = 100;
-
-  oneElement = (function() {
-    function oneElement() {}
-
-    oneElement.prototype.x = 0;
-
-    oneElement.prototype.y = 0;
-
-    oneElement.prototype.h = 0;
-
-    oneElement.prototype.w = 0;
-
-    oneElement.prototype.index = 0;
-
-    oneElement.prototype.count = 0;
-
-    return oneElement;
-
-  })();
-
-  elem = [];
-
-  for (elelmIndex = ad = 0; ad < 10000; elelmIndex = ++ad) {
-    elem[elelmIndex] = new oneElement;
-  }
-
-  SPACE_BETWEEN_COLUMNS = 3;
-
-  SPACE_BETWEEN_ROWS = 1;
-
-  emit_tensor = function(p) {
-    var ae, af, ag, ah, col, dx, dy, eh, ew, h, i, n, ncol, nrow, ref2, ref3, ref4, ref5, ref6, row, w, x, y;
-    i = 0;
-    n = 0;
-    nrow = 0;
-    ncol = 0;
-    x = 0;
-    y = 0;
-    h = 0;
-    w = 0;
-    dx = 0;
-    dy = 0;
-    eh = 0;
-    ew = 0;
-    row = 0;
-    col = 0;
-    if (p.tensor.ndim > 2) {
-      emit_flat_tensor(p);
-      return;
-    }
-    nrow = p.tensor.dim[0];
-    if (p.tensor.ndim === 2) {
-      ncol = p.tensor.dim[1];
-    } else {
-      ncol = 1;
-    }
-    n = nrow * ncol;
-    if (n > N) {
-      emit_flat_tensor(p);
-      return;
-    }
-    x = emit_x;
-    for (i = ae = 0, ref2 = n; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      elem[i].index = yindex;
-      elem[i].x = emit_x;
-      emit_expr(p.tensor.elem[i]);
-      elem[i].count = yindex - elem[i].index;
-      ref3 = get_size(elem[i].index, yindex), elem[i].h = ref3[0], elem[i].w = ref3[1], elem[i].y = ref3[2];
-    }
-    eh = 0;
-    ew = 0;
-    for (i = af = 0, ref4 = n; 0 <= ref4 ? af < ref4 : af > ref4; i = 0 <= ref4 ? ++af : --af) {
-      if (elem[i].h > eh) {
-        eh = elem[i].h;
-      }
-      if (elem[i].w > ew) {
-        ew = elem[i].w;
-      }
-    }
-    h = nrow * eh + (nrow - 1) * SPACE_BETWEEN_ROWS;
-    w = ncol * ew + (ncol - 1) * SPACE_BETWEEN_COLUMNS;
-    y = -(h / 2);
-    for (row = ag = 0, ref5 = nrow; 0 <= ref5 ? ag < ref5 : ag > ref5; row = 0 <= ref5 ? ++ag : --ag) {
-      for (col = ah = 0, ref6 = ncol; 0 <= ref6 ? ah < ref6 : ah > ref6; col = 0 <= ref6 ? ++ah : --ah) {
-        i = row * ncol + col;
-        dx = x - elem[i].x;
-        dy = y - elem[i].y;
-        move(elem[i].index, elem[i].index + elem[i].count, dx, dy);
-        dx = 0;
-        if (col > 0) {
-          dx = col * (ew + SPACE_BETWEEN_COLUMNS);
-        }
-        dy = 0;
-        if (row > 0) {
-          dy = row * (eh + SPACE_BETWEEN_ROWS);
-        }
-        dx += (ew - elem[i].w) / 2;
-        dy += (eh - elem[i].h) / 2;
-        move(elem[i].index, elem[i].index + elem[i].count, dx, dy);
-      }
-    }
-    return emit_x = x + w;
-
-    /*
-    	if 0
-    
-    		 * left brace
-    
-    		for (i = 0; i < h; i++) {
-    			if (yindex == YMAX)
-    				break
-    			chartab[yindex].c = '|'
-    			chartab[yindex].x = x - 2
-    			chartab[yindex].y = y + i
-    			yindex++
-    		}
-    
-    		 * right brace
-    
-    		emit_x++
-    
-    		for (i = 0; i < h; i++) {
-    			if (yindex == YMAX)
-    				break
-    			chartab[yindex].c = '|'
-    			chartab[yindex].x = emit_x
-    			chartab[yindex].y = y + i
-    			yindex++
-    		}
-    
-    		emit_x++
-    
-    	endif
-     */
-  };
-
-  emit_flat_tensor = function(p) {
-    return emit_tensor_inner(p, 0, 0);
-  };
-
-  emit_tensor_inner = function(p, j, k) {
-    var ae, i, ref2;
-    i = 0;
-    __emit_char('(');
-    for (i = ae = 0, ref2 = p.tensor.dim[j]; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      if (j + 1 === p.tensor.ndim) {
-        emit_expr(p.tensor.elem[k]);
-        k = k + 1;
-      } else {
-        k = emit_tensor_inner(p, j + 1, k);
-      }
-      if (i + 1 < p.tensor.dim[j]) {
-        __emit_char(',');
-      }
-    }
-    __emit_char(')');
-    return k;
-  };
-
-
-  /*
-  void
-  test_display(void)
-  {
-  	test(__FILE__, s, sizeof s / sizeof (char *))
-  }
-  
-  #endif
-   */
-
-  Find = function(p, q) {
-    var ae, i, ref2;
-    i = 0;
-    if (equal(p, q)) {
-      return 1;
-    }
-    if (istensor(p)) {
-      for (i = ae = 0, ref2 = p.tensor.nelem; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-        if (Find(p.tensor.elem[i], q)) {
-          return 1;
-        }
-      }
-      return 0;
-    }
-    while (iscons(p)) {
-      if (Find(car(p), q)) {
-        return 1;
-      }
-      p = cdr(p);
-    }
-    return 0;
-  };
-
-  $.Find = Find;
-
-  init = function() {
-    var ae, af, i, ref2, ref3;
-    i = 0;
-    flag = 0;
-    tos = 0;
-    esc_flag = 0;
-    draw_flag = 0;
-    frame = TOS;
-    if (flag) {
-      return;
-    }
-    flag = 1;
-    for (i = ae = 0, ref2 = NSYM; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      symtab[i] = new U();
-    }
-    for (i = af = 0, ref3 = NSYM; 0 <= ref3 ? af < ref3 : af > ref3; i = 0 <= ref3 ? ++af : --af) {
-      symtab[i].k = SYM;
-      binding[i] = symtab[i];
-      arglist[i] = symbol(NIL);
-    }
-    p0 = symbol(NIL);
-    p1 = symbol(NIL);
-    p2 = symbol(NIL);
-    p3 = symbol(NIL);
-    p4 = symbol(NIL);
-    p5 = symbol(NIL);
-    p6 = symbol(NIL);
-    p7 = symbol(NIL);
-    p8 = symbol(NIL);
-    p9 = symbol(NIL);
-    std_symbol("abs", ABS);
-    std_symbol("add", ADD);
-    std_symbol("adj", ADJ);
-    std_symbol("and", AND);
-    std_symbol("arccos", ARCCOS);
-    std_symbol("arccosh", ARCCOSH);
-    std_symbol("arcsin", ARCSIN);
-    std_symbol("arcsinh", ARCSINH);
-    std_symbol("arctan", ARCTAN);
-    std_symbol("arctanh", ARCTANH);
-    std_symbol("arg", ARG);
-    std_symbol("atomize", ATOMIZE);
-    std_symbol("besselj", BESSELJ);
-    std_symbol("bessely", BESSELY);
-    std_symbol("binding", BINDING);
-    std_symbol("binomial", BINOMIAL);
-    std_symbol("ceiling", CEILING);
-    std_symbol("check", CHECK);
-    std_symbol("choose", CHOOSE);
-    std_symbol("circexp", CIRCEXP);
-    std_symbol("clear", CLEAR);
-    std_symbol("clock", CLOCK);
-    std_symbol("coeff", COEFF);
-    std_symbol("cofactor", COFACTOR);
-    std_symbol("condense", CONDENSE);
-    std_symbol("conj", CONJ);
-    std_symbol("contract", CONTRACT);
-    std_symbol("cos", COS);
-    std_symbol("cosh", COSH);
-    std_symbol("decomp", DECOMP);
-    std_symbol("defint", DEFINT);
-    std_symbol("deg", DEGREE);
-    std_symbol("denominator", DENOMINATOR);
-    std_symbol("det", DET);
-    std_symbol("derivative", DERIVATIVE);
-    std_symbol("dim", DIM);
-    std_symbol("dirac", DIRAC);
-    std_symbol("display", DISPLAY);
-    std_symbol("divisors", DIVISORS);
-    std_symbol("do", DO);
-    std_symbol("dot", DOT);
-    std_symbol("draw", DRAW);
-    std_symbol("dsolve", DSOLVE);
-    std_symbol("erf", ERF);
-    std_symbol("erfc", ERFC);
-    std_symbol("eigen", EIGEN);
-    std_symbol("eigenval", EIGENVAL);
-    std_symbol("eigenvec", EIGENVEC);
-    std_symbol("eval", EVAL);
-    std_symbol("exp", EXP);
-    std_symbol("expand", EXPAND);
-    std_symbol("expcos", EXPCOS);
-    std_symbol("expsin", EXPSIN);
-    std_symbol("factor", FACTOR);
-    std_symbol("factorial", FACTORIAL);
-    std_symbol("factorpoly", FACTORPOLY);
-    std_symbol("filter", FILTER);
-    std_symbol("float", FLOATF);
-    std_symbol("floor", FLOOR);
-    std_symbol("for", FOR);
-    std_symbol("Gamma", GAMMA);
-    std_symbol("gcd", GCD);
-    std_symbol("hermite", HERMITE);
-    std_symbol("hilbert", HILBERT);
-    std_symbol("imag", IMAG);
-    std_symbol("component", INDEX);
-    std_symbol("inner", INNER);
-    std_symbol("integral", INTEGRAL);
-    std_symbol("inv", INV);
-    std_symbol("invg", INVG);
-    std_symbol("isinteger", ISINTEGER);
-    std_symbol("isprime", ISPRIME);
-    std_symbol("laguerre", LAGUERRE);
-    std_symbol("lcm", LCM);
-    std_symbol("leading", LEADING);
-    std_symbol("legendre", LEGENDRE);
-    std_symbol("log", LOG);
-    std_symbol("mag", MAG);
-    std_symbol("mod", MOD);
-    std_symbol("multiply", MULTIPLY);
-    std_symbol("not", NOT);
-    std_symbol("nroots", NROOTS);
-    std_symbol("number", NUMBER);
-    std_symbol("numerator", NUMERATOR);
-    std_symbol("operator", OPERATOR);
-    std_symbol("or", OR);
-    std_symbol("outer", OUTER);
-    std_symbol("polar", POLAR);
-    std_symbol("power", POWER);
-    std_symbol("prime", PRIME);
-    std_symbol("print", PRINT);
-    std_symbol("product", PRODUCT);
-    std_symbol("quote", QUOTE);
-    std_symbol("quotient", QUOTIENT);
-    std_symbol("rank", RANK);
-    std_symbol("rationalize", RATIONALIZE);
-    std_symbol("real", REAL);
-    std_symbol("rect", YYRECT);
-    std_symbol("roots", ROOTS);
-    std_symbol("equals", SETQ);
-    std_symbol("sgn", SGN);
-    std_symbol("simplify", SIMPLIFY);
-    std_symbol("sin", SIN);
-    std_symbol("sinh", SINH);
-    std_symbol("shape", SHAPE);
-    std_symbol("sqrt", SQRT);
-    std_symbol("stop", STOP);
-    std_symbol("subst", SUBST);
-    std_symbol("sum", SUM);
-    std_symbol("tan", TAN);
-    std_symbol("tanh", TANH);
-    std_symbol("taylor", TAYLOR);
-    std_symbol("test", TEST);
-    std_symbol("testeq", TESTEQ);
-    std_symbol("testge", TESTGE);
-    std_symbol("testgt", TESTGT);
-    std_symbol("testle", TESTLE);
-    std_symbol("testlt", TESTLT);
-    std_symbol("transpose", TRANSPOSE);
-    std_symbol("unit", UNIT);
-    std_symbol("zero", ZERO);
-    std_symbol("nil", NIL);
-    std_symbol("autoexpand", AUTOEXPAND);
-    std_symbol("bake", BAKE);
-    std_symbol("last", LAST);
-    std_symbol("trace", TRACE);
-    std_symbol("tty", TTY);
-    std_symbol("~", YYE);
-    std_symbol("$DRAWX", DRAWX);
-    std_symbol("$METAA", METAA);
-    std_symbol("$METAB", METAB);
-    std_symbol("$METAX", METAX);
-    std_symbol("$SECRETX", SECRETX);
-    std_symbol("pi", PI);
-    std_symbol("a", SYMBOL_A);
-    std_symbol("b", SYMBOL_B);
-    std_symbol("c", SYMBOL_C);
-    std_symbol("d", SYMBOL_D);
-    std_symbol("i", SYMBOL_I);
-    std_symbol("j", SYMBOL_J);
-    std_symbol("n", SYMBOL_N);
-    std_symbol("r", SYMBOL_R);
-    std_symbol("s", SYMBOL_S);
-    std_symbol("t", SYMBOL_T);
-    std_symbol("x", SYMBOL_X);
-    std_symbol("y", SYMBOL_Y);
-    std_symbol("z", SYMBOL_Z);
-    std_symbol("$C1", C1);
-    std_symbol("$C2", C2);
-    std_symbol("$C3", C3);
-    std_symbol("$C4", C4);
-    std_symbol("$C5", C5);
-    std_symbol("$C6", C6);
-    push_integer(0);
-    zero = pop();
-    push_integer(1);
-    one = pop();
-    push_symbol(POWER);
-    if (DEBUG) {
-      print1(stack[tos - 1]);
-    }
-    push_integer(-1);
-    if (DEBUG) {
-      print1(stack[tos - 1]);
-    }
-    push_rational(1, 2);
-    if (DEBUG) {
-      print1(stack[tos - 1]);
-    }
-    list(3);
-    if (DEBUG) {
-      print1(stack[tos - 1]);
-    }
-    imaginaryunit = pop();
-    return defn();
-  };
-
-  defn_str = ["e=exp(1)", "i=sqrt(-1)", "autoexpand=1", "trange=(-pi,pi)", "xrange=(-10,10)", "yrange=(-10,10)", "last=0", "trace=0", "tty=0", "cross(u,v)=(u[2]*v[3]-u[3]*v[2],u[3]*v[1]-u[1]*v[3],u[1]*v[2]-u[2]*v[1])", "curl(v)=(d(v[3],y)-d(v[2],z),d(v[1],z)-d(v[3],x),d(v[2],x)-d(v[1],y))", "div(v)=d(v[1],x)+d(v[2],y)+d(v[3],z)", "ln(x)=log(x)"];
-
-  defn = function() {
-    var ae, definitionOfInterest, defn_i, ref2, results;
-    results = [];
-    for (defn_i = ae = 0, ref2 = defn_str.length; 0 <= ref2 ? ae < ref2 : ae > ref2; defn_i = 0 <= ref2 ? ++ae : --ae) {
-      definitionOfInterest = defn_str[defn_i];
-      scan(definitionOfInterest);
-      if (DEBUG) {
-        console.log("... evaling " + definitionOfInterest);
-        console.log("top of stack:");
-        print1(stack[tos - 1]);
-      }
-      Eval();
-      results.push(pop());
-    }
-    return results;
-  };
-
-  mcmp = function(a, b) {
-    return a.compare(b);
-  };
-
-  mcmpint = function(a, n) {
-    var b, t;
-    b = bigInt(n);
-    t = mcmp(a, b);
-    return t;
-  };
-
-
-  /*
-  #if SELFTEST
-  
-  void
-  test_mcmp(void)
-  {
-  	int i, j, k
-  	unsigned int *x, *y
-  	logout("testing mcmp\n")
-  	for (i = -1000; i < 1000; i++) {
-  		x = mint(i)
-  		for (j = -1000; j < 1000; j++) {
-  			y = mint(j)
-  			k = mcmp(x, y)
-  			if (i == j && k != 0) {
-  				logout("failed\n")
-  				errout()
-  			}
-  			if (i < j && k != -1) {
-  				logout("failed\n")
-  				errout()
-  			}
-  			if (i > j && k != 1) {
-  				logout("failed\n")
-  				errout()
-  			}
-  			mfree(y)
-  		}
-  		mfree(x)
-  	}
-  	logout("ok\n")
-  }
-  
-  #endif
-   */
-
-  strcmp = function(str1, str2) {
-    if (str1 === str2) {
-      return 0;
-    } else if (str1 > str2) {
-      return 1;
-    } else {
-      return -1;
-    }
-  };
-
-  doubleToReasonableString = function(d) {
-    return parseFloat(d.toPrecision(6));
-  };
-
-  clear_term = function() {};
-
-  isspace = function(s) {
-    if (s == null) {
-      return false;
-    }
-    return s === ' ' || s === '\t' || s === '\n' || s === '\v' || s === '\f' || s === '\r';
-  };
-
-  isdigit = function(str) {
-    if (str == null) {
-      return false;
-    }
-    return /^\d+$/.test(str);
-  };
-
-  isalpha = function(str) {
-    if (str == null) {
-      return false;
-    }
-    if (str == null) {
-      debugger;
-    }
-    return str.search(/[^A-Za-z]/) === -1;
-  };
-
-  isalnum = function(str) {
-    if (str == null) {
-      return false;
-    }
-    return isalpha(str) || isdigit(str);
-  };
-
-  stop = function(s) {
-    var message;
-    errorMessage += "Stop: ";
-    errorMessage += s;
-    message = errorMessage;
-    errorMessage = '';
-    tos = 0;
-    throw new Error(message);
-  };
-
-  inited = false;
-
-  run = function(stringToBeRun) {
-    var allReturnedStrings, collectedResult, error, error1, error2, i, indexOfPartRemainingToBeParsed, n;
-    stringToBeRun = stringToBeRun;
-    if (stringToBeRun === "selftest") {
-      selftest();
-      return;
-    }
-    if (!inited) {
-      inited = true;
-      init();
-    }
-    i = 0;
-    n = 0;
-    indexOfPartRemainingToBeParsed = 0;
-    allReturnedStrings = "";
-    while (1.) {
-      try {
-        errorMessage = "";
-        check_stack();
-        n = scan(stringToBeRun.substring(indexOfPartRemainingToBeParsed));
-        p1 = pop();
-        check_stack();
-      } catch (error1) {
-        error = error1;
-        if (PRINTOUTRESULT) {
-          console.log(error);
-        }
-        allReturnedStrings += error.message;
-        init();
-        break;
-      }
-      if (n === 0) {
-        break;
-      }
-      indexOfPartRemainingToBeParsed += n;
-      push(p1);
-      try {
-        top_level_eval();
-        p2 = pop();
-        check_stack();
-        if (p2 === symbol(NIL)) {
-          continue;
-        }
-        if (isstr(p2)) {
-          console.log(p2.str);
-          console.log("\n");
-          continue;
-        }
-        collectedResult = collectResultLine(p2);
-        allReturnedStrings += collectedResult;
-        if (PRINTOUTRESULT) {
-          console.log("printline");
-          console.log(collectedResult);
-        }
-        if (PRINTOUTRESULT) {
-          console.log("display:");
-          display(p2);
-        }
-        allReturnedStrings += "\n";
-      } catch (error2) {
-        error = error2;
-        collectedResult = error.message;
-        if (PRINTOUTRESULT) {
-          console.log(collectedResult);
-        }
-        allReturnedStrings += collectedResult;
-        allReturnedStrings += "\n";
-        init();
-      }
-    }
-    if (allReturnedStrings[allReturnedStrings.length - 1] === "\n") {
-      allReturnedStrings = allReturnedStrings.substring(0, allReturnedStrings.length - 1);
-    }
-    return allReturnedStrings;
-  };
-
-  check_stack = function() {
-    if (tos !== 0) {
-      debugger;
-      stop("stack error");
-    }
-    if (frame !== TOS) {
-      debugger;
-      return stop("frame error");
-    }
-  };
-
-  echo_input = function(s) {
-    console.log(s);
-    return console.log("\n");
-  };
-
-  top_level_eval = function() {
-    var doNothing;
-    if (DEBUG) {
-      console.log("#### top level eval");
-    }
-    save();
-    trigmode = 0;
-    p1 = symbol(AUTOEXPAND);
-    if (iszero(get_binding(p1))) {
-      expanding = 0;
-    } else {
-      expanding = 1;
-    }
-    p1 = pop();
-    push(p1);
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push(p2);
-      restore();
-      return;
-    }
-    set_binding(symbol(LAST), p2);
-    if (!iszero(get_binding(symbol(BAKE)))) {
-      push(p2);
-      bake();
-      p2 = pop();
-    }
-    if ((p1 === symbol(SYMBOL_I) || p1 === symbol(SYMBOL_J)) && isimaginaryunit(p2)) {
-      doNothing = 0;
-    } else if (isimaginaryunit(get_binding(symbol(SYMBOL_J)))) {
-      push(p2);
-      push(imaginaryunit);
-      push_symbol(SYMBOL_J);
-      subst();
-      p2 = pop();
-    } else if (isimaginaryunit(get_binding(symbol(SYMBOL_I)))) {
-      push(p2);
-      push(imaginaryunit);
-      push_symbol(SYMBOL_I);
-      subst();
-      p2 = pop();
-    }
-    push(p2);
-    return restore();
-  };
-
-  check_esc_flag = function() {
-    if (esc_flag) {
-      return stop("esc key");
-    }
-  };
-
-  (typeof exports !== "undefined" && exports !== null ? exports : this).run = run;
-
-  tos = 0;
-
-  nil_symbols = 0;
-
-  push = function(p) {
-    if (p == null) {
-      debugger;
-    }
-    if (p.isZero != null) {
-      debugger;
-    }
-    if (p === symbol(NIL)) {
-      nil_symbols++;
-      if (DEBUG) {
-        console.log("pushing symbol(NIL) #" + nil_symbols);
-      }
-    }
-    if (tos >= frame) {
-      stop("stack overflow");
-    }
-    return stack[tos++] = p;
-  };
-
-  pop = function() {
-    var elementToBeReturned;
-    if (tos === 0) {
-      debugger;
-      stop("stack underflow");
-    }
-    if (stack[tos - 1] == null) {
-      debugger;
-    }
-    elementToBeReturned = stack[--tos];
-    return elementToBeReturned;
-  };
-
-  push_frame = function(n) {
-    var ae, i, ref2, results;
-    i = 0;
-    frame -= n;
-    if (frame < tos) {
-      debugger;
-      stop("frame overflow, circular reference?");
-    }
-    results = [];
-    for (i = ae = 0, ref2 = n; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      results.push(stack[frame + i] = symbol(NIL));
-    }
-    return results;
-  };
-
-  pop_frame = function(n) {
-    frame += n;
-    if (frame > TOS) {
-      return stop("frame underflow");
-    }
-  };
-
-  save = function() {
-    frame -= 10;
-    if (frame < tos) {
-      debugger;
-      stop("frame overflow, circular reference?");
-    }
-    stack[frame + 0] = p0;
-    stack[frame + 1] = p1;
-    stack[frame + 2] = p2;
-    stack[frame + 3] = p3;
-    stack[frame + 4] = p4;
-    stack[frame + 5] = p5;
-    stack[frame + 6] = p6;
-    stack[frame + 7] = p7;
-    stack[frame + 8] = p8;
-    return stack[frame + 9] = p9;
-  };
-
-  restore = function() {
-    if (frame > TOS - 10) {
-      stop("frame underflow");
-    }
-    p0 = stack[frame + 0];
-    p1 = stack[frame + 1];
-    p2 = stack[frame + 2];
-    p3 = stack[frame + 3];
-    p4 = stack[frame + 4];
-    p5 = stack[frame + 5];
-    p6 = stack[frame + 6];
-    p7 = stack[frame + 7];
-    p8 = stack[frame + 8];
-    p9 = stack[frame + 9];
-    return frame += 10;
-  };
-
-  swap = function() {
-    var p, q;
-    p = pop();
-    q = pop();
-    push(p);
-    return push(q);
-  };
-
-  dupl = function() {
-    var p;
-    p = pop();
-    push(p);
-    return push(p);
-  };
-
-  $.dupl = dupl;
-
-  $.swap = swap;
-
-  $.restore = restore;
-
-  $.save = save;
-
-  $.push = push;
-
-  $.pop = pop;
-
-  std_symbol = function(s, n) {
-    var p;
-    p = symtab[n];
-    if (p == null) {
-      debugger;
-    }
-    return p.printname = s;
-  };
-
-  usr_symbol = function(s) {
-    var ae, i, p, ref2;
-    i = 0;
-    for (i = ae = 0, ref2 = NSYM; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      if (symtab[i].printname === "") {
-        break;
-      }
-      if (s === symtab[i].printname) {
-        return symtab[i];
-      }
-    }
-    if (i === NSYM) {
-      stop("symbol table overflow");
-    }
-    p = symtab[i];
-    p.printname = s;
-    return p;
-  };
-
-  get_printname = function(p) {
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    return p.printname;
-  };
-
-  set_binding = function(p, q) {
-    var indexFound;
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    indexFound = symtab.indexOf(p);
-    if (symtab.indexOf(p, indexFound + 1) !== -1) {
-      console.log("ops, more than one element!");
-      debugger;
-    }
-    if (DEBUG) {
-      console.log("lookup >> set_binding lookup " + indexFound);
-    }
-    binding[indexFound] = q;
-    return arglist[indexFound] = symbol(NIL);
-  };
-
-  get_binding = function(p) {
-    var indexFound;
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    indexFound = symtab.indexOf(p);
-    if (symtab.indexOf(p, indexFound + 1) !== -1) {
-      console.log("ops, more than one element!");
-      debugger;
-    }
-    if (DEBUG) {
-      console.log("lookup >> get_binding lookup " + indexFound);
-    }
-    return binding[indexFound];
-  };
-
-  set_binding_and_arglist = function(p, q, r) {
-    var indexFound;
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    indexFound = symtab.indexOf(p);
-    if (symtab.indexOf(p, indexFound + 1) !== -1) {
-      console.log("ops, more than one element!");
-      debugger;
-    }
-    if (DEBUG) {
-      console.log("lookup >> set_binding_and_arglist lookup " + indexFound);
-    }
-    binding[indexFound] = q;
-    return arglist[indexFound] = r;
-  };
-
-  get_arglist = function(p) {
-    var indexFound;
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    indexFound = symtab.indexOf(p);
-    if (symtab.indexOf(p, indexFound + 1) !== -1) {
-      console.log("ops, more than one element!");
-      debugger;
-    }
-    if (DEBUG) {
-      console.log("lookup >> get_arglist lookup " + indexFound);
-    }
-    return arglist[indexFound];
-  };
-
-  lookupsTotal = 0;
-
-  symnum = function(p) {
-    var indexFound;
-    lookupsTotal++;
-    if (p.k !== SYM) {
-      stop("symbol error");
-    }
-    indexFound = symtab.indexOf(p);
-    if (symtab.indexOf(p, indexFound + 1) !== -1) {
-      console.log("ops, more than one element!");
-      debugger;
-    }
-    if (DEBUG) {
-      console.log("lookup >> symnum lookup " + indexFound + " lookup # " + lookupsTotal);
-    }
-    return indexFound;
-  };
-
-  push_symbol = function(k) {
-    return push(symtab[k]);
-  };
-
-  clear_symbols = function() {
-    var ae, i, ref2, results;
-    i = 0;
-    results = [];
-    for (i = ae = 0, ref2 = NSYM; 0 <= ref2 ? ae < ref2 : ae > ref2; i = 0 <= ref2 ? ++ae : --ae) {
-      binding[i] = symtab[i];
-      results.push(arglist[i] = symbol(NIL));
-    }
-    return results;
-  };
-
-  $.get_binding = get_binding;
-
-  $.set_binding = set_binding;
-
-  $.usr_symbol = usr_symbol;
-
-  if (!inited) {
-    inited = true;
-    init();
-  }
-
-  $.init = init;
-
-  parse_internal = function(argu) {
-    if (typeof argu === 'string') {
-      return scan(argu);
-    } else if (typeof argu === 'number') {
-      if (argu % 1 === 0) {
-        return push_integer(argu);
-      } else {
-        return push_double(argu);
-      }
-    } else if (argu instanceof U) {
-      return push(argu);
-    } else {
-      console.warn('unknown argument type', argu);
-      return push(symbol(NIL));
-    }
-  };
-
-  parse = function(argu) {
-    var data, error, error1;
-    try {
-      parse_internal(argu);
-      data = pop();
-      check_stack();
-    } catch (error1) {
-      error = error1;
-      reset_after_error();
-      throw error;
-    }
-    return data;
-  };
-
-  exec = function() {
-    var ae, argu, argus, error, error1, fn, len, name, result;
-    name = arguments[0], argus = 2 <= arguments.length ? slice.call(arguments, 1) : [];
-    fn = get_binding(usr_symbol(name));
-    check_stack();
-    push(fn);
-    for (ae = 0, len = argus.length; ae < len; ae++) {
-      argu = argus[ae];
-      parse_internal(argu);
-    }
-    list(1 + argus.length);
-    p1 = pop();
-    push(p1);
-    try {
-      fixed_top_level_eval();
-      result = pop();
-      check_stack();
-    } catch (error1) {
-      error = error1;
-      reset_after_error();
-      throw error;
-    }
-    return result;
-  };
-
-  reset_after_error = function() {
-    tos = 0;
-    esc_flag = 0;
-    draw_flag = 0;
-    return frame = TOS;
-  };
-
-  fixed_top_level_eval = function() {
-    save();
-    trigmode = 0;
-    p1 = symbol(AUTOEXPAND);
-    if (iszero(get_binding(p1))) {
-      expanding = 0;
-    } else {
-      expanding = 1;
-    }
-    p1 = pop();
-    push(p1);
-    Eval();
-    p2 = pop();
-    if (p2 === symbol(NIL)) {
-      push(p2);
-      restore();
-      return;
-    }
-    if (!iszero(get_binding(symbol(BAKE)))) {
-      push(p2);
-      bake();
-      p2 = pop();
-    }
-    push(p2);
-    return restore();
-  };
-
-  $.exec = exec;
-
-  $.parse = parse;
-
-  (function() {
-    var ae, builtin_fns, fn, len, results;
-    builtin_fns = ["abs", "add", "adj", "and", "arccos", "arccosh", "arcsin", "arcsinh", "arctan", "arctanh", "arg", "atomize", "besselj", "bessely", "binding", "binomial", "ceiling", "check", "choose", "circexp", "clear", "clock", "coeff", "cofactor", "condense", "conj", "contract", "cos", "cosh", "decomp", "defint", "deg", "denominator", "det", "derivative", "dim", "dirac", "display", "divisors", "do", "dot", "draw", "dsolve", "erf", "erfc", "eigen", "eigenval", "eigenvec", "eval", "exp", "expand", "expcos", "expsin", "factor", "factorial", "factorpoly", "filter", "float", "floor", "for", "Gamma", "gcd", "hermite", "hilbert", "imag", "component", "inner", "integral", "inv", "invg", "isinteger", "isprime", "laguerre", "lcm", "leading", "legendre", "log", "mag", "mod", "multiply", "not", "nroots", "number", "numerator", "operator", "or", "outer", "polar", "power", "prime", "print", "product", "quote", "quotient", "rank", "rationalize", "real", "rect", "roots", "equals", "sgn", "simplify", "sin", "sinh", "sqrt", "stop", "subst", "sum", "tan", "tanh", "taylor", "test", "testeq", "testge", "testgt", "testle", "testlt", "transpose", "unit", "zero"];
-    results = [];
-    for (ae = 0, len = builtin_fns.length; ae < len; ae++) {
-      fn = builtin_fns[ae];
-      results.push($[fn] = exec.bind(this, fn));
-    }
-    return results;
-  })();
-
-}).call(this);
-
-},{"big-integer":13}],13:[function(require,module,exports){
-var bigInt = (function (undefined) {
-    "use strict";
-
-    var BASE = 1e7,
-        LOG_BASE = 7,
-        MAX_INT = 9007199254740992,
-        MAX_INT_ARR = smallToArray(MAX_INT),
-        LOG_MAX_INT = Math.log(MAX_INT);
-
-    function Integer(v, radix) {
-        if (typeof v === "undefined") return Integer[0];
-        if (typeof radix !== "undefined") return +radix === 10 ? parseValue(v) : parseBase(v, radix);
-        return parseValue(v);
-    }
-
-    function BigInteger(value, sign) {
-        this.value = value;
-        this.sign = sign;
-        this.isSmall = false;
-    }
-    BigInteger.prototype = Object.create(Integer.prototype);
-
-    function SmallInteger(value) {
-        this.value = value;
-        this.sign = value < 0;
-        this.isSmall = true;
-    }
-    SmallInteger.prototype = Object.create(Integer.prototype);
-
-    function isPrecise(n) {
-        return -MAX_INT < n && n < MAX_INT;
-    }
-
-    function smallToArray(n) { // For performance reasons doesn't reference BASE, need to change this function if BASE changes
-        if (n < 1e7)
-            return [n];
-        if (n < 1e14)
-            return [n % 1e7, Math.floor(n / 1e7)];
-        return [n % 1e7, Math.floor(n / 1e7) % 1e7, Math.floor(n / 1e14)];
-    }
-
-    function arrayToSmall(arr) { // If BASE changes this function may need to change
-        trim(arr);
-        var length = arr.length;
-        if (length < 4 && compareAbs(arr, MAX_INT_ARR) < 0) {
-            switch (length) {
-                case 0: return 0;
-                case 1: return arr[0];
-                case 2: return arr[0] + arr[1] * BASE;
-                default: return arr[0] + (arr[1] + arr[2] * BASE) * BASE;
-            }
-        }
-        return arr;
-    }
-
-    function trim(v) {
-        var i = v.length;
-        while (v[--i] === 0);
-        v.length = i + 1;
-    }
-
-    function createArray(length) { // function shamelessly stolen from Yaffle's library https://github.com/Yaffle/BigInteger
-        var x = new Array(length);
-        var i = -1;
-        while (++i < length) {
-            x[i] = 0;
-        }
-        return x;
-    }
-
-    function truncate(n) {
-        if (n > 0) return Math.floor(n);
-        return Math.ceil(n);
-    }
-
-    function add(a, b) { // assumes a and b are arrays with a.length >= b.length
-        var l_a = a.length,
-            l_b = b.length,
-            r = new Array(l_a),
-            carry = 0,
-            base = BASE,
-            sum, i;
-        for (i = 0; i < l_b; i++) {
-            sum = a[i] + b[i] + carry;
-            carry = sum >= base ? 1 : 0;
-            r[i] = sum - carry * base;
-        }
-        while (i < l_a) {
-            sum = a[i] + carry;
-            carry = sum === base ? 1 : 0;
-            r[i++] = sum - carry * base;
-        }
-        if (carry > 0) r.push(carry);
-        return r;
-    }
-
-    function addAny(a, b) {
-        if (a.length >= b.length) return add(a, b);
-        return add(b, a);
-    }
-
-    function addSmall(a, carry) { // assumes a is array, carry is number with 0 <= carry < MAX_INT
-        var l = a.length,
-            r = new Array(l),
-            base = BASE,
-            sum, i;
-        for (i = 0; i < l; i++) {
-            sum = a[i] - base + carry;
-            carry = Math.floor(sum / base);
-            r[i] = sum - carry * base;
-            carry += 1;
-        }
-        while (carry > 0) {
-            r[i++] = carry % base;
-            carry = Math.floor(carry / base);
-        }
-        return r;
-    }
-
-    BigInteger.prototype.add = function (v) {
-        var value, n = parseValue(v);
-        if (this.sign !== n.sign) {
-            return this.subtract(n.negate());
-        }
-        var a = this.value, b = n.value;
-        if (n.isSmall) {
-            return new BigInteger(addSmall(a, Math.abs(b)), this.sign);
-        }
-        return new BigInteger(addAny(a, b), this.sign);
-    };
-    BigInteger.prototype.plus = BigInteger.prototype.add;
-
-    SmallInteger.prototype.add = function (v) {
-        var n = parseValue(v);
-        var a = this.value;
-        if (a < 0 !== n.sign) {
-            return this.subtract(n.negate());
-        }
-        var b = n.value;
-        if (n.isSmall) {
-            if (isPrecise(a + b)) return new SmallInteger(a + b);
-            b = smallToArray(Math.abs(b));
-        }
-        return new BigInteger(addSmall(b, Math.abs(a)), a < 0);
-    };
-    SmallInteger.prototype.plus = SmallInteger.prototype.add;
-
-    function subtract(a, b) { // assumes a and b are arrays with a >= b
-        var a_l = a.length,
-            b_l = b.length,
-            r = new Array(a_l),
-            borrow = 0,
-            base = BASE,
-            i, difference;
-        for (i = 0; i < b_l; i++) {
-            difference = a[i] - borrow - b[i];
-            if (difference < 0) {
-                difference += base;
-                borrow = 1;
-            } else borrow = 0;
-            r[i] = difference;
-        }
-        for (i = b_l; i < a_l; i++) {
-            difference = a[i] - borrow;
-            if (difference < 0) difference += base;
-            else {
-                r[i++] = difference;
-                break;
-            }
-            r[i] = difference;
-        }
-        for (; i < a_l; i++) {
-            r[i] = a[i];
-        }
-        trim(r);
-        return r;
-    }
-
-    function subtractAny(a, b, sign) {
-        var value, isSmall;
-        if (compareAbs(a, b) >= 0) {
-            value = subtract(a,b);
-        } else {
-            value = subtract(b, a);
-            sign = !sign;
-        }
-        value = arrayToSmall(value);
-        if (typeof value === "number") {
-            if (sign) value = -value;
-            return new SmallInteger(value);
-        }
-        return new BigInteger(value, sign);
-    }
-
-    function subtractSmall(a, b, sign) { // assumes a is array, b is number with 0 <= b < MAX_INT
-        var l = a.length,
-            r = new Array(l),
-            carry = -b,
-            base = BASE,
-            i, difference;
-        for (i = 0; i < l; i++) {
-            difference = a[i] + carry;
-            carry = Math.floor(difference / base);
-            difference %= base;
-            r[i] = difference < 0 ? difference + base : difference;
-        }
-        r = arrayToSmall(r);
-        if (typeof r === "number") {
-            if (sign) r = -r;
-            return new SmallInteger(r);
-        } return new BigInteger(r, sign);
-    }
-
-    BigInteger.prototype.subtract = function (v) {
-        var n = parseValue(v);
-        if (this.sign !== n.sign) {
-            return this.add(n.negate());
-        }
-        var a = this.value, b = n.value;
-        if (n.isSmall)
-            return subtractSmall(a, Math.abs(b), this.sign);
-        return subtractAny(a, b, this.sign);
-    };
-    BigInteger.prototype.minus = BigInteger.prototype.subtract;
-
-    SmallInteger.prototype.subtract = function (v) {
-        var n = parseValue(v);
-        var a = this.value;
-        if (a < 0 !== n.sign) {
-            return this.add(n.negate());
-        }
-        var b = n.value;
-        if (n.isSmall) {
-            return new SmallInteger(a - b);
-        }
-        return subtractSmall(b, Math.abs(a), a >= 0);
-    };
-    SmallInteger.prototype.minus = SmallInteger.prototype.subtract;
-
-    BigInteger.prototype.negate = function () {
-        return new BigInteger(this.value, !this.sign);
-    };
-    SmallInteger.prototype.negate = function () {
-        var sign = this.sign;
-        var small = new SmallInteger(-this.value);
-        small.sign = !sign;
-        return small;
-    };
-
-    BigInteger.prototype.abs = function () {
-        return new BigInteger(this.value, false);
-    };
-    SmallInteger.prototype.abs = function () {
-        return new SmallInteger(Math.abs(this.value));
-    };
-
-    function multiplyLong(a, b) {
-        var a_l = a.length,
-            b_l = b.length,
-            l = a_l + b_l,
-            r = createArray(l),
-            base = BASE,
-            product, carry, i, a_i, b_j;
-        for (i = 0; i < a_l; ++i) {
-            a_i = a[i];
-            for (var j = 0; j < b_l; ++j) {
-                b_j = b[j];
-                product = a_i * b_j + r[i + j];
-                carry = Math.floor(product / base);
-                r[i + j] = product - carry * base;
-                r[i + j + 1] += carry;
-            }
-        }
-        trim(r);
-        return r;
-    }
-
-    function multiplySmall(a, b) { // assumes a is array, b is number with |b| < BASE
-        var l = a.length,
-            r = new Array(l),
-            base = BASE,
-            carry = 0,
-            product, i;
-        for (i = 0; i < l; i++) {
-            product = a[i] * b + carry;
-            carry = Math.floor(product / base);
-            r[i] = product - carry * base;
-        }
-        while (carry > 0) {
-            r[i++] = carry % base;
-            carry = Math.floor(carry / base);
-        }
-        return r;
-    }
-
-    function shiftLeft(x, n) {
-        var r = [];
-        while (n-- > 0) r.push(0);
-        return r.concat(x);
-    }
-
-    function multiplyKaratsuba(x, y) {
-        var n = Math.max(x.length, y.length);
-        
-        if (n <= 30) return multiplyLong(x, y);
-        n = Math.ceil(n / 2);
-
-        var b = x.slice(n),
-            a = x.slice(0, n),
-            d = y.slice(n),
-            c = y.slice(0, n);
-
-        var ac = multiplyKaratsuba(a, c),
-            bd = multiplyKaratsuba(b, d),
-            abcd = multiplyKaratsuba(addAny(a, b), addAny(c, d));
-
-        var product = addAny(addAny(ac, shiftLeft(subtract(subtract(abcd, ac), bd), n)), shiftLeft(bd, 2 * n));
-        trim(product);
-        return product;
-    }
-
-    // The following function is derived from a surface fit of a graph plotting the performance difference
-    // between long multiplication and karatsuba multiplication versus the lengths of the two arrays.
-    function useKaratsuba(l1, l2) {
-        return -0.012 * l1 - 0.012 * l2 + 0.000015 * l1 * l2 > 0;
-    }
-
-    BigInteger.prototype.multiply = function (v) {
-        var value, n = parseValue(v),
-            a = this.value, b = n.value,
-            sign = this.sign !== n.sign,
-            abs;
-        if (n.isSmall) {
-            if (b === 0) return Integer[0];
-            if (b === 1) return this;
-            if (b === -1) return this.negate();
-            abs = Math.abs(b);
-            if (abs < BASE) {
-                return new BigInteger(multiplySmall(a, abs), sign);
-            }
-            b = smallToArray(abs);
-        }
-        if (useKaratsuba(a.length, b.length)) // Karatsuba is only faster for certain array sizes
-            return new BigInteger(multiplyKaratsuba(a, b), sign);
-        return new BigInteger(multiplyLong(a, b), sign);
-    };
-
-    BigInteger.prototype.times = BigInteger.prototype.multiply;
-
-    function multiplySmallAndArray(a, b, sign) { // a >= 0
-        if (a < BASE) {
-            return new BigInteger(multiplySmall(b, a), sign);
-        }
-        return new BigInteger(multiplyLong(b, smallToArray(a)), sign);
-    }
-    SmallInteger.prototype._multiplyBySmall = function (a) {
-            if (isPrecise(a.value * this.value)) {
-                return new SmallInteger(a.value * this.value);
-            }
-            return multiplySmallAndArray(Math.abs(a.value), smallToArray(Math.abs(this.value)), this.sign !== a.sign);
-    };
-    BigInteger.prototype._multiplyBySmall = function (a) {
-            if (a.value === 0) return Integer[0];
-            if (a.value === 1) return this;
-            if (a.value === -1) return this.negate();
-            return multiplySmallAndArray(Math.abs(a.value), this.value, this.sign !== a.sign);
-    };
-    SmallInteger.prototype.multiply = function (v) {
-        return parseValue(v)._multiplyBySmall(this);
-    };
-    SmallInteger.prototype.times = SmallInteger.prototype.multiply;
-
-    function square(a) {
-        var l = a.length,
-            r = createArray(l + l),
-            base = BASE,
-            product, carry, i, a_i, a_j;
-        for (i = 0; i < l; i++) {
-            a_i = a[i];
-            for (var j = 0; j < l; j++) {
-                a_j = a[j];
-                product = a_i * a_j + r[i + j];
-                carry = Math.floor(product / base);
-                r[i + j] = product - carry * base;
-                r[i + j + 1] += carry;
-            }
-        }
-        trim(r);
-        return r;
-    }
-
-    BigInteger.prototype.square = function () {
-        return new BigInteger(square(this.value), false);
-    };
-
-    SmallInteger.prototype.square = function () {
-        var value = this.value * this.value;
-        if (isPrecise(value)) return new SmallInteger(value);
-        return new BigInteger(square(smallToArray(Math.abs(this.value))), false);
-    };
-
-    function divMod1(a, b) { // Left over from previous version. Performs faster than divMod2 on smaller input sizes.
-        var a_l = a.length,
-            b_l = b.length,
-            base = BASE,
-            result = createArray(b.length),
-            divisorMostSignificantDigit = b[b_l - 1],
-            // normalization
-            lambda = Math.ceil(base / (2 * divisorMostSignificantDigit)),
-            remainder = multiplySmall(a, lambda),
-            divisor = multiplySmall(b, lambda),
-            quotientDigit, shift, carry, borrow, i, l, q;
-        if (remainder.length <= a_l) remainder.push(0);
-        divisor.push(0);
-        divisorMostSignificantDigit = divisor[b_l - 1];
-        for (shift = a_l - b_l; shift >= 0; shift--) {
-            quotientDigit = base - 1;
-            if (remainder[shift + b_l] !== divisorMostSignificantDigit) {
-              quotientDigit = Math.floor((remainder[shift + b_l] * base + remainder[shift + b_l - 1]) / divisorMostSignificantDigit);
-            }
-            // quotientDigit <= base - 1
-            carry = 0;
-            borrow = 0;
-            l = divisor.length;
-            for (i = 0; i < l; i++) {
-                carry += quotientDigit * divisor[i];
-                q = Math.floor(carry / base);
-                borrow += remainder[shift + i] - (carry - q * base);
-                carry = q;
-                if (borrow < 0) {
-                    remainder[shift + i] = borrow + base;
-                    borrow = -1;
-                } else {
-                    remainder[shift + i] = borrow;
-                    borrow = 0;
-                }
-            }
-            while (borrow !== 0) {
-                quotientDigit -= 1;
-                carry = 0;
-                for (i = 0; i < l; i++) {
-                    carry += remainder[shift + i] - base + divisor[i];
-                    if (carry < 0) {
-                        remainder[shift + i] = carry + base;
-                        carry = 0;
-                    } else {
-                        remainder[shift + i] = carry;
-                        carry = 1;
-                    }
-                }
-                borrow += carry;
-            }
-            result[shift] = quotientDigit;
-        }
-        // denormalization
-        remainder = divModSmall(remainder, lambda)[0];
-        return [arrayToSmall(result), arrayToSmall(remainder)];
-    }
-
-    function divMod2(a, b) { // Implementation idea shamelessly stolen from Silent Matt's library http://silentmatt.com/biginteger/
-        // Performs faster than divMod1 on larger input sizes.
-        var a_l = a.length,
-            b_l = b.length,
-            result = [],
-            part = [],
-            base = BASE,
-            guess, xlen, highx, highy, check;
-        while (a_l) {
-            part.unshift(a[--a_l]);
-            if (compareAbs(part, b) < 0) {
-                result.push(0);
-                continue;
-            }
-            xlen = part.length;
-            highx = part[xlen - 1] * base + part[xlen - 2];
-            highy = b[b_l - 1] * base + b[b_l - 2];
-            if (xlen > b_l) {
-                highx = (highx + 1) * base;
-            }
-            guess = Math.ceil(highx / highy);
-            do {
-                check = multiplySmall(b, guess);
-                if (compareAbs(check, part) <= 0) break;
-                guess--;
-            } while (guess);
-            result.push(guess);
-            part = subtract(part, check);
-        }
-        result.reverse();
-        return [arrayToSmall(result), arrayToSmall(part)];
-    }
-
-    function divModSmall(value, lambda) {
-        var length = value.length,
-            quotient = createArray(length),
-            base = BASE,
-            i, q, remainder, divisor;
-        remainder = 0;
-        for (i = length - 1; i >= 0; --i) {
-            divisor = remainder * base + value[i];
-            q = truncate(divisor / lambda);
-            remainder = divisor - q * lambda;
-            quotient[i] = q | 0;
-        }
-        return [quotient, remainder | 0];
-    }
-
-    function divModAny(self, v) {
-        var value, n = parseValue(v);
-        var a = self.value, b = n.value;
-        var quotient;
-        if (b === 0) throw new Error("Cannot divide by zero");
-        if (self.isSmall) {
-            if (n.isSmall) {
-                return [new SmallInteger(truncate(a / b)), new SmallInteger(a % b)];
-            }
-            return [Integer[0], self];
-        }
-        if (n.isSmall) {
-            if (b === 1) return [self, Integer[0]];
-            if (b == -1) return [self.negate(), Integer[0]];
-            var abs = Math.abs(b);
-            if (abs < BASE) {
-                value = divModSmall(a, abs);
-                quotient = arrayToSmall(value[0]);
-                var remainder = value[1];
-                if (self.sign) remainder = -remainder;
-                if (typeof quotient === "number") {
-                    if (self.sign !== n.sign) quotient = -quotient;
-                    return [new SmallInteger(quotient), new SmallInteger(remainder)];
-                }
-                return [new BigInteger(quotient, self.sign !== n.sign), new SmallInteger(remainder)];
-            }
-            b = smallToArray(abs);
-        }
-        var comparison = compareAbs(a, b);
-        if (comparison === -1) return [Integer[0], self];
-        if (comparison === 0) return [Integer[self.sign === n.sign ? 1 : -1], Integer[0]];
-
-        // divMod1 is faster on smaller input sizes
-        if (a.length + b.length <= 200)
-            value = divMod1(a, b);
-        else value = divMod2(a, b);
-
-        quotient = value[0];
-        var qSign = self.sign !== n.sign,
-            mod = value[1],
-            mSign = self.sign;
-        if (typeof quotient === "number") {
-            if (qSign) quotient = -quotient;
-            quotient = new SmallInteger(quotient);
-        } else quotient = new BigInteger(quotient, qSign);
-        if (typeof mod === "number") {
-            if (mSign) mod = -mod;
-            mod = new SmallInteger(mod);
-        } else mod = new BigInteger(mod, mSign);
-        return [quotient, mod];
-    }
-
-    BigInteger.prototype.divmod = function (v) {
-        var result = divModAny(this, v);
-        return {
-            quotient: result[0],
-            remainder: result[1]
-        };
-    };
-    SmallInteger.prototype.divmod = BigInteger.prototype.divmod;
-
-    BigInteger.prototype.divide = function (v) {
-        return divModAny(this, v)[0];
-    };
-    SmallInteger.prototype.over = SmallInteger.prototype.divide = BigInteger.prototype.over = BigInteger.prototype.divide;
-
-    BigInteger.prototype.mod = function (v) {
-        return divModAny(this, v)[1];
-    };
-    SmallInteger.prototype.remainder = SmallInteger.prototype.mod = BigInteger.prototype.remainder = BigInteger.prototype.mod;
-
-    BigInteger.prototype.pow = function (v) {
-        var n = parseValue(v),
-            a = this.value,
-            b = n.value,
-            value, x, y;
-        if (b === 0) return Integer[1];
-        if (a === 0) return Integer[0];
-        if (a === 1) return Integer[1];
-        if (a === -1) return n.isEven() ? Integer[1] : Integer[-1];
-        if (n.sign) {
-            return Integer[0];
-        }
-        if (!n.isSmall) throw new Error("The exponent " + n.toString() + " is too large.");
-        if (this.isSmall) {
-            if (isPrecise(value = Math.pow(a, b)))
-                return new SmallInteger(truncate(value));
-        }
-        x = this;
-        y = Integer[1];
-        while (true) {
-            if (b & 1 === 1) {
-                y = y.times(x);
-                --b;
-            }
-            if (b === 0) break;
-            b /= 2;
-            x = x.square();
-        }
-        return y;
-    };
-    SmallInteger.prototype.pow = BigInteger.prototype.pow;
-
-    BigInteger.prototype.modPow = function (exp, mod) {
-        exp = parseValue(exp);
-        mod = parseValue(mod);
-        if (mod.isZero()) throw new Error("Cannot take modPow with modulus 0");
-        var r = Integer[1],
-            base = this.mod(mod);
-        while (exp.isPositive()) {
-            if (base.isZero()) return Integer[0];
-            if (exp.isOdd()) r = r.multiply(base).mod(mod);
-            exp = exp.divide(2);
-            base = base.square().mod(mod);
-        }
-        return r;
-    };
-    SmallInteger.prototype.modPow = BigInteger.prototype.modPow;
-
-    function compareAbs(a, b) {
-        if (a.length !== b.length) {
-            return a.length > b.length ? 1 : -1;
-        }
-        for (var i = a.length - 1; i >= 0; i--) {
-            if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
-        }
-        return 0;
-    }
-
-    BigInteger.prototype.compareAbs = function (v) {
-        var n = parseValue(v),
-            a = this.value,
-            b = n.value;
-        if (n.isSmall) return 1;
-        return compareAbs(a, b);
-    };
-    SmallInteger.prototype.compareAbs = function (v) {
-        var n = parseValue(v),
-            a = Math.abs(this.value),
-            b = n.value;
-        if (n.isSmall) {
-            b = Math.abs(b);
-            return a === b ? 0 : a > b ? 1 : -1;
-        }
-        return -1;
-    };
-
-    BigInteger.prototype.compare = function (v) {
-        // See discussion about comparison with Infinity:
-        // https://github.com/peterolson/BigInteger.js/issues/61
-        if (v === Infinity) {
-            return -1;
-        }
-        if (v === -Infinity) {
-            return 1;
-        }
-
-        var n = parseValue(v),
-            a = this.value,
-            b = n.value;
-        if (this.sign !== n.sign) {
-            return n.sign ? 1 : -1;
-        }
-        if (n.isSmall) {
-            return this.sign ? -1 : 1;
-        }
-        return compareAbs(a, b) * (this.sign ? -1 : 1);
-    };
-    BigInteger.prototype.compareTo = BigInteger.prototype.compare;
-
-    SmallInteger.prototype.compare = function (v) {
-        if (v === Infinity) {
-            return -1;
-        }
-        if (v === -Infinity) {
-            return 1;
-        }
-
-        var n = parseValue(v),
-            a = this.value,
-            b = n.value;
-        if (n.isSmall) {
-            return a == b ? 0 : a > b ? 1 : -1;
-        }
-        if (a < 0 !== n.sign) {
-            return a < 0 ? -1 : 1;
-        }
-        return a < 0 ? 1 : -1;
-    };
-    SmallInteger.prototype.compareTo = SmallInteger.prototype.compare;
-
-    BigInteger.prototype.equals = function (v) {
-        return this.compare(v) === 0;
-    };
-    SmallInteger.prototype.eq = SmallInteger.prototype.equals = BigInteger.prototype.eq = BigInteger.prototype.equals;
-
-    BigInteger.prototype.notEquals = function (v) {
-        return this.compare(v) !== 0;
-    };
-    SmallInteger.prototype.neq = SmallInteger.prototype.notEquals = BigInteger.prototype.neq = BigInteger.prototype.notEquals;
-
-    BigInteger.prototype.greater = function (v) {
-        return this.compare(v) > 0;
-    };
-    SmallInteger.prototype.gt = SmallInteger.prototype.greater = BigInteger.prototype.gt = BigInteger.prototype.greater;
-
-    BigInteger.prototype.lesser = function (v) {
-        return this.compare(v) < 0;
-    };
-    SmallInteger.prototype.lt = SmallInteger.prototype.lesser = BigInteger.prototype.lt = BigInteger.prototype.lesser;
-
-    BigInteger.prototype.greaterOrEquals = function (v) {
-        return this.compare(v) >= 0;
-    };
-    SmallInteger.prototype.geq = SmallInteger.prototype.greaterOrEquals = BigInteger.prototype.geq = BigInteger.prototype.greaterOrEquals;
-
-    BigInteger.prototype.lesserOrEquals = function (v) {
-        return this.compare(v) <= 0;
-    };
-    SmallInteger.prototype.leq = SmallInteger.prototype.lesserOrEquals = BigInteger.prototype.leq = BigInteger.prototype.lesserOrEquals;
-
-    BigInteger.prototype.isEven = function () {
-        return (this.value[0] & 1) === 0;
-    };
-    SmallInteger.prototype.isEven = function () {
-        return (this.value & 1) === 0;
-    };
-
-    BigInteger.prototype.isOdd = function () {
-        return (this.value[0] & 1) === 1;
-    };
-    SmallInteger.prototype.isOdd = function () {
-        return (this.value & 1) === 1;
-    };
-
-    BigInteger.prototype.isPositive = function () {
-        return !this.sign;
-    };
-    SmallInteger.prototype.isPositive = function () {
-        return this.value > 0;
-    };
-
-    BigInteger.prototype.isNegative = function () {
-        return this.sign;
-    };
-    SmallInteger.prototype.isNegative = function () {
-        return this.value < 0;
-    };
-
-    BigInteger.prototype.isUnit = function () {
-        return false;
-    };
-    SmallInteger.prototype.isUnit = function () {
-        return Math.abs(this.value) === 1;
-    };
-
-    BigInteger.prototype.isZero = function () {
-        return false;
-    };
-    SmallInteger.prototype.isZero = function () {
-        return this.value === 0;
-    };
-    BigInteger.prototype.isDivisibleBy = function (v) {
-        var n = parseValue(v);
-        var value = n.value;
-        if (value === 0) return false;
-        if (value === 1) return true;
-        if (value === 2) return this.isEven();
-        return this.mod(n).equals(Integer[0]);
-    };
-    SmallInteger.prototype.isDivisibleBy = BigInteger.prototype.isDivisibleBy;
-
-    function isBasicPrime(v) {
-        var n = v.abs();
-        if (n.isUnit()) return false;
-        if (n.equals(2) || n.equals(3) || n.equals(5)) return true;
-        if (n.isEven() || n.isDivisibleBy(3) || n.isDivisibleBy(5)) return false;
-        if (n.lesser(25)) return true;
-        // we don't know if it's prime: let the other functions figure it out
-    }
-
-    BigInteger.prototype.isPrime = function () {
-        var isPrime = isBasicPrime(this);
-        if (isPrime !== undefined) return isPrime;
-        var n = this.abs(),
-            nPrev = n.prev();
-        var a = [2, 3, 5, 7, 11, 13, 17, 19],
-            b = nPrev,
-            d, t, i, x;
-        while (b.isEven()) b = b.divide(2);
-        for (i = 0; i < a.length; i++) {
-            x = bigInt(a[i]).modPow(b, n);
-            if (x.equals(Integer[1]) || x.equals(nPrev)) continue;
-            for (t = true, d = b; t && d.lesser(nPrev) ; d = d.multiply(2)) {
-                x = x.square().mod(n);
-                if (x.equals(nPrev)) t = false;
-            }
-            if (t) return false;
-        }
-        return true;
-    };
-    SmallInteger.prototype.isPrime = BigInteger.prototype.isPrime;
-
-    BigInteger.prototype.isProbablePrime = function (iterations) {
-        var isPrime = isBasicPrime(this);
-        if (isPrime !== undefined) return isPrime;
-        var n = this.abs();
-        var t = iterations === undefined ? 5 : iterations;
-        // use the Fermat primality test
-        for (var i = 0; i < t; i++) {
-            var a = bigInt.randBetween(2, n.minus(2));
-            if (!a.modPow(n.prev(), n).isUnit()) return false; // definitely composite
-        }
-        return true; // large chance of being prime
-    };
-    SmallInteger.prototype.isProbablePrime = BigInteger.prototype.isProbablePrime;
-
-    BigInteger.prototype.next = function () {
-        var value = this.value;
-        if (this.sign) {
-            return subtractSmall(value, 1, this.sign);
-        }
-        return new BigInteger(addSmall(value, 1), this.sign);
-    };
-    SmallInteger.prototype.next = function () {
-        var value = this.value;
-        if (value + 1 < MAX_INT) return new SmallInteger(value + 1);
-        return new BigInteger(MAX_INT_ARR, false);
-    };
-
-    BigInteger.prototype.prev = function () {
-        var value = this.value;
-        if (this.sign) {
-            return new BigInteger(addSmall(value, 1), true);
-        }
-        return subtractSmall(value, 1, this.sign);
-    };
-    SmallInteger.prototype.prev = function () {
-        var value = this.value;
-        if (value - 1 > -MAX_INT) return new SmallInteger(value - 1);
-        return new BigInteger(MAX_INT_ARR, true);
-    };
-
-    var powersOfTwo = [1];
-    while (powersOfTwo[powersOfTwo.length - 1] <= BASE) powersOfTwo.push(2 * powersOfTwo[powersOfTwo.length - 1]);
-    var powers2Length = powersOfTwo.length, highestPower2 = powersOfTwo[powers2Length - 1];
-
-    function shift_isSmall(n) {
-        return ((typeof n === "number" || typeof n === "string") && +Math.abs(n) <= BASE) ||
-            (n instanceof BigInteger && n.value.length <= 1);
-    }
-
-    BigInteger.prototype.shiftLeft = function (n) {
-        if (!shift_isSmall(n)) {
-            throw new Error(String(n) + " is too large for shifting.");
-        }
-        n = +n;
-        if (n < 0) return this.shiftRight(-n);
-        var result = this;
-        while (n >= powers2Length) {
-            result = result.multiply(highestPower2);
-            n -= powers2Length - 1;
-        }
-        return result.multiply(powersOfTwo[n]);
-    };
-    SmallInteger.prototype.shiftLeft = BigInteger.prototype.shiftLeft;
-
-    BigInteger.prototype.shiftRight = function (n) {
-        var remQuo;
-        if (!shift_isSmall(n)) {
-            throw new Error(String(n) + " is too large for shifting.");
-        }
-        n = +n;
-        if (n < 0) return this.shiftLeft(-n);
-        var result = this;
-        while (n >= powers2Length) {
-            if (result.isZero()) return result;
-            remQuo = divModAny(result, highestPower2);
-            result = remQuo[1].isNegative() ? remQuo[0].prev() : remQuo[0];
-            n -= powers2Length - 1;
-        }
-        remQuo = divModAny(result, powersOfTwo[n]);
-        return remQuo[1].isNegative() ? remQuo[0].prev() : remQuo[0];
-    };
-    SmallInteger.prototype.shiftRight = BigInteger.prototype.shiftRight;
-
-    function bitwise(x, y, fn) {
-        y = parseValue(y);
-        var xSign = x.isNegative(), ySign = y.isNegative();
-        var xRem = xSign ? x.not() : x,
-            yRem = ySign ? y.not() : y;
-        var xBits = [], yBits = [];
-        var xStop = false, yStop = false;
-        while (!xStop || !yStop) {
-            if (xRem.isZero()) { // virtual sign extension for simulating two's complement
-                xStop = true;
-                xBits.push(xSign ? 1 : 0);
-            }
-            else if (xSign) xBits.push(xRem.isEven() ? 1 : 0); // two's complement for negative numbers
-            else xBits.push(xRem.isEven() ? 0 : 1);
-
-            if (yRem.isZero()) {
-                yStop = true;
-                yBits.push(ySign ? 1 : 0);
-            }
-            else if (ySign) yBits.push(yRem.isEven() ? 1 : 0);
-            else yBits.push(yRem.isEven() ? 0 : 1);
-
-            xRem = xRem.over(2);
-            yRem = yRem.over(2);
-        }
-        var result = [];
-        for (var i = 0; i < xBits.length; i++) result.push(fn(xBits[i], yBits[i]));
-        var sum = bigInt(result.pop()).negate().times(bigInt(2).pow(result.length));
-        while (result.length) {
-            sum = sum.add(bigInt(result.pop()).times(bigInt(2).pow(result.length)));
-        }
-        return sum;
-    }
-
-    BigInteger.prototype.not = function () {
-        return this.negate().prev();
-    };
-    SmallInteger.prototype.not = BigInteger.prototype.not;
-
-    BigInteger.prototype.and = function (n) {
-        return bitwise(this, n, function (a, b) { return a & b; });
-    };
-    SmallInteger.prototype.and = BigInteger.prototype.and;
-
-    BigInteger.prototype.or = function (n) {
-        return bitwise(this, n, function (a, b) { return a | b; });
-    };
-    SmallInteger.prototype.or = BigInteger.prototype.or;
-
-    BigInteger.prototype.xor = function (n) {
-        return bitwise(this, n, function (a, b) { return a ^ b; });
-    };
-    SmallInteger.prototype.xor = BigInteger.prototype.xor;
-
-    var LOBMASK_I = 1 << 30, LOBMASK_BI = (BASE & -BASE) * (BASE & -BASE) | LOBMASK_I;
-    function roughLOB(n) { // get lowestOneBit (rough)
-        // SmallInteger: return Min(lowestOneBit(n), 1 << 30)
-        // BigInteger: return Min(lowestOneBit(n), 1 << 14) [BASE=1e7]
-        var v = n.value, x = typeof v === "number" ? v | LOBMASK_I : v[0] + v[1] * BASE | LOBMASK_BI;
-        return x & -x;
-    }
-
-    function max(a, b) {
-        a = parseValue(a);
-        b = parseValue(b);
-        return a.greater(b) ? a : b;
-    }
-    function min(a,b) {
-        a = parseValue(a);
-        b = parseValue(b);
-        return a.lesser(b) ? a : b;
-    }
-    function gcd(a, b) {
-        a = parseValue(a).abs();
-        b = parseValue(b).abs();
-        if (a.equals(b)) return a;
-        if (a.isZero()) return b;
-        if (b.isZero()) return a;
-        var c = Integer[1], d, t;
-        while (a.isEven() && b.isEven()) {
-            d = Math.min(roughLOB(a), roughLOB(b));
-            a = a.divide(d);
-            b = b.divide(d);
-            c = c.multiply(d);
-        }
-        while (a.isEven()) {
-            a = a.divide(roughLOB(a));
-        }
-        do {
-            while (b.isEven()) {
-                b = b.divide(roughLOB(b));
-            }
-            if (a.greater(b)) {
-                t = b; b = a; a = t;
-            }
-            b = b.subtract(a);
-        } while (!b.isZero());
-        return c.isUnit() ? a : a.multiply(c);
-    }
-    function lcm(a, b) {
-        a = parseValue(a).abs();
-        b = parseValue(b).abs();
-        return a.divide(gcd(a, b)).multiply(b);
-    }
-    function randBetween(a, b) {
-        a = parseValue(a);
-        b = parseValue(b);
-        var low = min(a, b), high = max(a, b);
-        var range = high.subtract(low);
-        if (range.isSmall) return low.add(Math.round(Math.random() * range));
-        var length = range.value.length - 1;
-        var result = [], restricted = true;
-        for (var i = length; i >= 0; i--) {
-            var top = restricted ? range.value[i] : BASE;
-            var digit = truncate(Math.random() * top);
-            result.unshift(digit);
-            if (digit < top) restricted = false;
-        }
-        result = arrayToSmall(result);
-        return low.add(typeof result === "number" ? new SmallInteger(result) : new BigInteger(result, false));
-    }
-    var parseBase = function (text, base) {
-        var val = Integer[0], pow = Integer[1],
-            length = text.length;
-        if (2 <= base && base <= 36) {
-            if (length <= LOG_MAX_INT / Math.log(base)) {
-                return new SmallInteger(parseInt(text, base));
-            }
-        }
-        base = parseValue(base);
-        var digits = [];
-        var i;
-        var isNegative = text[0] === "-";
-        for (i = isNegative ? 1 : 0; i < text.length; i++) {
-            var c = text[i].toLowerCase(),
-                charCode = c.charCodeAt(0);
-            if (48 <= charCode && charCode <= 57) digits.push(parseValue(c));
-            else if (97 <= charCode && charCode <= 122) digits.push(parseValue(c.charCodeAt(0) - 87));
-            else if (c === "<") {
-                var start = i;
-                do { i++; } while (text[i] !== ">");
-                digits.push(parseValue(text.slice(start + 1, i)));
-            }
-            else throw new Error(c + " is not a valid character");
-        }
-        digits.reverse();
-        for (i = 0; i < digits.length; i++) {
-            val = val.add(digits[i].times(pow));
-            pow = pow.times(base);
-        }
-        return isNegative ? val.negate() : val;
-    };
-
-    function stringify(digit) {
-        var v = digit.value;
-        if (typeof v === "number") v = [v];
-        if (v.length === 1 && v[0] <= 35) {
-            return "0123456789abcdefghijklmnopqrstuvwxyz".charAt(v[0]);
-        }
-        return "<" + v + ">";
-    }
-    function toBase(n, base) {
-        base = bigInt(base);
-        if (base.isZero()) {
-            if (n.isZero()) return "0";
-            throw new Error("Cannot convert nonzero numbers to base 0.");
-        }
-        if (base.equals(-1)) {
-            if (n.isZero()) return "0";
-            if (n.isNegative()) return new Array(1 - n).join("10");
-            return "1" + new Array(+n).join("01");
-        }
-        var minusSign = "";
-        if (n.isNegative() && base.isPositive()) {
-            minusSign = "-";
-            n = n.abs();
-        }
-        if (base.equals(1)) {
-            if (n.isZero()) return "0";
-            return minusSign + new Array(+n + 1).join(1);
-        }
-        var out = [];
-        var left = n, divmod;
-        while (left.isNegative() || left.compareAbs(base) >= 0) {
-            divmod = left.divmod(base);
-            left = divmod.quotient;
-            var digit = divmod.remainder;
-            if (digit.isNegative()) {
-                digit = base.minus(digit).abs();
-                left = left.next();
-            }
-            out.push(stringify(digit));
-        }
-        out.push(stringify(left));
-        return minusSign + out.reverse().join("");
-    }
-
-    BigInteger.prototype.toString = function (radix) {
-        if (radix === undefined) radix = 10;
-        if (radix !== 10) return toBase(this, radix);
-        var v = this.value, l = v.length, str = String(v[--l]), zeros = "0000000", digit;
-        while (--l >= 0) {
-            digit = String(v[l]);
-            str += zeros.slice(digit.length) + digit;
-        }
-        var sign = this.sign ? "-" : "";
-        return sign + str;
-    };
-    SmallInteger.prototype.toString = function (radix) {
-        if (radix === undefined) radix = 10;
-        if (radix != 10) return toBase(this, radix);
-        return String(this.value);
-    };
-
-    BigInteger.prototype.valueOf = function () {
-        return +this.toString();
-    };
-    BigInteger.prototype.toJSNumber = BigInteger.prototype.valueOf;
-
-    SmallInteger.prototype.valueOf = function () {
-        return this.value;
-    };
-    SmallInteger.prototype.toJSNumber = SmallInteger.prototype.valueOf;
-    
-    function parseStringValue(v) {
-            if (isPrecise(+v)) {
-                var x = +v;
-                if (x === truncate(x))
-                    return new SmallInteger(x);
-                throw "Invalid integer: " + v;
-            }
-            var sign = v[0] === "-";
-            if (sign) v = v.slice(1);
-            var split = v.split(/e/i);
-            if (split.length > 2) throw new Error("Invalid integer: " + split.join("e"));
-            if (split.length === 2) {
-                var exp = split[1];
-                if (exp[0] === "+") exp = exp.slice(1);
-                exp = +exp;
-                if (exp !== truncate(exp) || !isPrecise(exp)) throw new Error("Invalid integer: " + exp + " is not a valid exponent.");
-                var text = split[0];
-                var decimalPlace = text.indexOf(".");
-                if (decimalPlace >= 0) {
-                    exp -= text.length - decimalPlace - 1;
-                    text = text.slice(0, decimalPlace) + text.slice(decimalPlace + 1);
-                }
-                if (exp < 0) throw new Error("Cannot include negative exponent part for integers");
-                text += (new Array(exp + 1)).join("0");
-                v = text;
-            }
-            var isValid = /^([0-9][0-9]*)$/.test(v);
-            if (!isValid) throw new Error("Invalid integer: " + v);
-            var r = [], max = v.length, l = LOG_BASE, min = max - l;
-            while (max > 0) {
-                r.push(+v.slice(min, max));
-                min -= l;
-                if (min < 0) min = 0;
-                max -= l;
-            }
-            trim(r);
-            return new BigInteger(r, sign);
-    }
-    
-    function parseNumberValue(v) {
-        if (isPrecise(v)) {
-            if (v !== truncate(v)) throw new Error(v + " is not an integer.");
-            return new SmallInteger(v);
-        }
-        return parseStringValue(v.toString());
-    }
-
-    function parseValue(v) {
-        if (typeof v === "number") {
-            return parseNumberValue(v);
-        }
-        if (typeof v === "string") {
-            return parseStringValue(v);
-        }
-        return v;
-    }
-    // Pre-define numbers in range [-999,999]
-    for (var i = 0; i < 1000; i++) {
-        Integer[i] = new SmallInteger(i);
-        if (i > 0) Integer[-i] = new SmallInteger(-i);
-    }
-    // Backwards compatibility
-    Integer.one = Integer[1];
-    Integer.zero = Integer[0];
-    Integer.minusOne = Integer[-1];
-    Integer.max = max;
-    Integer.min = min;
-    Integer.gcd = gcd;
-    Integer.lcm = lcm;
-    Integer.isInstance = function (x) { return x instanceof BigInteger || x instanceof SmallInteger; };
-    Integer.randBetween = randBetween;
-    return Integer;
-})();
-
-// Node.js check
-if (typeof module !== "undefined" && module.hasOwnProperty("exports")) {
-    module.exports = bigInt;
 }
 
+},{}],13:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable no-undef */
+j6.extend = Object.assign
+
+j6.clone = function (o) { return JSON.parse(JSON.stringify(o)) }
+
+j6.assert = function (cond, msg) {
+  if (!cond) throw Error(msg)
+}
+
+j6.steps = function(from, to, step = 1) {
+	var a=[];
+	for (var t=from; t<=to; t+=step)
+		a.push(t);
+	return a;
+}
+
+j6.slice = function (a) {
+  return Array.prototype.slice.call(a)
+}
+
+j6.bind = function (o, member) {
+  if (typeof o[member] === 'function') {
+    return o[member].bind(o)
+  } else {
+    return o[member]
+  }
+}
+
+j6.ncall = function () {
+  var args = j6.slice(arguments)
+  var n = args[0]
+  var o = args[1]
+  var fname = args[2]
+  var params = args.slice(3)
+  var a = []
+  for (var i = 0; i < n; i++) {
+    a.push(o[fname].apply(o, params))
+  }
+  return a
+}
+
+j6.mapFunctions = function (host, obj, pairs) {
+  for (var h in pairs) {
+    var o = pairs[h]
+    if (typeof host[h] !== 'undefined') {
+      console.log('mapFunction:mapBind: error!', h, ' has been defined!')
+    }
+    host[h] = j6.bind(obj, o)
+  }
+}
+
+j6.copyFunctions = function (host, obj, names) {
+  for (var name of names) {
+    if (typeof host[name] !== 'undefined') {
+      console.log('copyFunctions:namesBind: error!', name, ' has been defined!')
+    }
+    host[name] = j6.bind(obj, name)
+  }
+}
+
+j6.mix = function (self, members) {
+  for (var name in members) {
+    var member = members[name]
+    if (typeof self[name] === 'undefined') {
+      Object.defineProperty(self, name, {
+        enumerable: true,
+        writable: true,
+        value: member
+      })
+    } else {
+      console.log('j6.mix fail:', name, ' already exists!')
+      console.log(' self[name]=', self[name])
+      console.log(' member=', member)
+    }
+  }
+}
+
+j6.arg1this = function (f, obj) { // 傳回一個已經綁定 f, obj 的函數
+  return function () {
+    var args = j6.slice(arguments)
+    return f.apply(obj, [this].concat(args)) // 效果相當於 obj.f(this, args)
+  }
+}
+
+j6.mixThis = function (proto, obj, fmembers) {
+  for (var fname of fmembers) {
+    var f = obj[fname]
+    if (typeof proto[fname] === 'undefined') {
+      Object.defineProperty(proto, fname, {
+        enumerable: false,
+        writable: true,
+        value: j6.arg1this(f, obj) // proto.f(args) => obj.f(this, args) , 這行盡量不要動，除非想得很清楚了！
+      })
+    } else {
+      console.log('j6.mixThis:', fname, ' fail!')
+      console.log(' obj[fname]=', obj[fname])
+      throw Error()
+    }
+  }
+}
+
+j6.mixThisMap = function (proto, obj, poMap) {
+  for (var pname in poMap) {
+    var oname = poMap[pname]
+    var f = obj[oname]
+    if (typeof proto[pname] === 'undefined') {
+      Object.defineProperty(proto, pname, {
+        enumerable: false,
+        writable: true,
+        value: j6.arg1this(f, obj) // proto.f(args) = f(this, args) , 這行盡量不要動，除非想得很清楚了！
+      })
+    } else {
+      console.log('pname=', pname, 'proto[pname]=', proto[pname])
+      console.log('j6.mixThisMap:', oname, ' fail!')
+    }
+  }
+}
+
+j6.ctrim = function (s, set, side) {
+  side = side || 'both'
+  for (var b = 0; b < s.length; b++) {
+    if (set.indexOf(s[b]) < 0) break
+  }
+  for (var e = s.length - 1; e >= 0; e--) {
+    if (set.indexOf(s[e]) < 0) break
+  }
+  if (side === 'right') b = 0
+  if (side === 'left') e = s.length - 1
+  return s.substring(b, e + 1)
+}
+
+j6.lpad = function (s, width, ch) {
+  return s.length >= width ? s : new Array(width - s.length + 1).join(ch) + s
+}
+
+j6.def = function (x, value) {
+  return (typeof x !== 'undefined') ? x : value
+}
+
+j6.precision = 2
+
+j6.nstr = function (n, precision = j6.precision) {
+  if (n % 1 === 0) return n.toFixed(0)
+  return n.toFixed(precision)
+}
+
+j6.vstr = function (a, precision = j6.precision) {
+  var s = []
+  for (var i in a) {
+    if (typeof a[i] === 'undefined') {
+      s.push('undefined')
+    } else {
+      s.push(a[i].str(precision))
+    }
+  }
+  return '[' + s.join(', ') + ']'
+}
+
+j6.sstr = function (s) { return s.toString() }
+
+/*
+j6.ostr = function(o, precision=j6.precision) {
+  var s = [];
+  for (var k in o)
+    s.push(k+':'+j6.str(o[k], precision));
+  return '{'+s.join(', ')+'}';
+}
+*/
+
+j6.ostr = function (o) { return o.toString() }
+
+j6.str = function (o, precision = j6.precision) {
+  if (typeof o === 'undefined') {
+    return 'undefined'
+  } else {
+    return o.str(precision)
+  }
+}
+
+j6.toArray = function (arg) { return Array.prototype.slice.call(arg) }
+
+// Global
+j6.debug = function () {
+  var arg = j6.toArray(arguments)
+  console.debug.apply(console, arg)
+}
+
+j6.print = function () {
+  var arg = j6.toArray(arguments)
+  console.log.apply(console, arg)
+}
+
+j6.json = function (o) { return JSON.stringify(this) }
+
+/* eslint-disable no-extend-native */
+// Array.prototype.toString = function () { return j6.vstr(this) } // 這行不能用，會干擾 numeric.js
+// Number.prototype.toString = function () { return j6.nstr(this) }
+}
 },{}],14:[function(require,module,exports){
+module.exports = function (j6) {
+/* eslint-disable no-undef */
+var V = j6.V = {}
+
+V.new = function (n, value = 0) { return j6.T.repeat([n], value) }
+
+// V.random = function (n, a, b) { return j6.T.random([n], a, b) }
+
+V.resize = function (a, size) {
+  var v = a.slice()
+  for (var i = a.length; i < size; i++) {
+    v.push(0)
+  }
+  return v
+}
+
+V.dot = function (x, y, isComplex = false) {
+  let cadd = j6.ComplexField.add
+  let cmul = j6.ComplexField.mul
+  let sum = 0
+  let len = x.length
+  for (var i = 0; i < len; i++) {
+    if (!isComplex) {
+      sum += x[i] * y[i] // 速度較快
+    } else {
+      sum = cadd(sum, cmul(x[i], y[i])) // 速度稍慢(不使用多型，否則會很慢)
+    }
+  }
+  return sum
+}
+
+V.add = function (a, b) {
+  let len = a.length
+  let r = new Array(len)
+  for (var i = 0; i < len; i++) {
+    r[i] = a[i] + b[i]
+  }
+  return r
+}
+
+V.sub = function (a, b) {
+  let len = a.length
+  let r = new Array(len)
+  for (var i = 0; i < len; i++) {
+    r[i] = a[i] - b[i]
+  }
+  return r
+}
+
+V.mul = function (a, b) {
+  let len = a.length
+  let r = new Array(len)
+  for (var i = 0; i < len; i++) {
+    r[i] = a[i] * b[i]
+  }
+  return r
+}
+
+V.div = function (a, b) {
+  let len = a.length
+  let r = new Array(len)
+  for (var i = 0; i < len; i++) {
+    r[i] = a[i] / b[i]
+  }
+  return r
+}
+}
+},{}],15:[function(require,module,exports){
 this.j$ = this.jStat = (function(Math, undefined) {
 
 // For quick reference.
@@ -23672,7 +6657,7 @@ jStat.extend(jStat.fn, {
 
 }(this.jStat, Math));
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -40658,7 +23643,7 @@ jStat.extend(jStat.fn, {
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -45086,448 +28071,7 @@ numeric.svd= function svd(A) {
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],17:[function(require,module,exports){
-// http://cs.stanford.edu/people/karpathy/convnetjs/
-// https://github.com/junku901/dnn
-var NN = {};
-
-NN.sigmoid = function(x) {
-	var sigmoid = (1. / (1 + Math.exp(-x)))
-	if(sigmoid ==1) {
-	 //   console.warn("Something Wrong!! Sigmoid Function returns 1. Probably javascript float precision problem?\nSlightly Controlled value to 1 - 1e-14")
-			sigmoid = 0.99999999999999; // Javascript Float Precision Problem.. This is a limit of javascript.
-	} else if(sigmoid ==0) {
-		//  console.warn("Something Wrong!! Sigmoid Function returns 0. Probably javascript float precision problem?\nSlightly Controlled value to 1e-14")
-			sigmoid = 1e-14;
-	}
-	return sigmoid; // sigmoid cannot be 0 or 1;;
-}
-
-NN.dSigmoid = function(x){
-	a = B.sigmoid(x);
-	return a * (1. - a);
-}
-
-module.exports = NN;
 },{}],18:[function(require,module,exports){
-var NN = require("../neural");
-var R, M;
+j6 = require('../lib/j6')
 
-var RBM = function (rlab, settings) {
-  R = rlab;
-  M = R.M;
-  Object.assign(this, settings);
-	this.settings = {
-			'log level' : 1 // 0 : nothing, 1 : info, 2: warn
-	};
-	var a = 1. / this.nVisible;
-	this.W = this.W || M.randomM(this.nVisible,this.nHidden,-a,a);
-	this.hbias = this.hbias || M.newV(this.nHidden);
-  this.vbias = this.vbias || M.newV(this.nVisible);
-}
-
-RBM.prototype.train = function(settings) {
-	var lr = settings.lr||0.8;
-	var k  = settings.k||1;
-	var epochs = settings.epochs||1500;
-	this.input = settings.input||this.input;
-
-	var i,j;
-	var currentProgress = 1;
-	for(i=0;i<epochs;i++) {
-			/* CD - k . Contrastive Divergence */
-		var ph = this.sampleHgivenV(this.input);
-		var phMean = ph[0], phSample = ph[1];
-		var chainStart = phSample;
-		var nvMeans, nvSamples, nhMeans, nhSamples;
-
-		for(j=0 ; j<k ; j++) {
-			if (j==0) {
-				var gibbsVH = this.gibbsHVH(chainStart);
-				nvMeans = gibbsVH[0], nvSamples = gibbsVH[1], nhMeans = gibbsVH[2], nhSamples = gibbsVH[3];
-			} else {
-				var gibbsVH = this.gibbsHVH(nhSamples);
-				nvMeans = gibbsVH[0], nvSamples = gibbsVH[1], nhMeans = gibbsVH[2], nhSamples = gibbsVH[3];
-			}
-		}
-    // ((input^t*phMean)-(nvSample^t*nhMeans))*1/input.length
-	  var deltaW = this.input.tr().dot(phMean).sub(nvSamples.tr().dot(nhMeans)).mul(1./this.input.length);
-    // deltaW = (input*phMean)-(nvSample^t * nhMeans)*1/input.length
-		var deltaVbias = this.input.sub(nvSamples).colMean();
-    // deltaHbias = (phSample - nhMeans).mean(row)
-    var deltaHbias = phSample.sub(nhMeans).colMean();
-    // W += deltaW*lr
-		this.W = this.W.add(deltaW.mul(lr));
-    // vbias += deltaVbias*lr
-		this.vbias = this.vbias.add(deltaVbias.dot(lr));
-    // hbias += deltaHbias*lr
-		this.hbias = this.hbias.add(deltaHbias.dot(lr));
-		if(this.settings['log level'] > 0) {
-			var progress = (1.*i/epochs)*100;
-			if(progress > currentProgress) {
-				console.log("RBM",progress.toFixed(0),"% Completed.");
-				currentProgress+=8;
-			}
-		}
-	}
-	if(this.settings['log level'] > 0)
-		console.log("RBM Final Cross Entropy : ",this.getReconstructionCrossEntropy())
-};
-
-RBM.prototype.propup = function(v) {
-  // sigmoid(v*W+hbias)
-	return v.dot(this.W).addMV(this.hbias).mapM(NN.sigmoid);
-};
-
-RBM.prototype.probToBinaryMat = function(m) {
-	return M.mapM(m, (x)=>(Math.random() < m[i][j])?1:0);
-};
-
-RBM.prototype.propdown = function(h) {
-	return h.dot(this.W.tr()).addMV(this.vbias).mapM(NN.sigmoid);
-};
-
-RBM.prototype.sampleHgivenV = function(v0_sample) {
-	var h1_mean = this.propup(v0_sample);
-	var h1_sample = this.probToBinaryMat(h1_mean);
-	return [h1_mean,h1_sample];
-};
-
-RBM.prototype.sampleVgivenH = function(h0_sample) {
-	var v1_mean = this.propdown(h0_sample);
-	var v1_sample = this.probToBinaryMat(v1_mean);
-	return [v1_mean,v1_sample];
-};
-
-RBM.prototype.gibbsHVH = function(h0_sample) {
-	var v1 = this.sampleVgivenH(h0_sample);
-	var h1 = this.sampleHgivenV(v1[1]);
-	return [v1[0],v1[1],h1[0],h1[1]];
-};
-
-RBM.prototype.reconstruct = function(v) {
-	var h = v.dot(this.W).addMV(this.hbias).mapM(NN.sigmoid);
-	return h.dot(this.W.tr()).addMV(this.vbias).mapM(NN.sigmoid);
-};
-
-RBM.prototype.getReconstructionCrossEntropy = function() {
-	var reconstructedV = this.reconstruct(this.input);
-	var a = M.mapMM(this.input, reconstructedV, function(x,y){
-		return x*Math.log(y);
-	});
-
-	var b = M.mapMM(this.input,reconstructedV,function(x,y){
-		return (1-x)*Math.log(1-y);
-	});
-  var crossEntropy = -a.add(b).rowSum().mean();
-	return crossEntropy
-
-};
-
-RBM.prototype.set = function(property,value) {
-	this.settings[property] = value;
-}
-
-module.exports = RBM;
-},{"../neural":17}],19:[function(require,module,exports){
-var R    = require("./lib/math");
-var _ = R._ = require("lodash");
-R.Symbol = require("./lib/symbolic");
-R.NN     = require("./plugin/neural");
-R.NN.RBM = require("./plugin/neural/rbm");
-
-// space 沒有加上機率參數 , 不能指定機率
-R.samples = function(space, size, arg) {
-	var arg = _.defaults(arg, {replace:true});
-	if (arg.replace)
-		return _.times(size, ()=>_.sample(space));
-	else
-		return _.sampleSize(space, size);
-}
-
-// Global
-R.debug = debug = function() {
-	var arg = _.slice(arguments);
-	console.debug.apply(console, arg);
-}
-
-R.print = print = function() {
-	var arg = _.slice(arguments);
-	console.log.apply(console, arg);
-}
-
-p = R.parse;
-be = R.be;
-
-R.mixThisMap(Array.prototype, R, {
-lu:"lu",
-luSolve:"luSolve",
-svd:"svd",
-// "cdelsq",
-// "clone",
-rows:"rows",
-cols:"cols",
-row:"row",
-col:"col",
-tr:"tr",
-inv:"inv",
-// "all",
-// "any",
-// "same",
-// "isFinite",
-// "isNaN",
-// "mapreduce",
-// "complex",
-det:"det",
-// "norm2",
-// "norm2Squared",
-// "norm2inf",
-dot:"dot",
-// "dim",
-eig:"eig",
-// "sum",
-rowSum:"rowSum",
-colSum:"colSum",
-rowMean:"rowMean",
-colMean:"colMean",
-addMV:"addMV",
-mapM:"mapM",
-mapMM:"mapMM",
-flatM:"flatM",
-fillVM:"fillVM",
-fillMM:"fillMM",
-getBlock:"getBlock",
-setBlock:"setBlock",
-getDiag:"getDiag",
-diag:"diag",
-// "parseFloat",
-// "parseDate",
-// "parseCSV",
-// "toCSV",
-mstr:"mstr",
-// "sumM",
-str:'astr',
-print:'print',
-});
-
-R.mixThis(Array.prototype, R, [
-"max",
-"min",
-"sum",
-"product",
-"norm",
-"mean",
-"range",
-"median",
-"variance",
-"deviation",
-"sd",
-"cov",
-"cor",
-"normalize",
-"curve",
-"hist",
-"ihist",
-"eval",
-// +-*/%
-"add",
-"sub",
-"mul",
-"div",
-"mod",
-"neg",
-// "inv", 和矩陣相衝
-// logical
-"and",
-"or",
-"xor",
-"not",
-// bits operation
-"bnot",
-"band",
-"bor",
-"bxor",
-// function
-"power",
-// "dot", 和矩陣相衝
-"sqrt",
-"log",
-"exp",
-"abs",
-"sin",
-"cos",
-"tan",
-"asin",
-"acos",
-"atan",
-"ceil",
-"floor",
-"round",
-]);
-
-R.mixThisMap(Number.prototype, R, {
-	str:'nstr',
-	print:'print',
-});
-
-R.mixThis(Number.prototype, R, [
-	'eval',
-	'add',
-	'sub',
-	'mul',
-	'div',
-	'mod',
-	'power',
-	'neg',
-	'inv',
-	'sqrt',
-	'log',
-	'exp',
-	'abs',
-	'sin',
-	'cos',
-	'tan',
-	'asin',
-	'acos',
-	'atan',
-	'ceil',
-	'floor',
-	'round',
-]);
-R.mixThisMap(Function.prototype, R, {
-	add:'fadd',
-	sub:'fsub',
-	mul:'fmul',
-	div:'fdiv',
-	compose:'fcompose',
-	eval:'feval',
-	diff:'fdiff',
-	integral:'fintegral',
-});
-R.mixThisMap(String.prototype, R, {str:'sstr',print:'print'});
-R.mixThisMap(Object.prototype, R, {str:'ostr',print:'print'});
-R.mixThisMap(Object.prototype, R, {
-	proto:'proto',
-	eq:'eq',
-	neq:'neq',
-	geq:'geq',
-	leq:'leq',
-	gt:'gt',
-	lt:'lt',
-});
-
-R.mixThisMap(Array.prototype, R._, {
-// lodash
-_chunk:'chunk',
-_compact:'compact',
-_concat:'concat',
-_difference:'difference',
-_differenceBy:'differenceBy',
-_differenceWith:'differenceWith',
-_drop:'drop',
-_dropRight:'dropRight',
-_dropRightWhile:'dropRightWhile',
-_dropWhile:'dropWhile',
-_fill:'fill',
-_findIndex:'findIndex',
-_findLastIndex:'findLastIndex',
-_flatten:'flatten',
-_flattenDeep:'flattenDeep',
-_flattenDepth:'flattenDepth',
-_fromPairs:'flattenPairs',
-_head:'head',
-_indexOf:'indexOf',
-_initial:'initial',
-_intersection:'intersection',
-_intersectionBy:'intersectonBy',
-_intersectionWith:'intersectionWith',
-_join:'join',
-_last:'last',
-_lastIndexOf:'lastIndexOf',
-_nth:'nth',
-_pull:'pull',
-_pullAll:'pullAll',
-_pullAllBy:'pullAllBy',
-_pullAllWith:'pullAllWith',
-_pullAt:'pullAt',
-_remove:'remove',
-_reverse:'reverse',
-_slice:'slice',
-_sortedIndex:'sortedIndex',
-_sortedIndexBy:'sortedIndexBy',
-_sortedIndexOf:'sortedIndexOf',
-_sortedLastIndex:'sortedLastIndex',
-_sortedLastIndexBy:'sortedLastIndexBy',
-_sortedLastIndexOf:'sortedLastIndexOf',
-_sortedUniq:'sortedUniq',
-_sortedUniqBy:'sortedUniqBy',
-_tail:'tail',
-_take:'take',
-_takeRight:'takeRight',
-_takeRightWhile:'takeRightWhile',
-_takeWhile:'takeWhile',
-_union:'union',
-_unionBy:'unionBy',
-_unionWith:'unionWith',
-_uniq:'uniq',
-_uniqBy:'uniqBy',
-_uniqWith:'uniqWith',
-_unzip:'unzip',
-_unzipWith:'unzipWith',
-_without:'without',
-_xor:'xor',
-_xorBy:'xorBy',
-_xorWith:'xorWith',
-_zip:'zip',
-_zipObject:'zipObject',
-_zipObjectDeep:'zipObjectDeep',
-_zipWith:'zipWith',
-// Collection
-_countBy:'countBy',
-// each→ forEach
-// _eachRight → forEachRight
-_every:'every',
-_filter:'filter',
-_find:'find',
-_findLast:'findLast',
-_flatMap:'flatMap',
-_flatMapDeep:'flatMapDeep',
-_flatMapDepth:'flatMapDepth',
-_forEach:'forEach',
-_forEachRight:'forEachRight',
-_groupBy:'groupBy',
-_includes:'includes',
-_invokeMap:'invokeMap',
-_keyBy:'keyBy',
-_map:'map',
-_orderBy:'orderBy',
-_partition:'partition',
-_reduce:'reduce',
-_reduceRight:'reduceRight',
-_reject:'reject',
-_sample:'sample',
-_sampleSize:'sampleSize',
-_shuffle:'shuffle',
-_size:'size',
-_some:'some',
-_sortBy:'sortBy',
-});
-
-module.exports = R;
-
-// R.mixThis(Array.prototype,  {str:R.astr}, ['str']);
-// R.mixThisMap(Array.prototype, R, {str:'astr',print:'print'});
-// R.mixThisMap(Object.prototype, R, {strM:'strM'});
-// ==== Copy functions to R ======
-// R.copyFunctions(R, D, "differential,integral".split(","));
-// R.copyFunctions(R, Math, "abs,acos,asin,atan,ceil,cos,exp,floor,log,pow,random,round,sin,sqrt,tan".split(","));
-
-// R.copyFunctions(R, M, "solveLP,solveMP,ODE,minimize,complex,spline,linspace".split(","));
-
-// not include : bench, xxxeq, ccsXXX, cgrid, 
-// Complex = R.Complex;
-// Ratio = R.Ratio;
-
-},{"./lib/math":7,"./lib/symbolic":11,"./plugin/neural":17,"./plugin/neural/rbm":18,"lodash":15}],20:[function(require,module,exports){
-R=rlab=require("../rlab");
-},{"../rlab":19}]},{},[20]);
+},{"../lib/j6":6}]},{},[18]);

@@ -1,6 +1,6 @@
 {
   "name": "j6",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Javascript scientific library (like R, NumPy, Matlab)",
   "main": "j6.js",
   "dependencies": {

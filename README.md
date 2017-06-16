@@ -309,15 +309,8 @@ Fdbserver is a used in the server.js of j6. You have to install fdbserver before
 
 ```
 $ git clone https://github.com/ccckmit/j6
-...
 $ cd j6
-...
-$ npm install fdbserver
-j6@0.7.1 D:\Dropbox\github\j6
-+-- chai@3.5.0  extraneous
-+-- express@4.13.4  extraneous
-`-- fdbserver@1.6.6  extraneous
-
+$ npm install --dev
 $ node server.js
 ```
 
@@ -325,22 +318,18 @@ A demo for j6 is on my web site <http://ccc.nqu.edu.tw/j6/j6.html> .
 
 The following figure is Screen Shot for j6 GUI.
 
-![Run j6 on Web](img/j6IDE.png)
-
-If you visit the site in https protocol, there will be a Button for 'Save File', and menus for 'Login' and 'Logout'. These function can only be used in the https mode, not in the http mode.
-
-You have to login to save code. The default code path is in 'file/' directory with the file name you choose to upload.
+![Run j6 on Web](img/j6ide.png)
 
 ## Rebuild Web Version
 
-You have to wrap j6 for web by browserify in the following command.
+You have to rebuild j6 for web by browserify in the following command.
 
 ```
-$npm run-script build-web
+$npm run build-web
 
 > j6@0.5.4 build-web D:\Dropbox\github\j6
 > browserify web/_j6.js -o web/j6.js
 ```
 
-When you modify the j6 source, make sure to wrap it again.
+When you modify the j6 source, make sure to rebuild it again.
 

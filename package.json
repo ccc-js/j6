@@ -2,7 +2,7 @@
   "name": "j6",
   "version": "1.0.1",
   "description": "Javascript scientific library (like R, NumPy, Matlab)",
-  "main": "j6.js",
+  "main": "lib/j6.js",
   "dependencies": {
     "algebrite": "^0.2.23",
     "jStat": "^1.5.2",
@@ -15,7 +15,9 @@
     "koa-static": "^3.0.0"
   },
   "scripts": {
-    "build-web": "browserify web/_j6.js -o web/j6.js"
+    "build-web": "browserify web/_j6.js -o web/j6.js",
+    "test": "mocha",
+    "start": "node server"
   },
   "bin": {},
   "keywords": [
@@ -24,9 +26,7 @@
     "Scientific Computing",
     "Statistics",
     "Probability",
-    "Matrix",
-    "Neural Network",
-    "Deep Learning"
+    "Matrix"
   ],
   "homepage": "https://github.com/ccckmit/j6",
   "repository": {

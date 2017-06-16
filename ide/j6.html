@@ -7,22 +7,22 @@
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <meta name="description" content="">
     <meta name="author" content="">
-    <link rel="icon" href="http://getbootstrap.com/favicon.ico">
+    <link rel="icon" href="web/favicon.ico">
 
     <title>j6 IDE</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="lib/bootstrap.min.css" rel="stylesheet">
 
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <link href="http://getbootstrap.com/assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+    <link href="lib/ie10-viewport-bug-workaround.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="web/j6.css" rel="stylesheet">
+    <link href="../web/j6.css" rel="stylesheet">
 
     <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
     <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-    <script src="http://getbootstrap.com/assets/js/ie-emulation-modes-warning.js"></script>
+    <script src="lib/ie-emulation-modes-warning.js"></script>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -30,11 +30,11 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
 		
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.18.2/codemirror.css">
+		<link rel="stylesheet" href="lib/codemirror.css">
 
-		<link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.11/c3.css" rel="stylesheet"/>
+		<link href="lib/c3.css" rel="stylesheet"/>
 
-		<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" rel="stylesheet"/>
+		<link href="lib/vis.css" rel="stylesheet"/>
 
 	</head>
 
@@ -48,7 +48,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">j6</a>
+          <a class="navbar-brand" href="#">j6 IDE</a>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         </div>
         <div id="navbar" class="navbar-collapse collapse">
@@ -72,15 +72,18 @@
             <div class="form-group">
               <input id='fileName', type="text" placeholder="File" class="form-control">
 						<label class="btn btn-primary btn-file" data-toggle="tooltip" title="Open File">
-						  <span class="glyphicon glyphicon-file" aria-hidden="true">
+						  <!--<span class="glyphicon glyphicon-file" aria-hidden="true">-->
+                Load
 							<input id="loadButton" type="file" style="display: none;">
 						</label>						 
 						<label class="btn btn-primary" data-toggle="tooltip" title="Run Code">
-						  <span class="glyphicon glyphicon-play">
+						  <!--<span class="glyphicon glyphicon-play">-->
+                Run
 							<input id="runButton" type="button" style="display: none;">
 						</label>
 						<label class="btn btn-primary https" data-toggle="tooltip" title="Save File">
-						  <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true">
+						  <!--<span class="glyphicon glyphicon-floppy-disk" aria-hidden="true">-->
+                Save
 							<input id="saveButton" type="button" style="display: none;">
 						</label>						 
             </div>
@@ -183,19 +186,24 @@ G.chart3D('#chart9', 'surface', function(x, y) {
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- 引入 jQuery 之前和之後必須加入 module 的處理，否則會失敗。
+      https://stackoverflow.com/questions/32621988/electron-jquery-is-not-defined
+    -->
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    <script src="lib/jquery.min.js"></script>
+    <!-- Insert this line after script imports -->
+    <script>if (window.module) module = window.module;</script>
+    <!-- <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script> -->
+    <script src="lib/bootstrap.min.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="http://getbootstrap.com/assets/js/ie10-viewport-bug-workaround.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.18.2/codemirror.js"></script>		
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.18.2/mode/javascript/javascript.js"></script>		
-		<script src="
-https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.11/c3.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.js"></script>		
-		<script src="web/j6.js"></script>
-		<script src="web/g6.js"></script>
+    <script src="lib/ie10-viewport-bug-workaround.js"></script>
+		<script src="lib/codemirror.js"></script>		
+		<script src="lib/javascript.js"></script>		
+		<script src="lib/d3.js"></script>
+		<script src="lib/c3.js"></script>
+    <script src="lib/vis.js"></script>		
+		<script src="../web/j6.js"></script>
+		<script src="../web/g6.js"></script>
 <!--		<script src="web/editor.js"></script> -->
 		
 <script>

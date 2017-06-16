@@ -30,7 +30,6 @@ log("dbinom(4, 5, 0.5)=", R.dbinom(4,5,0.5));
 log("dbinom(5, 5, 0.5)=", R.dbinom(5,5,0.5));
 log("pbinom(4, 5, 0.5)=", R.pbinom(4,5,0.5));
 log("qbinom(0.9, 5, 0.5)=", R.qbinom(0.9,5,0.5));
-
 ```
 
 run :
@@ -305,7 +304,9 @@ integral(x*y,x,y) = 1/4 x^2 y^2
 
 ## Run j6 on Web
 
-Fdbserver is a used in the server.js of j6. You have to install fdbserver before start the server.js
+There is a web IDE for j6 , just start the ide/j6.html for a demo.
+
+You can start a server to use the IDE.
 
 ```
 $ git clone https://github.com/ccckmit/j6
@@ -314,7 +315,9 @@ $ npm install --dev
 $ node server.js
 ```
 
-A demo for j6 is on my web site <http://ccc.nqu.edu.tw/j6/j6.html> .
+Visit http://localhost:3000/ide/j6.html for the j6 IDE。
+
+A demo for j6 is on my web site <https://mdbookspace.com/j6/ide/j6.html> .
 
 The following figure is Screen Shot for j6 GUI.
 
